@@ -124,7 +124,7 @@ El email incluye:
 
 ```
 ┌─────────────────────────────────────┐
-│  🏪 TPV SOLUTIONS                   │
+│  🏪 REISBLOC F&B                    │
 │  Reporte de Cierre de Caja          │
 │  Fecha: 23 de enero de 2026         │
 │  Cajero: admin                      │

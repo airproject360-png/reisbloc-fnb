@@ -9,7 +9,7 @@ interface OrderNoteModalProps {
   itemName?: string
 }
 
-// Etiquetas comunes para Cevicheria Mexa
+// Etiquetas comunes de cocina/bar
 const QUICK_TAGS = [
   'Sin cebolla', 'Sin cilantro', 'Salsa aparte', 
   'Sin hielo', 'Poca sal', 'Bien cocido', 

@@ -51,8 +51,8 @@ export function CartSummary({ tableNumber, items, onSend, onClear, sending, prod
     const html = `
       <div style="width:58mm;padding:8px;font-family:'Courier New', monospace;font-size:11px;line-height:1.2;color:#000;">
         <div style="text-align:center;margin-bottom:8px;border-bottom:1px solid #000;">
-          <div style="font-weight:bold;font-size:12px;">CEVICHERIA MEXA</div>
-          <div style="font-size:9px;">Restaurante y Marisquería</div>
+          <div style="font-weight:bold;font-size:12px;">REISBLOC F&B</div>
+          <div style="font-size:9px;">reisbloc.com</div>
           <div style="font-size:9px;">Mesa ${tableNumber}</div>
         </div>
         <div style="margin-bottom:6px;font-size:9px;">
@@ -77,7 +77,7 @@ export function CartSummary({ tableNumber, items, onSend, onClear, sending, prod
         </div>
         <div style="text-align:center;font-size:9px;margin-top:8px;">
           <div>Este no es comprobante fiscal.</div>
-          <div style="margin-top:4px;font-size:8px;">Gracias por su preferencia</div>
+          <div style="margin-top:4px;font-size:8px;">Gracias por su preferencia · reisbloc.com</div>
         </div>
       </div>
     `

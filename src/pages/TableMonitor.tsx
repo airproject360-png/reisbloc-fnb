@@ -92,8 +92,8 @@ export default function TableMonitor() {
     return `
       <div style="width:58mm;padding:4px;font-family:'Courier New', monospace;font-size:11px;line-height:1.2;color:#000;">
         <div style="text-align:center;margin-bottom:8px;border-bottom:1px dashed #000;padding-bottom:8px;">
-          <div style="font-weight:bold;font-size:14px;margin-bottom:4px;">CEVICHERIA MEXA</div>
-          <div style="font-size:10px;">🐟 Mariscos & Tacos 🌮</div>
+          <div style="font-weight:bold;font-size:14px;margin-bottom:4px;">REISBLOC F&B</div>
+          <div style="font-size:10px;">reisbloc.com</div>
           <div style="font-size:10px;margin-top:4px;">Mesa: ${tableNumber}</div>
           <div style="font-size:10px;">${title}</div>
           <div style="font-size:10px;">${date}</div>
@@ -123,7 +123,7 @@ export default function TableMonitor() {
         <div style="text-align:center;font-size:10px;margin-top:12px;">
           ${paymentDetails ? `<div>Pagado: ${paymentDetails.method.toUpperCase()}</div>` : ''}
           <div>¡Gracias por su visita!</div>
-          <div style="margin-top:4px;">Wifi: CevicheMexa / Pass: mariscos123</div>
+          <div style="margin-top:4px;">reisbloc.com</div>
         </div>
       </div>
     `
@@ -168,8 +168,8 @@ export default function TableMonitor() {
     return `
       <div style="width:58mm;padding:4px;font-family:'Courier New', monospace;font-size:11px;line-height:1.2;color:#000;">
         <div style="text-align:center;margin-bottom:8px;border-bottom:1px dashed #000;padding-bottom:8px;">
-          <div style="font-weight:bold;font-size:14px;margin-bottom:4px;">CEVICHERIA MEXA</div>
-          <div style="font-size:10px;">🐟 Mariscos & Tacos 🌮</div>
+          <div style="font-weight:bold;font-size:14px;margin-bottom:4px;">REISBLOC F&B</div>
+          <div style="font-size:10px;">reisbloc.com</div>
           <div style="font-size:10px;margin-top:4px;">Mesa ${tableNumber} · Persona ${split.personNumber}</div>
           <div style="font-size:10px;">${title}</div>
           <div style="font-size:10px;">${date}</div>
@@ -199,6 +199,7 @@ export default function TableMonitor() {
         </div>
         <div style="text-align:center;font-size:10px;margin-top:12px;">
           <div>¡Gracias por su visita!</div>
+          <div style="margin-top:4px;">reisbloc.com</div>
         </div>
       </div>
     `

@@ -19,7 +19,7 @@ interface PaymentPanelProps {
   orderId?: string
   orderIds?: string[]
   tableNumber: number
-  onPaymentComplete: (result: PaymentResult) => void
+  onPaymentComplete: (result: PaymentResult) => void | Promise<void>
   onCancel: () => void
 }
 
@@ -42,7 +42,6 @@ export default function PaymentPanel({
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [requestingSplit, setRequestingSplit] = useState(false)
 
   const total = orderTotal + tipAmount
 
@@ -54,6 +53,20 @@ export default function PaymentPanel({
   const handleTipChange = (amount: number) => {
     setTipAmount(amount)
     setTipPercentage(amount > 0 ? Math.round((amount / orderTotal) * 100) : 0)
+  }
+
+  const completePayment = async (result: PaymentResult) => {
+    setSuccess(true)
+    await new Promise(resolve => setTimeout(resolve, 450))
+
+    try {
+      await onPaymentComplete(result)
+    } catch (callbackError: any) {
+      const callbackMessage = callbackError?.message || 'No se pudo completar el pago'
+      logger.error('payment', 'Error al finalizar pago en callback', callbackError as any)
+      setSuccess(false)
+      setError(callbackMessage)
+    }
   }
 
   const handlePayment = async () => {
@@ -68,18 +81,14 @@ export default function PaymentPanel({
 
         // Simular un pequeño delay para mejor UX
         await new Promise(resolve => setTimeout(resolve, 800))
-        setSuccess(true)
-
-        setTimeout(() => {
-          onPaymentComplete({
-            transactionId,
-            paymentMethod,
-            currency,
-            tip: tipAmount,
-            tipCurrency,
-            total,
-          })
-        }, 1500)
+        await completePayment({
+          transactionId,
+          paymentMethod,
+          currency,
+          tip: tipAmount,
+          tipCurrency,
+          total,
+        })
       } else if (paymentMethod === 'mercadopago' || paymentMethod === 'transfer') {
         // MODO MANUAL: Registrar pago sin abrir ventana externa
         try {
@@ -94,17 +103,14 @@ export default function PaymentPanel({
 
           logger.info('payment', 'Pago registrado manualmente', payment.id)
 
-          setSuccess(true)
-          setTimeout(() => {
-            onPaymentComplete({
-              transactionId: payment.id,
-              paymentMethod: paymentMethod,
-              currency,
-              tip: tipAmount,
-              tipCurrency,
-              total,
-            })
-          }, 1500)
+          await completePayment({
+            transactionId: payment.id,
+            paymentMethod: paymentMethod,
+            currency,
+            tip: tipAmount,
+            tipCurrency,
+            total,
+          })
         } catch (err: any) {
           logger.error('payment', 'MercadoPago error', err as any)
           throw err
@@ -123,16 +129,16 @@ export default function PaymentPanel({
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-fadeIn max-h-[90vh] flex flex-col">
+      <div className="surface-warm rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-fadeIn max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-2xl p-6 relative overflow-hidden flex-shrink-0">
+        <div className="bg-gradient-to-r from-slate-900 to-teal-800 rounded-t-2xl p-6 relative overflow-hidden flex-shrink-0">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12" />
 
           <div className="flex justify-between items-center relative z-10">
             <div>
               <h2 className="text-2xl font-bold text-white">Procesar Pago</h2>
-              <p className="text-blue-100 text-sm mt-1">Mesa {tableNumber}</p>
+              <p className="text-cyan-50/80 text-sm mt-1">Mesa {tableNumber}</p>
             </div>
             <button
               onClick={onCancel}
@@ -165,7 +171,7 @@ export default function PaymentPanel({
                 disabled={loading || success}
                 className={`flex-1 px-3 py-2 rounded-lg font-semibold transition-all ${
                   currency === 'USD'
-                    ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg'
+                    ? 'bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-lg'
                     : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                 }`}
               >
@@ -218,7 +224,7 @@ export default function PaymentPanel({
                 disabled={loading || success}
                 className={`p-4 rounded-xl flex flex-col items-center gap-2 transition-all transform hover:scale-105 ${
                   paymentMethod === 'mercadopago'
-                    ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/50'
+                    ? 'bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-lg shadow-slate-500/40'
                     : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                 }`}
               >
@@ -256,7 +262,7 @@ export default function PaymentPanel({
                   disabled={loading || success}
                   className={`py-2 rounded-lg font-semibold text-sm transition-all ${
                     tipPercentage === percentage
-                      ? 'bg-blue-600 text-white shadow-lg'
+                        ? 'bg-teal-700 text-white shadow-lg'
                       : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                   }`}
                 >
@@ -268,7 +274,7 @@ export default function PaymentPanel({
                 disabled={loading || success}
                 className={`py-2 rounded-lg font-semibold text-sm transition-all ${
                   tipPercentage === 0
-                    ? 'bg-blue-600 text-white shadow-lg'
+                    ? 'bg-teal-700 text-white shadow-lg'
                     : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                 }`}
               >
@@ -282,7 +288,7 @@ export default function PaymentPanel({
                 onChange={e => handleTipChange(parseFloat(e.target.value) || 0)}
                 disabled={loading || success}
                 placeholder="Monto personalizado"
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
               />
             </div>
           </div>
@@ -296,9 +302,9 @@ export default function PaymentPanel({
 
           {/* Multiple Orders Info */}
           {ids.length > 1 && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-700 font-semibold">ℹ️ Múltiples órdenes consolidadas</p>
-              <p className="text-xs text-blue-600 mt-1">Puedes dividir la cuenta después de pagar si es necesario</p>
+            <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+              <p className="text-sm text-slate-800 font-semibold">ℹ️ Múltiples órdenes consolidadas</p>
+              <p className="text-xs text-slate-600 mt-1">Puedes dividir la cuenta después de pagar si es necesario</p>
             </div>
           )}
 
@@ -316,7 +322,7 @@ export default function PaymentPanel({
               <button
                 onClick={handlePayment}
                 disabled={loading || success}
-                className="flex-1 px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-green-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-6 py-4 bg-gradient-to-r from-slate-900 to-teal-700 hover:brightness-110 text-white rounded-xl font-bold shadow-lg shadow-slate-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>

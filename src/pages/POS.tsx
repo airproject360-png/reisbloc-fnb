@@ -144,8 +144,8 @@ export default function POS() {
     const html = `
       <div style="width:58mm;padding:8px;font-family:'Courier New', monospace;font-size:11px;line-height:1.2;color:#000;">
         <div style="text-align:center;margin-bottom:8px;border-bottom:1px solid #000;">
-          <div style="font-weight:bold;font-size:12px;">CEVICHERIA MEXA</div>
-          <div style="font-size:9px;">Restaurante y Marisquería</div>
+          <div style="font-weight:bold;font-size:12px;">REISBLOC F&B</div>
+          <div style="font-size:9px;">reisbloc.com</div>
           <div style="font-size:9px;">Mesa ${tableNumber}</div>
         </div>
         <div style="margin-bottom:6px;font-size:9px;">
@@ -181,7 +181,7 @@ export default function POS() {
         </div>
         <div style="text-align:center;font-size:9px;margin-top:8px;">
           <div>Este no es comprobante fiscal.</div>
-          <div style="margin-top:4px;font-size:8px;">Gracias por su preferencia</div>
+          <div style="margin-top:4px;font-size:8px;">Gracias por su preferencia · reisbloc.com</div>
         </div>
       </div>
     `
@@ -310,6 +310,7 @@ export default function POS() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error al enviar orden'
       setStockError(message)
+      alert(`❌ ${message}`)
       logger.error('pos', 'Error creating order', error as any)
     } finally {
       setSending(false)
@@ -414,8 +415,8 @@ export default function POS() {
         const html = `
           <div style="width:58mm;padding:8px;font-family:'Courier New', monospace;font-size:11px;line-height:1.2;color:#000;">
             <div style="text-align:center;margin-bottom:8px;border-bottom:1px solid #000;">
-              <div style="font-weight:bold;font-size:12px;">CEVICHERIA MEXA</div>
-              <div style="font-size:9px;">Restaurante y Marisquería</div>
+              <div style="font-weight:bold;font-size:12px;">REISBLOC F&B</div>
+              <div style="font-size:9px;">reisbloc.com</div>
               <div style="font-size:9px;">Mesa ${tableNumber}</div>
               <div style="font-size:9px;">Ticket: ${orderIds[0] ? orderIds[0].slice(0, 8) : `MESA-${tableNumber}`}</div>
             </div>
@@ -445,7 +446,7 @@ export default function POS() {
             </div>
             <div style="text-align:center;font-size:9px;margin-top:8px;">
               <div>Pagado: ${mappedMethod.toUpperCase()}</div>
-              <div style="margin-top:4px;font-size:8px;">Gracias por su preferencia</div>
+              <div style="margin-top:4px;font-size:8px;">Gracias por su preferencia · reisbloc.com</div>
             </div>
           </div>
         `
@@ -469,8 +470,11 @@ export default function POS() {
         transactionId: result.transactionId,
       })
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al registrar la venta'
       logger.error('pos', 'Error recording sale', error as any)
-      setStockError('Error al registrar la venta')
+      setStockError(message)
+      alert(`❌ ${message}`)
+      throw new Error(message)
     }
   }
 
@@ -490,21 +494,21 @@ export default function POS() {
   }
 
   return (
-    <div className="min-h-screen relative bg-gray-50">
+    <div className="page-shell bg-[color:var(--bg-canvas)]">
       {/* Background Doodle */}
       <div 
-        className="fixed inset-0 z-0 opacity-40 pointer-events-none bg-repeat"
+        className="fixed inset-0 z-0 opacity-25 pointer-events-none bg-repeat"
         style={{
           backgroundImage: 'url("/doodle_ceviche.png?v=2")',
           backgroundSize: '450px',
         }}
       />
       {/* Gradient Overlay */}
-      <div className="fixed inset-0 bg-gradient-to-br from-cyan-500/5 via-blue-500/5 to-teal-500/5 z-0 pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(24,33,46,0.06),transparent_28%),radial-gradient(circle_at_top_right,rgba(15,118,110,0.08),transparent_26%),linear-gradient(180deg,rgba(247,246,242,1),rgba(242,239,232,1))] z-0 pointer-events-none" />
 
       <div className="relative z-10">
       {/* Header - Mismo gradiente que Ready - Fijo al hacer scroll */}
-      <div className="sticky top-0 z-50 bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-2xl">
+      <div className="sticky top-0 z-50 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 text-white shadow-2xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -513,7 +517,7 @@ export default function POS() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold">Punto de Venta</h1>
-                <p className="text-blue-100 text-sm">Sistema en tiempo real</p>
+                <p className="text-cyan-50/85 text-sm">Sistema en tiempo real</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -534,7 +538,7 @@ export default function POS() {
               <div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-xl border border-white/10 backdrop-blur-sm">
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-bold leading-none">{currentUser?.username || 'Usuario'}</p>
-                  <p className="text-xs text-blue-200 uppercase tracking-wider font-semibold">{currentUser?.role || 'Staff'}</p>
+                  <p className="text-xs text-cyan-100/80 uppercase tracking-wider font-semibold">{currentUser?.role || 'Staff'}</p>
                 </div>
                 <div className="h-10 w-10 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white/20 shadow-inner">
                   {currentUser?.username?.charAt(0).toUpperCase() || <User size={20} />}
@@ -542,7 +546,7 @@ export default function POS() {
               </div>
 
               <div className="text-right">
-                <p className="text-sm text-blue-100">Mesa actual</p>
+                <p className="text-sm text-cyan-50/85">Mesa actual</p>
                 <p className="text-2xl font-bold">{tableNumber}</p>
               </div>
             </div>

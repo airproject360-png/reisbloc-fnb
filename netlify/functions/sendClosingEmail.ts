@@ -87,7 +87,7 @@ export default async (event: any) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>🏪 TPV SOLUTIONS</h1>
+            <h1>🏪 REISBLOC F&B</h1>
             <p>Reporte de Cierre de Caja</p>
             <p>${date}</p>
             <p>Cajero: ${username}</p>
@@ -166,7 +166,8 @@ export default async (event: any) => {
           ` : ""}
 
           <div class="footer">
-            <p>Este es un correo automático generado por Reisbloc POS</p>
+            <p>Este es un correo automático generado por Reisbloc F&B</p>
+            <p>reisbloc.com</p>
             <p>Por favor, guarda este correo como comprobante de tu cierre de caja</p>
           </div>
         </div>

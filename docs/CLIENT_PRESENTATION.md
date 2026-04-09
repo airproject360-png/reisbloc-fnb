@@ -55,7 +55,7 @@
 ### 1. Login Seguro
 ```
 ┌─────────────────────────────┐
-│   🍽️  TPV SOLUTIONS         │
+│   🍽️  REISBLOC F&B          │
 │                             │
 │   Ingresa tu PIN:           │
 │   [●] [●] [●] [●]          │

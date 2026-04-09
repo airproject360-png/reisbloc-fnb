@@ -1,8 +1,8 @@
-# 🛑 INSTANCIA DE CLIENTE: CEVICHERIA MEXA
+# 🛑 INSTANCIA DE CLIENTE: REISBLOC F&B
 
 > **⚠️ ADVERTENCIA DE SEGURIDAD Y DESPLIEGUE**
 
-Esta carpeta contiene el código fuente **específico y productivo** para el cliente **Cevicheria Mexa**.
+Esta carpeta contiene el código fuente **específico y productivo** para el cliente **Reisbloc F&B**.
 
 ## 🔒 REGLAS DE ORO
 
@@ -13,7 +13,7 @@ Esta carpeta contiene el código fuente **específico y productivo** para el cli
 
 ## 🚀 ESTADO ACTUAL (v3.2.1 Multi-Tenant)
 
-- **Organization ID:** `4eb9c537-8d82-4243-896a-c1b4f6440ddd` (Cevicheria Mexa)
+- **Organization ID:** `4eb9c537-8d82-4243-896a-c1b4f6440ddd` (Reisbloc F&B)
 - **Backend:** Supabase (Edge Functions activas).
 - **Auth:** PIN + Device Fingerprint.
 - **Sync:** Offline-First con IndexedDB.

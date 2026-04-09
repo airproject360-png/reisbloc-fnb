@@ -25,7 +25,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ message = 'Cargand
 
       {/* Texto de carga */}
       <h2 className="text-xl font-bold text-white tracking-widest uppercase mb-2">
-        Cevicheria Mexa
+        Reisbloc F&B
       </h2>
       <p className="text-cyan-400 text-sm animate-pulse">{message}</p>
     </div>

@@ -97,7 +97,7 @@ export default function NavBar() {
               {currentUser?.businessName?.[0] || 'R'}
             </div>
             <h1 className="font-black text-sm sm:text-lg tracking-tighter hidden xs:block bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-teal-200">
-              {currentUser?.businessName || 'CEVICHERIA MEXA'}
+              {currentUser?.businessName || 'REISBLOC F&B'}
             </h1>
           </div>
 

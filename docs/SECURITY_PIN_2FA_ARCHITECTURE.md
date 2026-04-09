@@ -280,9 +280,9 @@ Cada login registra:
   ip_address: "203.0.113.45",
   geolocation: {
     country: "MX",
-    city: "Playa del Carmen",
-    latitude: 20.6296,
-    longitude: -87.0739,
+    city: "Ciudad de México",
+    latitude: 19.4326,
+    longitude: -99.1332,
     timestamp: "2026-02-24T10:30:00Z"
   },
   auth_method: "pin",

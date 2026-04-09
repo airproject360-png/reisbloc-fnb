@@ -21,9 +21,9 @@ export default function ReceiptTicket({
   paymentMethod,
   tip,
   tableNumber,
-  businessName = 'CEVICHERIA MEXA',
-  address = 'Restaurante y Marisquería',
-  phone = '+52 (xxx) xxx-xxxx',
+  businessName = 'REISBLOC F&B',
+  address = 'reisbloc.com',
+  phone = 'Soporte: reisbloc.com',
 }: ReceiptTicketProps) {
   const receiptRef = useRef<HTMLDivElement>(null)
 
@@ -150,7 +150,7 @@ export default function ReceiptTicket({
       >
         <div>¡Gracias por su compra!</div>
         <div style={{ marginTop: '4px', fontSize: '8px' }}>
-          Vuelva pronto
+          Vuelva pronto · reisbloc.com
         </div>
       </div>
 

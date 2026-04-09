@@ -1,6 +1,6 @@
 /**
  * Reisbloc POS - Sistema POS Profesional
- * ⚠️ CLIENTE: CEVICHERIA MEXA (Producción)
+ * ⚠️ CLIENTE: REISBLOC F&B (Producción)
  * 
  * NOTA IMPORTANTE: Este archivo pertenece a una instancia Single-Tenant.
  * NO SOBREESCRIBIR con lógica del SaaS Multi-Tenant sin revisión manual.

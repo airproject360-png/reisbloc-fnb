@@ -286,7 +286,7 @@ export default function Closing() {
       <body>
         <div class="receipt">
           <div class="header">
-            <h1>🏪 TPV SOLUTIONS</h1>
+            <h1>🏪 REISBLOC F&B</h1>
             <p>CIERRE DE CAJA</p>
             <p>${new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
             <p>Cajero: ${currentUser?.username}</p>
@@ -371,7 +371,7 @@ export default function Closing() {
           ` : ''}
 
           <div class="footer">
-            <p>Documento generado automáticamente por Reisbloc POS</p>
+            <p>Documento generado automáticamente por Reisbloc F&B · reisbloc.com</p>
             <p>${new Date().toLocaleTimeString('es-MX')}</p>
           </div>
         </div>
@@ -386,39 +386,40 @@ export default function Closing() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="page-shell bg-[color:var(--bg-canvas)] flex items-center justify-center">
         <div className="text-center">
-          <Loader size={48} className="animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Cargando datos de cierre...</p>
+          <Loader size={48} className="animate-spin text-teal-700 mx-auto mb-4" />
+          <p className="text-slate-600">Cargando datos de cierre...</p>
         </div>
       </div>
     )
   }
 
-  const COLORS = ['#10b981', '#3b82f6', '#f59e0b']
+  const COLORS = ['#0f766e', '#0f172a', '#b45309']
 
   return (
-    <div className="min-h-screen relative bg-gradient-to-br from-gray-50 via-amber-50/30 to-orange-50/30 p-6">
+    <div className="page-shell bg-[color:var(--bg-canvas)] p-6">
       {/* Background Doodle */}
       <div 
-        className="fixed inset-0 z-0 opacity-40 pointer-events-none bg-repeat"
+        className="fixed inset-0 z-0 opacity-25 pointer-events-none bg-repeat"
         style={{
           backgroundImage: 'url("/doodle_ceviche.png?v=2")',
           backgroundSize: '450px',
         }}
       />
-      
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(24,33,46,0.06),transparent_28%),radial-gradient(circle_at_top_right,rgba(15,118,110,0.08),transparent_26%),linear-gradient(180deg,rgba(247,246,242,1),rgba(242,239,232,1))] z-0 pointer-events-none" />
+
       <div className="relative z-10 max-w-6xl mx-auto space-y-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-600 to-orange-600 rounded-3xl p-8 text-white shadow-xl">
+        <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 rounded-3xl p-8 text-white shadow-xl border border-white/10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-4 bg-white/20 rounded-xl backdrop-blur-sm">
+              <div className="p-4 bg-white/15 rounded-2xl backdrop-blur-sm border border-white/10">
                 <DollarSign size={36} />
               </div>
               <div>
                 <h1 className="text-4xl font-bold">Cierre de Caja</h1>
-                <p className="text-amber-100 mt-2">
+                <p className="text-cyan-50/85 mt-2">
                   {new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
               </div>
@@ -430,9 +431,9 @@ export default function Closing() {
         </div>
 
         {/* Alert */}
-        <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-amber-800">
+        <div className="surface-muted border-l-4 border-amber-600 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="text-amber-700 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-slate-700">
             <p className="font-semibold">Importante</p>
             <p>Este proceso generará un cierre oficial del día. Revisa todos los números antes de confirmar.</p>
           </div>
@@ -441,19 +442,19 @@ export default function Closing() {
         {/* Summary Cards */}
         {closingData && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-6 text-white shadow-lg">
+            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-lg">
               <p className="text-white/80 text-sm font-medium">Total Ventas</p>
               <p className="text-4xl font-bold mt-2">${closingData.totalSales?.toFixed(2)}</p>
             </div>
-            <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl p-6 text-white shadow-lg">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-600 rounded-2xl p-6 text-white shadow-lg">
               <p className="text-white/80 text-sm font-medium">Transacciones</p>
               <p className="text-4xl font-bold mt-2">{closingData.transactionCount || 0}</p>
             </div>
-            <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 text-white shadow-lg">
+            <div className="bg-gradient-to-br from-teal-700 to-cyan-700 rounded-2xl p-6 text-white shadow-lg">
               <p className="text-white/80 text-sm font-medium">Propinas</p>
               <p className="text-4xl font-bold mt-2">${closingData.totalTips?.toFixed(2)}</p>
             </div>
-            <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-6 text-white shadow-lg">
+            <div className="bg-gradient-to-br from-amber-700 to-stone-700 rounded-2xl p-6 text-white shadow-lg">
               <p className="text-white/80 text-sm font-medium">Ticket Promedio</p>
               <p className="text-3xl font-bold mt-2">${closingData.averageTicket?.toFixed(2)}</p>
             </div>
@@ -464,8 +465,8 @@ export default function Closing() {
         {closingData && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Payment Methods Chart */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Métodos de Pago</h3>
+            <div className="surface-warm p-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-4">Métodos de Pago</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie
@@ -491,24 +492,24 @@ export default function Closing() {
 
               {/* Payment Summary */}
               <div className="mt-6 space-y-3">
-                <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg border-l-4 border-emerald-500">
-                  <span className="font-semibold text-gray-900">Efectivo</span>
-                  <span className="text-lg font-bold text-emerald-600">${(closingData.totalCash || 0).toFixed(2)}</span>
+                <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg border-l-4 border-emerald-600">
+                  <span className="font-semibold text-slate-900">Efectivo</span>
+                  <span className="text-lg font-bold text-emerald-700">${(closingData.totalCash || 0).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                  <span className="font-semibold text-gray-900">Transferencia</span>
-                  <span className="text-lg font-bold text-blue-600">${(closingData.totalDigital || 0).toFixed(2)}</span>
+                <div className="flex justify-between items-center p-3 bg-slate-100 rounded-lg border-l-4 border-slate-500">
+                  <span className="font-semibold text-slate-900">Transferencia</span>
+                  <span className="text-lg font-bold text-slate-700">${(closingData.totalDigital || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border-l-4 border-amber-500">
-                  <span className="font-semibold text-gray-900">Tarjeta</span>
-                  <span className="text-lg font-bold text-amber-600">${(closingData.totalClip || 0).toFixed(2)}</span>
+                  <span className="font-semibold text-slate-900">Tarjeta</span>
+                  <span className="text-lg font-bold text-amber-700">${(closingData.totalClip || 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             {/* Discounts & Taxes */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
-              <h3 className="text-xl font-bold text-gray-900">Resumen Financiero</h3>
+            <div className="surface-warm p-6 space-y-4">
+              <h3 className="text-xl font-bold text-slate-900">Resumen Financiero</h3>
 
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-3 border-b border-gray-200">

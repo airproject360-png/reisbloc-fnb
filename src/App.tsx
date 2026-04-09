@@ -128,11 +128,11 @@ function App() {
         {/* 🎨 FONDO BASE GLOBAL */}
         <div className="fixed inset-0 bg-slate-50 z-[-2]" />
 
-        {/* 🐟 FONDO DOODLE GLOBAL - CEVICHERIA MEXA 🐟 */}
+        {/* Fondo doodle global */}
         <div 
           className="fixed inset-0 z-[-1] opacity-5 pointer-events-none bg-repeat"
           style={{
-            backgroundImage: 'url("/doodle_ceviche.png")', // Actualizado para Cevicheria Mexa
+            backgroundImage: 'url("/doodle_ceviche.png")',
             backgroundSize: '300px', // Ajusta el tamaño del patrón
             filter: 'grayscale(100%)' // Opcional: para que no compita con los colores de la UI
           }}

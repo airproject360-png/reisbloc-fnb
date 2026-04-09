@@ -1,11 +1,11 @@
-# 🌴 Cevicheria Mexa - Sistema POS & Gestión
+# Reisbloc F&B - Sistema POS & Gestión
 
 ![Estado](https://img.shields.io/badge/Estado-Producción_Activa-success)
 ![Engine](https://img.shields.io/badge/Powered_by-Reisbloc_POS_🚀-indigo)
 ![Tech](https://img.shields.io/badge/Stack-React_|_Supabase_|_Vite-blue)
 ![Ubicación](https://img.shields.io/badge/Ubicación-Playa_del_Carmen_🌊-teal)
 
-**Sistema de Punto de Venta (POS) personalizado para Cevicheria Mexa.**  
+**Sistema de Punto de Venta (POS) personalizado para Reisbloc F&B.**  
 Impulsado por la arquitectura Multi-Tenant de **Reisbloc POS**.
 
 Este repositorio contiene el código fuente de la aplicación de gestión operativa del restaurante. Diseñado para operar en un entorno de alto flujo frente al mar, gestionando desde la toma de comandas de mariscos hasta la operación nocturna de bar y sports bar.
@@ -14,12 +14,12 @@ Este repositorio contiene el código fuente de la aplicación de gestión operat
 
 ## 🍹 Contexto del Proyecto
 
-**Cevicheria Mexa** no es solo un restaurante, es una experiencia en Playa del Carmen. El sistema está diseñado para adaptarse a sus dos facetas:
+**Reisbloc F&B** es una operación de alto flujo y el sistema está diseñado para adaptarse a sus dos facetas:
 
 1.  **Modo Día (Restaurante):** Enfoque en cocina fría/caliente (ceviches, aguachiles, pescados) con alta rotación de mesas.
 2.  **Modo Noche (Bar & Sports Bar):** Enfoque en coctelería rápida, cervezas y gestión de cuentas abiertas para eventos deportivos.
 
-### Arquitectura "Beach-Proof" 🏖️
+### Arquitectura "Offline-First"
 Dado que la conectividad en la costa puede ser intermitente, el sistema implementa una arquitectura **Offline-First** (PWA) que permite seguir operando localmente y sincronizar con la nube cuando la conexión se restablece.
 
 ---
