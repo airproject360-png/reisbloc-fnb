@@ -42,7 +42,6 @@ export async function inviteUserToEvento(params: InviteUserParams): Promise<Invi
     },
     body: {
       ...params,
-      organizationSlug: 'evento',
     },
   })
 

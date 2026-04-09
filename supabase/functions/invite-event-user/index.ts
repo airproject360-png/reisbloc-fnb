@@ -223,21 +223,41 @@ serve(async (req) => {
 
   const rawEmail = String(body.email || '').trim().toLowerCase()
   const role: InviteRole = body.role === 'admin' ? 'admin' : 'supervisor'
-  const organizationSlug = String(body.organizationSlug || 'evento').trim().toLowerCase()
+  const organizationSlug = String(body.organizationSlug || '').trim().toLowerCase()
   const expiresInHours = Math.max(1, Math.min(Number(body.expiresInHours || 48), 168))
 
   if (!rawEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
     return response({ error: 'Invalid email address' }, 400)
   }
 
-  const { data: org, error: orgError } = await supabaseAdmin
-    .from('organizations')
-    .select('id, name, slug')
-    .eq('slug', organizationSlug)
-    .single()
+  let org: { id: string; name: string; slug: string } | null = null
 
-  if (orgError || !org) {
-    return response({ error: `Organization ${organizationSlug} not found` }, 404)
+  if (organizationSlug) {
+    const { data: orgBySlug } = await supabaseAdmin
+      .from('organizations')
+      .select('id, name, slug')
+      .eq('slug', organizationSlug)
+      .maybeSingle()
+
+    if (orgBySlug) org = orgBySlug
+  }
+
+  if (!org) {
+    const { data: orgById, error: orgByIdError } = await supabaseAdmin
+      .from('organizations')
+      .select('id, name, slug')
+      .eq('id', callerAppUser.organization_id)
+      .maybeSingle()
+
+    if (orgByIdError) {
+      return response({ error: orgByIdError.message }, 500)
+    }
+
+    org = orgById
+  }
+
+  if (!org) {
+    return response({ error: 'Organization not found for current admin user' }, 404)
   }
 
   const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString()
