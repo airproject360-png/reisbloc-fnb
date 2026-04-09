@@ -64,6 +64,9 @@ export default function EventInvitationSettings() {
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="email"
+              name="email"
+              autoComplete="email"
+              spellCheck={false}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="usuario@correo.com"
@@ -104,11 +107,19 @@ export default function EventInvitationSettings() {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-60"
           >
             <ShieldCheck size={18} />
-            {loading ? 'Enviando...' : 'Enviar Invitacion'}
+              {loading ? 'Enviando…' : 'Enviar Invitacion'}
           </button>
 
-          {resultMessage && <p className="text-sm text-emerald-700">{resultMessage}</p>}
-          {errorMessage && <p className="text-sm text-red-700">{errorMessage}</p>}
+            {resultMessage && (
+              <p className="text-sm text-emerald-700" aria-live="polite" role="status">
+                {resultMessage}
+              </p>
+            )}
+            {errorMessage && (
+              <p className="text-sm text-red-700" aria-live="polite" role="status">
+                {errorMessage}
+              </p>
+            )}
         </div>
       </form>
     </div>

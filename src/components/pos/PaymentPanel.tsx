@@ -142,6 +142,7 @@ export default function PaymentPanel({
             </div>
             <button
               onClick={onCancel}
+              aria-label="Cerrar panel de pago"
               className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
               disabled={loading || success}
             >
