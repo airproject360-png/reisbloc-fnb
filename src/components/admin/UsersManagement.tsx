@@ -19,6 +19,43 @@ import {
 const MAX_EVENT_ADMINS = 2
 const MAX_EVENT_SUPERVISORS = 4
 
+async function cropImageToSquare(file: File): Promise<File> {
+  const bitmap = await createImageBitmap(file)
+  const size = Math.min(bitmap.width, bitmap.height)
+  const offsetX = Math.floor((bitmap.width - size) / 2)
+  const offsetY = Math.floor((bitmap.height - size) / 2)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+
+  const context = canvas.getContext('2d')
+  if (!context) {
+    throw new Error('No se pudo preparar el recorte de la imagen')
+  }
+
+  context.drawImage(bitmap, offsetX, offsetY, size, size, 0, 0, size, size)
+
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (result) => {
+        if (!result) {
+          reject(new Error('No se pudo procesar la imagen'))
+          return
+        }
+        resolve(result)
+      },
+      file.type === 'image/png' ? 'image/png' : 'image/jpeg',
+      0.92
+    )
+  })
+
+  bitmap.close()
+
+  const extension = blob.type === 'image/png' ? 'png' : 'jpg'
+  return new File([blob], `avatar-${Date.now()}.${extension}`, { type: blob.type })
+}
+
 export default function UsersManagement() {
   const { users, setUsers, currentUser } = useAppStore()
   const { canManageUsers, isReadOnly } = usePermissions()
@@ -75,7 +112,8 @@ export default function UsersManagement() {
 
     setUploadingAvatarUserId(user.id)
     try {
-      await supabaseService.updateUserAvatar(user.id, file, user.username)
+      const croppedFile = await cropImageToSquare(file)
+      await supabaseService.updateUserAvatar(user.id, croppedFile, user.username)
       await loadUsers()
     } catch (error) {
       console.error('Error uploading avatar:', error)
@@ -158,11 +196,11 @@ export default function UsersManagement() {
                       <img
                         src={user.avatarUrl}
                         alt={`Foto de ${user.username}`}
-                        className="w-12 h-12 rounded-2xl border border-white/20 object-cover bg-white/10"
+                        className="w-14 h-14 rounded-full border-2 border-white/25 object-cover bg-white/10 shadow-sm"
                         loading="lazy"
                       />
                     ) : (
-                      <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center border border-white/15">
+                      <div className="w-14 h-14 bg-white/15 rounded-full flex items-center justify-center border border-white/15 shadow-sm">
                         <UserCog size={24} />
                       </div>
                     )}
@@ -199,6 +237,9 @@ export default function UsersManagement() {
 
                 {canManageUsers && !isReadOnly && (
                   <div className="pt-3 border-t border-slate-200">
+                    <p className="text-xs text-slate-500 mb-2">
+                      La foto se recorta al centro en formato cuadrado antes de subirla.
+                    </p>
                     <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold cursor-pointer transition-colors">
                       <Camera size={16} />
                       {uploadingAvatarUserId === user.id ? 'Subiendo foto...' : 'Cambiar foto'}
