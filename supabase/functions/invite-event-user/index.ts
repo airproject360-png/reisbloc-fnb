@@ -10,6 +10,65 @@ const corsHeaders = {
 
 type InviteRole = 'admin' | 'supervisor'
 
+const MAX_INVITES_PER_ADMIN_PER_HOUR = 20
+const MAX_INVITES_PER_ORG_PER_MINUTE = 8
+
+const isoNow = () => new Date().toISOString()
+const isoMinutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60 * 1000).toISOString()
+
+async function getRecentAuditCount(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  orgId: string,
+  userId: string | null,
+  sinceIso: string
+) {
+  let query = supabaseAdmin
+    .from('audit_logs')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', orgId)
+    .eq('action', 'INVITE_SENT')
+    .gte('created_at', sinceIso)
+
+  if (userId) {
+    query = query.eq('user_id', userId)
+  }
+
+  const { count, error } = await query
+  if (error) {
+    return { count: 0, error }
+  }
+
+  return { count: count || 0, error: null }
+}
+
+async function writeInviteAudit(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  orgId: string,
+  userId: string,
+  email: string,
+  role: InviteRole,
+  blocked: boolean,
+  reason?: string
+) {
+  const payload = {
+    organization_id: orgId,
+    user_id: userId,
+    action: blocked ? 'INVITE_BLOCKED' : 'INVITE_SENT',
+    table_name: 'users',
+    record_id: email,
+    changes: {
+      email,
+      role,
+      blocked,
+      reason: reason || null,
+      created_at: isoNow(),
+    },
+    ip_address: null,
+  }
+
+  await supabaseAdmin.from('audit_logs').insert([payload])
+}
+
 function response(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -68,6 +127,66 @@ serve(async (req) => {
 
   if (!callerAppUser || callerAppUser.role !== 'admin') {
     return response({ error: 'Only admin can invite users' }, 403)
+  }
+
+  // Anti-abuse: cap invites per admin/hour
+  const adminWindow = isoMinutesAgo(60)
+  const { count: adminRecentCount, error: adminRateError } = await getRecentAuditCount(
+    supabaseAdmin,
+    callerAppUser.organization_id,
+    callerAppUser.id,
+    adminWindow,
+  )
+
+  if (adminRateError) {
+    return response({ error: adminRateError.message }, 500)
+  }
+
+  if (adminRecentCount >= MAX_INVITES_PER_ADMIN_PER_HOUR) {
+    await writeInviteAudit(
+      supabaseAdmin,
+      callerAppUser.organization_id,
+      callerAppUser.id,
+      'rate-limit',
+      'supervisor',
+      true,
+      `max ${MAX_INVITES_PER_ADMIN_PER_HOUR} invites/hour reached`,
+    )
+
+    return response(
+      { error: `Rate limit reached. Max ${MAX_INVITES_PER_ADMIN_PER_HOUR} invitaciones por hora.` },
+      429,
+    )
+  }
+
+  // Anti-abuse: cap invite bursts per org/minute
+  const orgWindow = isoMinutesAgo(1)
+  const { count: orgRecentCount, error: orgRateError } = await getRecentAuditCount(
+    supabaseAdmin,
+    callerAppUser.organization_id,
+    null,
+    orgWindow,
+  )
+
+  if (orgRateError) {
+    return response({ error: orgRateError.message }, 500)
+  }
+
+  if (orgRecentCount >= MAX_INVITES_PER_ORG_PER_MINUTE) {
+    await writeInviteAudit(
+      supabaseAdmin,
+      callerAppUser.organization_id,
+      callerAppUser.id,
+      'burst-limit',
+      'supervisor',
+      true,
+      `max ${MAX_INVITES_PER_ORG_PER_MINUTE} invites/min reached`,
+    )
+
+    return response(
+      { error: `Rate limit reached. Max ${MAX_INVITES_PER_ORG_PER_MINUTE} invitaciones por minuto para la organización.` },
+      429,
+    )
   }
 
   const body = await req.json().catch(() => null)
@@ -161,6 +280,15 @@ serve(async (req) => {
       return response({ error: insertError.message }, 500)
     }
   }
+
+  await writeInviteAudit(
+    supabaseAdmin,
+    callerAppUser.organization_id,
+    callerAppUser.id,
+    rawEmail,
+    role,
+    false,
+  )
 
   return response({
     success: true,
