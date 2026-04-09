@@ -10,8 +10,8 @@ const corsHeaders = {
 
 type InviteRole = 'admin' | 'supervisor'
 
-const MAX_INVITES_PER_ADMIN_PER_HOUR = 20
-const MAX_INVITES_PER_ORG_PER_MINUTE = 8
+const MAX_INVITES_PER_IP_PER_MINUTE = 6
+const MAX_INVITES_PER_IP_PER_HOUR = 25
 
 const isoNow = () => new Date().toISOString()
 const isoMinutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60 * 1000).toISOString()
@@ -20,6 +20,7 @@ async function getRecentAuditCount(
   supabaseAdmin: ReturnType<typeof createClient>,
   orgId: string,
   userId: string | null,
+  ipAddress: string | null,
   sinceIso: string
 ) {
   let query = supabaseAdmin
@@ -31,6 +32,10 @@ async function getRecentAuditCount(
 
   if (userId) {
     query = query.eq('user_id', userId)
+  }
+
+  if (ipAddress) {
+    query = query.eq('ip_address', ipAddress)
   }
 
   const { count, error } = await query
@@ -45,6 +50,7 @@ async function writeInviteAudit(
   supabaseAdmin: ReturnType<typeof createClient>,
   orgId: string,
   userId: string,
+  ipAddress: string | null,
   email: string,
   role: InviteRole,
   blocked: boolean,
@@ -63,10 +69,26 @@ async function writeInviteAudit(
       reason: reason || null,
       created_at: isoNow(),
     },
-    ip_address: null,
+    ip_address: ipAddress,
   }
 
   await supabaseAdmin.from('audit_logs').insert([payload])
+}
+
+function getClientIp(req: Request): string | null {
+  const forwarded = req.headers.get('x-forwarded-for')
+  if (forwarded) {
+    const first = forwarded.split(',')[0]?.trim()
+    if (first) return first
+  }
+
+  const cfConnectingIp = req.headers.get('cf-connecting-ip')
+  if (cfConnectingIp) return cfConnectingIp.trim()
+
+  const realIp = req.headers.get('x-real-ip')
+  if (realIp) return realIp.trim()
+
+  return null
 }
 
 function response(body: unknown, status = 200) {
@@ -129,62 +151,67 @@ serve(async (req) => {
     return response({ error: 'Only admin can invite users' }, 403)
   }
 
-  // Anti-abuse: cap invites per admin/hour
-  const adminWindow = isoMinutesAgo(60)
-  const { count: adminRecentCount, error: adminRateError } = await getRecentAuditCount(
+  // Anti-abuse: cap invite bursts per IP/minute and IP/hour
+  const requestIp = getClientIp(req)
+
+  const perMinuteWindow = isoMinutesAgo(1)
+  const { count: ipPerMinuteCount, error: ipPerMinuteError } = await getRecentAuditCount(
     supabaseAdmin,
     callerAppUser.organization_id,
-    callerAppUser.id,
-    adminWindow,
+    null,
+    requestIp,
+    perMinuteWindow,
   )
 
-  if (adminRateError) {
-    return response({ error: adminRateError.message }, 500)
+  if (ipPerMinuteError) {
+    return response({ error: ipPerMinuteError.message }, 500)
   }
 
-  if (adminRecentCount >= MAX_INVITES_PER_ADMIN_PER_HOUR) {
+  if (ipPerMinuteCount >= MAX_INVITES_PER_IP_PER_MINUTE) {
     await writeInviteAudit(
       supabaseAdmin,
       callerAppUser.organization_id,
       callerAppUser.id,
+      requestIp,
       'rate-limit',
       'supervisor',
       true,
-      `max ${MAX_INVITES_PER_ADMIN_PER_HOUR} invites/hour reached`,
+      `max ${MAX_INVITES_PER_IP_PER_MINUTE} invites/min reached for IP`,
     )
 
     return response(
-      { error: `Rate limit reached. Max ${MAX_INVITES_PER_ADMIN_PER_HOUR} invitaciones por hora.` },
+      { error: `Rate limit reached for IP. Max ${MAX_INVITES_PER_IP_PER_MINUTE} invitaciones por minuto.` },
       429,
     )
   }
 
-  // Anti-abuse: cap invite bursts per org/minute
-  const orgWindow = isoMinutesAgo(1)
-  const { count: orgRecentCount, error: orgRateError } = await getRecentAuditCount(
+  const perHourWindow = isoMinutesAgo(60)
+  const { count: ipPerHourCount, error: ipPerHourError } = await getRecentAuditCount(
     supabaseAdmin,
     callerAppUser.organization_id,
     null,
-    orgWindow,
+    requestIp,
+    perHourWindow,
   )
 
-  if (orgRateError) {
-    return response({ error: orgRateError.message }, 500)
+  if (ipPerHourError) {
+    return response({ error: ipPerHourError.message }, 500)
   }
 
-  if (orgRecentCount >= MAX_INVITES_PER_ORG_PER_MINUTE) {
+  if (ipPerHourCount >= MAX_INVITES_PER_IP_PER_HOUR) {
     await writeInviteAudit(
       supabaseAdmin,
       callerAppUser.organization_id,
       callerAppUser.id,
+      requestIp,
       'burst-limit',
       'supervisor',
       true,
-      `max ${MAX_INVITES_PER_ORG_PER_MINUTE} invites/min reached`,
+      `max ${MAX_INVITES_PER_IP_PER_HOUR} invites/hour reached for IP`,
     )
 
     return response(
-      { error: `Rate limit reached. Max ${MAX_INVITES_PER_ORG_PER_MINUTE} invitaciones por minuto para la organización.` },
+      { error: `Rate limit reached for IP. Max ${MAX_INVITES_PER_IP_PER_HOUR} invitaciones por hora.` },
       429,
     )
   }
@@ -285,6 +312,7 @@ serve(async (req) => {
     supabaseAdmin,
     callerAppUser.organization_id,
     callerAppUser.id,
+    requestIp,
     rawEmail,
     role,
     false,
