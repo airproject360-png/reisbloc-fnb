@@ -93,6 +93,8 @@ export default function NotificationCenter({
       navigate('/tables') // Consolidado de órdenes/ventas por mesa
     } else if (notification.title.includes('Nueva orden')) {
       navigate('/tables') // Consolidado de órdenes/ventas por mesa
+    } else if (notification.type === 'inventory') {
+      navigate('/inventory')
     }
   }
 

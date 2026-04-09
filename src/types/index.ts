@@ -16,6 +16,7 @@ export interface User {
 export interface Device {
   id: string;
   userId: string;
+  userName?: string;
   macAddress: string;
   deviceName: string;
   network: 'wifi' | 'mobile';
@@ -27,6 +28,7 @@ export interface Device {
   lastAccess: Date;
   isApproved: boolean;
   isRejected?: boolean; // Added to align with DeviceApprovalPanel.tsx logic
+  deletedAt?: Date;
 }
 
 export interface Product {
@@ -34,11 +36,14 @@ export interface Product {
   name: string;
   price: number;
   category: string;
+  imagePath?: string;
+  imageUrl?: string;
   hasInventory: boolean;
   currentStock?: number;
   minimumStock?: number;
   active: boolean;
   createdAt: Date;
+  deletedAt?: Date;
 }
 
 export interface OrderItem {

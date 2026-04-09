@@ -6,7 +6,6 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { useAuth } from '@/hooks/useAuth'
 import { 
   Users, 
-  Package, 
   Smartphone, 
   FileText, 
   Settings,
@@ -15,16 +14,15 @@ import {
 } from 'lucide-react'
 import DeviceApprovalPanel from '@/components/admin/DeviceApprovalPanel'
 import UsersManagement from '@/components/admin/UsersManagement'
-import InventoryManagement from '@/components/admin/InventoryManagement'
 import AuditLogsPanel from '@/components/admin/AuditLogsPanel'
 import EventInvitationSettings from '@/components/admin/EventInvitationSettings'
 
-type AdminTab = 'devices' | 'users' | 'inventory' | 'logs' | 'settings'
+type AdminTab = 'devices' | 'users' | 'logs' | 'settings'
 
 export default function Admin() {
   const { currentUser } = useAppStore()
   const { logout } = useAuth()
-  const { canManageUsers, canManageInventory, canManageDevices, canViewLogs } = usePermissions()
+  const { canManageUsers, canManageDevices, canViewLogs } = usePermissions()
   const [searchParams] = useSearchParams()
   const initialTab = (searchParams.get('tab') as AdminTab) || 'devices'
   const [activeTab, setActiveTab] = useState<AdminTab>('devices')
@@ -36,7 +34,6 @@ export default function Admin() {
   const tabs = [
     { id: 'devices' as AdminTab, label: 'Dispositivos', icon: Smartphone, enabled: canManageDevices },
     { id: 'users' as AdminTab, label: 'Usuarios', icon: Users, enabled: canManageUsers },
-    { id: 'inventory' as AdminTab, label: 'Inventario', icon: Package, enabled: canManageInventory },
     { id: 'logs' as AdminTab, label: 'Logs de Auditoría', icon: FileText, enabled: canViewLogs },
     { id: 'settings' as AdminTab, label: 'Configuración', icon: Settings, enabled: true },
   ]
@@ -49,34 +46,35 @@ export default function Admin() {
     : enabledTabs[0]?.id || 'devices'
 
   return (
-    <div className="min-h-screen relative bg-gray-50">
+    <div className="page-shell bg-slate-100">
       {/* Background Doodle */}
       <div 
-        className="fixed inset-0 z-0 opacity-40 pointer-events-none bg-repeat"
+        className="fixed inset-0 z-0 opacity-25 pointer-events-none bg-repeat"
         style={{
           backgroundImage: 'url("/doodle_ceviche.png?v=2")',
-          backgroundSize: '450px',
+          backgroundSize: '420px',
         }}
       />
       {/* Gradient Overlay */}
-      <div className="fixed inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-slate-500/5 z-0 pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_30%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.1),transparent_28%),linear-gradient(180deg,rgba(248,250,252,0.9),rgba(241,245,249,1))] z-0 pointer-events-none" />
 
       <div className="relative z-10">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
-        <header className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-white shadow-xl flex justify-between items-center">
+        <header className="page-hero p-6 md:p-8 text-white bg-[linear-gradient(130deg,rgba(15,23,42,0.97),rgba(3,105,161,0.92),rgba(16,185,129,0.82))] flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="p-4 bg-white/20 rounded-xl backdrop-blur-sm">
+            <div className="p-4 bg-white/15 rounded-2xl backdrop-blur-sm border border-white/15">
               <ShieldCheck size={32} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold">Panel de Administración</h1>
-              <p className="text-indigo-100 mt-2">Gestión completa del sistema</p>
+              <p className="section-kicker bg-white/15 text-white border border-white/15">Control center</p>
+              <h1 className="text-3xl md:text-4xl font-black tracking-tight mt-2">Panel de Administración</h1>
+              <p className="text-cyan-50/90 mt-2 max-w-2xl">Gestión completa del sistema con una interfaz más limpia, rápida y consistente.</p>
             </div>
           </div>
           <button 
             onClick={logout}
-            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-sm font-bold backdrop-blur-sm border border-white/10"
+            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors text-sm font-bold backdrop-blur-sm border border-white/10 w-fit"
           >
             <LogOut size={18} />
             Cerrar Sesión
@@ -84,7 +82,7 @@ export default function Admin() {
         </header>
 
         {/* Tabs Navigation */}
-        <div className="bg-white rounded-xl shadow-lg p-2 flex gap-2 overflow-x-auto">
+        <div className="panel-surface p-2 flex gap-2 overflow-x-auto">
           {enabledTabs.map(tab => {
             const Icon = tab.icon
             return (
@@ -93,8 +91,8 @@ export default function Admin() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
                   selectedTab === tab.id
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-gradient-to-r from-slate-900 to-cyan-700 text-white shadow-lg'
+                    : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 <Icon size={20} />
@@ -108,7 +106,6 @@ export default function Admin() {
         <div className="animate-fadeIn">
           {selectedTab === 'devices' && <DeviceApprovalPanel />}
           {selectedTab === 'users' && <UsersManagement />}
-          {selectedTab === 'inventory' && <InventoryManagement />}
           {selectedTab === 'logs' && <AuditLogsPanel />}
           {selectedTab === 'settings' && <EventInvitationSettings />}
         </div>

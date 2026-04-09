@@ -159,14 +159,6 @@ export function AdminRecipes() {
     setShowModal(true);
   };
 
-  const handleDelete = (id: number) => {
-    setRecipes(recipes.filter((r) => r.id !== id));
-    setMessage({
-      type: 'success',
-      text: 'Receta eliminada',
-    });
-  };
-
   const handleToggleStatus = (id: number) => {
     setRecipes(
       recipes.map((r) =>
@@ -293,13 +285,6 @@ export function AdminRecipes() {
                           {recipe?.status === 'active'
                             ? 'Desactivar'
                             : 'Activar'}
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => handleDelete(value)}
-                        >
-                          Eliminar
                         </Button>
                       </div>
                     );

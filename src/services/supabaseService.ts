@@ -31,6 +31,11 @@ import {
 
 class SupabaseService {
   private warnedMissingOrg = false
+  private productImageCache = new Map<string, { url: string; expiresAt: number }>()
+
+  private get productImageBucket(): string {
+    return import.meta.env.VITE_SUPABASE_PRODUCT_BUCKET || 'product-images'
+  }
 
   // Reintento simple para operaciones de red propensas a fallos transitorios
   private async withRetry<T>(operation: () => Promise<T>, retries = 2, delayMs = 200): Promise<T> {
@@ -205,7 +210,10 @@ class SupabaseService {
       // Soft delete - marcar como inactivo
       const { error } = await supabase
         .from('users')
-        .update({ active: false })
+        .update({
+          active: false,
+          deleted_at: new Date().toISOString(),
+        })
         .eq('id', userId)
         .eq('organization_id', this.getCurrentOrgId()) // FIX: Requerido por RLS
 
@@ -416,7 +424,10 @@ class SupabaseService {
     try {
       const { error } = await supabase
         .from('devices')
-        .delete()
+        .update({
+          status: 'rejected',
+          deleted_at: new Date().toISOString(),
+        })
         .eq('id', deviceId)
 
       if (error) throw error
@@ -427,6 +438,75 @@ class SupabaseService {
   }
 
   // ==================== PRODUCTS ====================
+
+  async uploadProductImage(file: File, productName: string): Promise<string> {
+    const orgId = this.getCurrentOrgId()
+    if (!orgId) {
+      throw new Error('No se pudo resolver organization_id para subir imagen')
+    }
+
+    const baseName = (productName || 'producto')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 50)
+    const extension = file.type.includes('png') ? 'png' : file.type.includes('webp') ? 'webp' : 'jpg'
+    const filePath = `${orgId}/${Date.now()}-${baseName || 'producto'}.${extension}`
+
+    const { error } = await supabase.storage
+      .from(this.productImageBucket)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type || 'image/jpeg',
+      })
+
+    if (error) {
+      logger.error('supabase', 'Error uploading product image', error as any)
+      throw error
+    }
+
+    return filePath
+  }
+
+  async removeProductImage(imagePath: string): Promise<void> {
+    if (!imagePath) return
+
+    const { error } = await supabase.storage
+      .from(this.productImageBucket)
+      .remove([imagePath])
+
+    if (error) {
+      logger.warn('supabase', 'Error removing product image', error as any)
+    }
+
+    this.productImageCache.delete(imagePath)
+  }
+
+  async getProductImageUrl(imagePath?: string): Promise<string | undefined> {
+    if (!imagePath) return undefined
+
+    const cached = this.productImageCache.get(imagePath)
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.url
+    }
+
+    const { data, error } = await supabase.storage
+      .from(this.productImageBucket)
+      .createSignedUrl(imagePath, 3600)
+
+    if (error || !data?.signedUrl) {
+      logger.warn('supabase', 'Error generating product image signed url', error as any)
+      return undefined
+    }
+
+    this.productImageCache.set(imagePath, {
+      url: data.signedUrl,
+      expiresAt: Date.now() + 55 * 60 * 1000,
+    })
+
+    return data.signedUrl
+  }
 
   async getAllProducts(): Promise<Product[]> {
     return this.withRetry(async () => {
@@ -448,14 +528,22 @@ class SupabaseService {
       console.log('🔍 [Supabase] Productos error:', error)
       
       if (error) throw error
-      // Filter in memory to show active/available products
-      const products = (data || []).map((p: any) => ({
+      const rawProducts = (data || []).map((p: any) => ({
         ...p,
         active: p.available, // Map available -> active
         currentStock: p.current_stock, // Map snake_case -> camelCase
         minimumStock: p.minimum_stock,
-        hasInventory: p.has_inventory
+        hasInventory: p.has_inventory,
+        imagePath: p.image_path,
+        deletedAt: p.deleted_at,
       })) as Product[]
+
+      const products = await Promise.all(
+        rawProducts.map(async product => ({
+          ...product,
+          imageUrl: await this.getProductImageUrl(product.imagePath),
+        }))
+      )
       
       console.log('🔍 [Supabase] Total productos:', products.length)
       return products
@@ -507,6 +595,15 @@ class SupabaseService {
         payload.minimum_stock = product.minimumStock
         delete payload.minimumStock
       }
+      if ('imagePath' in product) {
+        payload.image_path = product.imagePath
+        delete payload.imagePath
+      }
+      if ('imageUrl' in payload) delete payload.imageUrl
+      if ('deletedAt' in product) {
+        payload.deleted_at = product.deletedAt
+        delete payload.deletedAt
+      }
       // Remove timestamp fields (Supabase handles with triggers)
       if ('createdAt' in payload) delete payload.createdAt
       if ('updatedAt' in payload) delete payload.updatedAt
@@ -548,6 +645,15 @@ class SupabaseService {
         payload.minimum_stock = updates.minimumStock
         delete payload.minimumStock
       }
+      if ('imagePath' in updates) {
+        payload.image_path = updates.imagePath
+        delete payload.imagePath
+      }
+      if ('deletedAt' in updates) {
+        payload.deleted_at = updates.deletedAt
+        delete payload.deletedAt
+      }
+      if ('imageUrl' in payload) delete payload.imageUrl
       // Remove timestamp fields (Supabase handles with triggers)
       if ('createdAt' in payload) delete payload.createdAt
       if ('updatedAt' in payload) delete payload.updatedAt
@@ -582,7 +688,10 @@ class SupabaseService {
       // Soft delete - marcar como no disponible
       const { error } = await supabase
         .from('products')
-        .update({ available: false })
+        .update({
+          available: false,
+          deleted_at: new Date().toISOString(),
+        })
         .eq('id', productId)
 
       if (error) throw error
@@ -788,7 +897,10 @@ class SupabaseService {
     try {
       const { error } = await supabase
         .from('orders')
-        .delete()
+        .update({
+          status: 'cancelled',
+          cancelled_at: new Date().toISOString(),
+        })
         .eq('id', orderId)
 
       if (error) throw error

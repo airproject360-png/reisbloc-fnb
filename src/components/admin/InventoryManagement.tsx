@@ -3,16 +3,17 @@ import { useAppStore } from '@/store/appStore'
 import { usePermissions } from '@/hooks/usePermissions'
 import supabaseService from '@/services/supabaseService'
 import { Product } from '@/types/index'
-import { 
-  Plus, 
-  Edit2, 
-  Trash2, 
+import {
+  Plus,
+  Edit2,
   Package,
   AlertTriangle,
   CheckCircle,
   TrendingUp,
   TrendingDown,
-  Eye
+  Eye,
+  ImagePlus,
+  Archive,
 } from 'lucide-react'
 
 export default function InventoryManagement() {
@@ -24,7 +25,7 @@ export default function InventoryManagement() {
   const [filter, setFilter] = useState<'all' | 'active' | 'low-stock'>('all')
 
   useEffect(() => {
-    loadProducts()
+    void loadProducts()
   }, [])
 
   const loadProducts = async () => {
@@ -50,35 +51,12 @@ export default function InventoryManagement() {
         entityType: 'PRODUCT',
         entityId: product.id,
         oldValue: { active: product.active },
-        newValue: { active: !product.active }
+        newValue: { active: !product.active },
       })
       await loadProducts()
     } catch (error) {
       console.error('Error toggling product:', error)
       alert('Error al actualizar producto')
-    }
-  }
-
-  const handleDeleteProduct = async (product: Product) => {
-    if (isReadOnly) return
-
-    if (!confirm(`¿Eliminar "${product.name}"? Esta acción no se puede deshacer.`)) {
-      return
-    }
-
-    try {
-      await supabaseService.deleteProduct(product.id)
-      await supabaseService.createAuditLog({
-        userId: currentUser?.id || 'unknown',
-        action: 'PRODUCT_DELETED',
-        entityType: 'PRODUCT',
-        entityId: product.id,
-        oldValue: { name: product.name }
-      })
-      await loadProducts()
-    } catch (error) {
-      console.error('Error deleting product:', error)
-      alert('Error al eliminar producto')
     }
   }
 
@@ -99,7 +77,7 @@ export default function InventoryManagement() {
         entityType: 'PRODUCT',
         entityId: product.id,
         oldValue: { stock: product.currentStock },
-        newValue: { stock: newStock, adjustment }
+        newValue: { stock: newStock, adjustment },
       })
       await loadProducts()
     } catch (error) {
@@ -124,81 +102,54 @@ export default function InventoryManagement() {
   }
 
   const categoryColors: Record<string, string> = {
-    'Comida': 'from-orange-500 to-red-600',
-    'Bebidas': 'from-blue-500 to-cyan-600',
-    'Postres': 'from-pink-500 to-purple-600',
-    'Otros': 'from-gray-500 to-gray-700',
+    Comida: 'from-amber-500 to-orange-600',
+    Bebidas: 'from-cyan-500 to-blue-600',
+    Postres: 'from-fuchsia-500 to-pink-600',
+    Otros: 'from-slate-500 to-zinc-700',
   }
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Productos"
-          value={stats.total}
-          icon={Package}
-          color="from-blue-500 to-cyan-600"
-        />
-        <StatCard
-          title="Activos"
-          value={stats.active}
-          icon={CheckCircle}
-          color="from-green-500 to-emerald-600"
-        />
-        <StatCard
-          title="Con Inventario"
-          value={stats.withInventory}
-          icon={TrendingUp}
-          color="from-purple-500 to-indigo-600"
-        />
-        <StatCard
-          title="Stock Bajo"
-          value={stats.lowStock}
-          icon={AlertTriangle}
-          color="from-red-500 to-rose-600"
-        />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard title="Total Productos" value={stats.total} icon={Package} color="from-slate-800 to-cyan-700" />
+        <StatCard title="Activos" value={stats.active} icon={CheckCircle} color="from-emerald-600 to-lime-600" />
+        <StatCard title="Con Inventario" value={stats.withInventory} icon={TrendingUp} color="from-sky-600 to-indigo-600" />
+        <StatCard title="Stock Bajo" value={stats.lowStock} icon={AlertTriangle} color="from-rose-600 to-orange-600" />
       </div>
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gestión de Inventario</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-2xl font-black text-slate-900">Gestion de Inventario</h2>
+          <p className="text-slate-600 mt-1">
             {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''}
           </p>
         </div>
 
         {canManageInventory && !isReadOnly && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn-primary flex items-center gap-2"
-          >
+          <button onClick={() => setShowCreateModal(true)} className="btn-primary flex items-center gap-2">
             <Plus size={20} />
             Nuevo Producto
           </button>
         )}
       </div>
 
-      {/* Read-only warning */}
       {isReadOnly && (
         <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 flex items-center gap-3">
           <Eye className="text-blue-600" size={24} />
           <div>
             <p className="font-bold text-blue-900">Modo Solo Lectura</p>
-            <p className="text-sm text-blue-700">No puedes modificar el inventario</p>
+            <p className="text-sm text-blue-700">Puedes revisar inventario, pero no modificarlo.</p>
           </div>
         </div>
       )}
 
-      {/* Filters */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('all')}
           className={`px-4 py-2 rounded-lg font-semibold transition-all ${
             filter === 'all'
-              ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-gradient-to-r from-slate-800 to-cyan-700 text-white shadow-lg'
+              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
           }`}
         >
           Todos
@@ -207,8 +158,8 @@ export default function InventoryManagement() {
           onClick={() => setFilter('active')}
           className={`px-4 py-2 rounded-lg font-semibold transition-all ${
             filter === 'active'
-              ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-gradient-to-r from-emerald-600 to-lime-600 text-white shadow-lg'
+              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
           }`}
         >
           Activos
@@ -217,89 +168,84 @@ export default function InventoryManagement() {
           onClick={() => setFilter('low-stock')}
           className={`px-4 py-2 rounded-lg font-semibold transition-all ${
             filter === 'low-stock'
-              ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-gradient-to-r from-rose-600 to-orange-600 text-white shadow-lg'
+              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
           }`}
         >
           Stock Bajo
         </button>
       </div>
 
-      {/* Products Grid */}
       {loading ? (
         <div className="text-center py-12">
           <div className="spinner mx-auto mb-4" />
-          <p className="text-gray-600">Cargando productos...</p>
+          <p className="text-slate-600">Cargando productos...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filteredProducts.map(product => {
             const isLowStock = product.hasInventory && (product.currentStock || 0) <= (product.minimumStock || 0)
-            
+
             return (
-              <div
-                key={product.id}
-                className="card-gradient hover-lift"
-              >
-                {/* Header */}
-                <div className={`bg-gradient-to-r ${categoryColors[product.category] || categoryColors['Otros']} rounded-xl p-4 -m-6 mb-4`}>
-                  <div className="flex items-center justify-between text-white">
+              <div key={product.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-lg hover:-translate-y-1 hover:shadow-xl transition-all">
+                <div className="relative h-44 overflow-hidden">
+                  {product.imageUrl ? (
+                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className={`h-full w-full bg-gradient-to-br ${categoryColors[product.category] || categoryColors.Otros} flex items-center justify-center`}>
+                      <span className="text-5xl font-black text-white/90">{product.name.charAt(0).toUpperCase()}</span>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                  <div className="absolute left-4 right-4 bottom-3 text-white flex items-end justify-between gap-3">
                     <div>
-                      <h3 className="font-bold text-lg">{product.name}</h3>
-                      <p className="text-xs opacity-90">{product.category}</p>
+                      <p className="text-xs uppercase tracking-wide text-white/70">{product.category}</p>
+                      <h3 className="font-black text-lg leading-tight">{product.name}</h3>
                     </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold">${product.price}</div>
-                    </div>
+                    <p className="text-2xl font-black">${product.price}</p>
                   </div>
                 </div>
 
-                {/* Body */}
-                <div className="space-y-3">
-                  {/* Status */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Estado:</span>
-                    <span className={`badge ${product.active ? 'badge-success' : 'bg-gray-300 text-gray-700'}`}>
-                      {product.active ? 'Activo' : 'Inactivo'}
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">Estado</span>
+                    <span className={`badge ${product.active ? 'badge-success' : 'bg-slate-200 text-slate-700'}`}>
+                      {product.active ? 'Activo' : 'Archivado'}
                     </span>
                   </div>
 
-                  {/* Inventory */}
                   {product.hasInventory ? (
                     <>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Stock actual:</span>
-                        <span className={`font-bold text-lg ${isLowStock ? 'text-red-600' : 'text-green-600'}`}>
+                        <span className="text-sm text-slate-500">Stock actual</span>
+                        <span className={`font-black text-lg ${isLowStock ? 'text-rose-600' : 'text-emerald-600'}`}>
                           {product.currentStock || 0}
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Stock mínimo:</span>
-                        <span className="font-semibold text-gray-900">
-                          {product.minimumStock || 0}
-                        </span>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500">Stock minimo</span>
+                        <span className="font-semibold text-slate-900">{product.minimumStock || 0}</span>
                       </div>
 
                       {isLowStock && (
-                        <div className="bg-red-50 border border-red-200 rounded-lg p-2 flex items-center gap-2">
-                          <AlertTriangle size={16} className="text-red-600" />
-                          <span className="text-xs font-bold text-red-700">Stock bajo</span>
+                        <div className="bg-rose-50 border border-rose-200 rounded-lg p-2 flex items-center gap-2">
+                          <AlertTriangle size={16} className="text-rose-600" />
+                          <span className="text-xs font-bold text-rose-700">Stock bajo</span>
                         </div>
                       )}
 
-                      {/* Stock adjustment controls */}
                       {canManageInventory && !isReadOnly && (
-                        <div className="flex gap-2 pt-3 border-t border-gray-200">
+                        <div className="flex gap-2 pt-3 border-t border-slate-200">
                           <button
                             onClick={() => handleAdjustStock(product, -1)}
-                            className="flex-1 p-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-bold transition-all"
+                            className="flex-1 p-2 bg-rose-100 text-rose-700 hover:bg-rose-200 rounded-lg font-bold transition-all"
                           >
                             <TrendingDown size={20} className="mx-auto" />
                           </button>
                           <button
                             onClick={() => handleAdjustStock(product, 1)}
-                            className="flex-1 p-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg font-bold transition-all"
+                            className="flex-1 p-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg font-bold transition-all"
                           >
                             <TrendingUp size={20} className="mx-auto" />
                           </button>
@@ -307,37 +253,31 @@ export default function InventoryManagement() {
                       )}
                     </>
                   ) : (
-                    <div className="text-sm text-gray-500 italic text-center py-2">
-                      Sin control de inventario
-                    </div>
+                    <div className="text-sm text-slate-500 italic text-center py-2">Sin control de inventario</div>
                   )}
 
-                  {/* Actions */}
                   {canManageInventory && !isReadOnly && (
-                    <div className="flex gap-2 pt-3 border-t border-gray-200">
+                    <div className="flex gap-2 pt-3 border-t border-slate-200">
                       <button
                         onClick={() => handleToggleActive(product)}
                         className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all ${
                           product.active
                             ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                            : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
                         }`}
                       >
-                        {product.active ? 'Desactivar' : 'Activar'}
+                        <span className="inline-flex items-center gap-2">
+                          <Archive size={16} />
+                          {product.active ? 'Archivar' : 'Reactivar'}
+                        </span>
                       </button>
 
                       <button
                         onClick={() => setEditingProduct(product)}
-                        className="p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-all"
+                        className="p-2 bg-sky-100 text-sky-700 hover:bg-sky-200 rounded-lg transition-all"
+                        title="Editar"
                       >
                         <Edit2 size={18} />
-                      </button>
-
-                      <button
-                        onClick={() => handleDeleteProduct(product)}
-                        className="p-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition-all"
-                      >
-                        <Trash2 size={18} />
                       </button>
                     </div>
                   )}
@@ -348,99 +288,118 @@ export default function InventoryManagement() {
         </div>
       )}
 
-      {/* Modals */}
-      {showCreateModal && (
-        <ProductModal
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={loadProducts}
-        />
-      )}
+      {showCreateModal && <ProductModal onClose={() => setShowCreateModal(false)} onSuccess={loadProducts} />}
 
       {editingProduct && (
-        <ProductModal
-          product={editingProduct}
-          onClose={() => setEditingProduct(null)}
-          onSuccess={loadProducts}
-        />
+        <ProductModal product={editingProduct} onClose={() => setEditingProduct(null)} onSuccess={loadProducts} />
       )}
     </div>
   )
 }
 
-// Stat Card Component
-function StatCard({ 
-  title, 
-  value, 
-  icon: Icon, 
-  color 
-}: { 
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  color,
+}: {
   title: string
   value: number
   icon: any
   color: string
 }) {
   return (
-    <div className="card-gradient">
+    <div className="rounded-2xl border border-slate-200 bg-white/85 backdrop-blur-md p-4 shadow-md">
       <div className={`p-3 bg-gradient-to-br ${color} rounded-xl text-white w-fit mb-3`}>
-        <Icon size={24} />
+        <Icon size={22} />
       </div>
-      <p className="text-sm text-gray-600 font-semibold">{title}</p>
-      <p className="text-3xl font-bold text-gray-900 mt-1">{value}</p>
+      <p className="text-xs md:text-sm text-slate-600 font-semibold uppercase tracking-wide">{title}</p>
+      <p className="text-2xl md:text-3xl font-black text-slate-900 mt-1">{value}</p>
     </div>
   )
 }
 
-// Product Modal (Create/Edit)
-function ProductModal({ 
-  product, 
-  onClose, 
-  onSuccess 
-}: { 
+function ProductModal({
+  product,
+  onClose,
+  onSuccess,
+}: {
   product?: Product
   onClose: () => void
-  onSuccess: () => void 
+  onSuccess: () => void
 }) {
   const { currentUser } = useAppStore()
   const [formData, setFormData] = useState({
     name: product?.name || '',
     price: product?.price || 0,
     category: product?.category || 'Comida',
+    imagePath: product?.imagePath || '',
     hasInventory: product?.hasInventory || false,
     currentStock: product?.currentStock || 0,
     minimumStock: product?.minimumStock || 10,
     active: product?.active ?? true,
   })
+  const [imagePreview, setImagePreview] = useState<string | undefined>(product?.imageUrl)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const handleImageChange = (file?: File) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      alert('Solo puedes subir imagenes')
+      return
+    }
+
+    setSelectedImage(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     setLoading(true)
     try {
+      let uploadedImagePath = formData.imagePath
+
+      if (selectedImage) {
+        const optimizedImage = await optimizeImage(selectedImage)
+        uploadedImagePath = await supabaseService.uploadProductImage(optimizedImage, formData.name)
+      }
+
+      const payload = {
+        ...formData,
+        imagePath: uploadedImagePath || undefined,
+      }
+
       if (product) {
-        await supabaseService.updateProduct(product.id, formData)
+        await supabaseService.updateProduct(product.id, payload)
+
+        if (product.imagePath && uploadedImagePath && product.imagePath !== uploadedImagePath) {
+          void supabaseService.removeProductImage(product.imagePath)
+        }
+
         await supabaseService.createAuditLog({
           userId: currentUser?.id || 'unknown',
           action: 'PRODUCT_UPDATED',
           entityType: 'PRODUCT',
           entityId: product.id,
-          newValue: formData
+          newValue: payload,
         })
       } else {
         const newId = await supabaseService.createProduct({
-          ...formData,
+          ...payload,
           createdAt: new Date(),
         })
-        
+
         await supabaseService.createAuditLog({
           userId: currentUser?.id || 'unknown',
           action: 'PRODUCT_CREATED',
           entityType: 'PRODUCT',
           entityId: newId,
-          newValue: formData
+          newValue: payload,
         })
       }
-      
+
       onSuccess()
       onClose()
     } catch (error) {
@@ -453,47 +412,39 @@ function ProductModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-scaleIn max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-4">
-          {product ? 'Editar Producto' : 'Crear Producto'}
-        </h2>
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-scaleIn max-h-[90vh] overflow-y-auto">
+        <h2 className="text-2xl font-black mb-4">{product ? 'Editar Producto' : 'Crear Producto'}</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Nombre
-            </label>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Nombre</label>
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
               className="input-field"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Precio
-            </label>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Precio</label>
             <input
               type="number"
               value={formData.price || ''}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+              onChange={e => setFormData({ ...formData, price: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
               className="input-field"
               step="0.01"
               min="0"
-                            required
+              required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Categoría
-            </label>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Categoria</label>
             <select
               value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              onChange={e => setFormData({ ...formData, category: e.target.value })}
               className="input-field"
             >
               <option value="Comida">Comida</option>
@@ -503,15 +454,30 @@ function ProductModal({
             </select>
           </div>
 
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Imagen del producto</label>
+            <div className="rounded-xl border-2 border-dashed border-slate-300 p-4 bg-slate-50">
+              <label className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors font-semibold text-slate-700">
+                <ImagePlus size={18} />
+                Seleccionar imagen
+                <input type="file" accept="image/*" className="hidden" onChange={e => handleImageChange(e.target.files?.[0])} />
+              </label>
+              <p className="text-xs text-slate-500 mt-2 text-center">Se optimiza automaticamente para reducir consumo en Supabase.</p>
+              {imagePreview && (
+                <img src={imagePreview} alt="Preview" className="mt-3 rounded-lg w-full h-40 object-cover border border-slate-200" />
+              )}
+            </div>
+          </div>
+
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
               id="hasInventory"
               checked={formData.hasInventory}
-              onChange={(e) => setFormData({ ...formData, hasInventory: e.target.checked })}
+              onChange={e => setFormData({ ...formData, hasInventory: e.target.checked })}
               className="w-5 h-5"
             />
-            <label htmlFor="hasInventory" className="text-sm font-bold text-gray-700">
+            <label htmlFor="hasInventory" className="text-sm font-bold text-slate-700">
               Controlar inventario
             </label>
           </div>
@@ -519,26 +485,33 @@ function ProductModal({
           {formData.hasInventory && (
             <>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Stock actual
-                </label>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Stock actual</label>
                 <input
                   type="number"
                   value={formData.currentStock || ''}
-                  onChange={(e) => setFormData({ ...formData, currentStock: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      currentStock: e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0,
+                    })
+                  }
                   className="input-field"
                   min="0"
-                  required                              />
+                  required
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Stock mínimo
-                </label>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Stock minimo</label>
                 <input
                   type="number"
                   value={formData.minimumStock || ''}
-                  onChange={(e) => setFormData({ ...formData, minimumStock: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      minimumStock: e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0,
+                    })
+                  }
                   className="input-field"
                   min="0"
                   required
@@ -552,28 +525,19 @@ function ProductModal({
               type="checkbox"
               id="active"
               checked={formData.active}
-              onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+              onChange={e => setFormData({ ...formData, active: e.target.checked })}
               className="w-5 h-5"
             />
-            <label htmlFor="active" className="text-sm font-bold text-gray-700">
+            <label htmlFor="active" className="text-sm font-bold text-slate-700">
               Producto activo
             </label>
           </div>
 
           <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 btn-secondary"
-              disabled={loading}
-            >
+            <button type="button" onClick={onClose} className="flex-1 btn-secondary" disabled={loading}>
               Cancelar
             </button>
-            <button
-              type="submit"
-              className="flex-1 btn-success"
-              disabled={loading}
-            >
+            <button type="submit" className="flex-1 btn-success" disabled={loading}>
               {loading ? 'Guardando...' : product ? 'Guardar' : 'Crear'}
             </button>
           </div>
@@ -581,4 +545,29 @@ function ProductModal({
       </div>
     </div>
   )
+}
+
+async function optimizeImage(file: File): Promise<File> {
+  const imageBitmap = await createImageBitmap(file)
+  const maxWidth = 1280
+  const maxHeight = 1280
+  const scale = Math.min(maxWidth / imageBitmap.width, maxHeight / imageBitmap.height, 1)
+  const width = Math.round(imageBitmap.width * scale)
+  const height = Math.round(imageBitmap.height * scale)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+
+  const context = canvas.getContext('2d')
+  if (!context) return file
+
+  context.drawImage(imageBitmap, 0, 0, width, height)
+
+  const blob = await new Promise<Blob | null>(resolve => {
+    canvas.toBlob(resolve, 'image/webp', 0.8)
+  })
+
+  if (!blob) return file
+  return new File([blob], `${file.name.split('.')[0] || 'product'}.webp`, { type: 'image/webp' })
 }

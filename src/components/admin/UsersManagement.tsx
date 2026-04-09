@@ -7,12 +7,13 @@ import bcrypt from 'bcryptjs'
 import { 
   Plus, 
   Edit2, 
-  Trash2, 
   CheckCircle, 
   XCircle, 
   Shield,
   Eye,
-  Lock
+  Lock,
+  UserCog,
+  BadgeCheck,
 } from 'lucide-react'
 
 const MAX_EVENT_ADMINS = 2
@@ -57,26 +58,6 @@ export default function UsersManagement() {
     }
   }
 
-  const handleDeleteUser = async (user: User) => {
-    if (isReadOnly) return
-    if (user.id === currentUser?.id) {
-      alert('No puedes eliminar tu propio usuario')
-      return
-    }
-
-    if (!confirm(`¿Eliminar usuario "${user.username}"? Esta acción no se puede deshacer.`)) {
-      return
-    }
-
-    try {
-      await supabaseService.deleteUser(user.id)
-      await loadUsers()
-    } catch (error) {
-      console.error('Error deleting user:', error)
-      alert('Error al eliminar usuario')
-    }
-  }
-
   const roleColors = {
     admin: 'from-purple-500 to-indigo-600',
     capitan: 'from-blue-500 to-cyan-600',
@@ -98,10 +79,11 @@ export default function UsersManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gestión de Usuarios</h2>
-          <p className="text-gray-600 mt-1">
+          <p className="section-kicker bg-slate-900 text-white w-fit">People ops</p>
+          <h2 className="section-title mt-2">Gestión de Usuarios</h2>
+          <p className="text-slate-600 mt-2 max-w-2xl">
             {users.length} usuario{users.length !== 1 ? 's' : ''} registrado{users.length !== 1 ? 's' : ''}
           </p>
         </div>
@@ -123,7 +105,7 @@ export default function UsersManagement() {
           <Eye className="text-blue-600" size={24} />
           <div>
             <p className="font-bold text-blue-900">Modo Solo Lectura</p>
-            <p className="text-sm text-blue-700">No puedes crear, editar o eliminar usuarios</p>
+            <p className="text-sm text-blue-700">No puedes crear, editar o desactivar usuarios</p>
           </div>
         </div>
       )}
@@ -139,18 +121,18 @@ export default function UsersManagement() {
           {users.map(user => (
             <div
               key={user.id}
-              className="card-gradient hover-lift"
+              className="panel-surface hover-lift overflow-hidden"
             >
               {/* Header con rol */}
-              <div className={`bg-gradient-to-r ${roleColors[user.role]} rounded-xl p-4 -m-6 mb-4`}>
+              <div className={`bg-gradient-to-r ${roleColors[user.role]} p-4 text-white`}>
                 <div className="flex items-center justify-between text-white">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                      <Shield size={24} />
+                    <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center border border-white/15">
+                      <UserCog size={24} />
                     </div>
                     <div>
                       <h3 className="font-bold text-lg">{user.username}</h3>
-                      <p className="text-xs opacity-90">{roleLabels[user.role]}</p>
+                      <p className="text-xs opacity-90 inline-flex items-center gap-1"><BadgeCheck size={12} /> {roleLabels[user.role]}</p>
                     </div>
                   </div>
 
@@ -164,30 +146,30 @@ export default function UsersManagement() {
               </div>
 
               {/* Body */}
-              <div className="space-y-3">
+              <div className="space-y-3 p-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Estado:</span>
-                  <span className={`font-bold ${user.active ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className="text-slate-500">Estado</span>
+                  <span className={`font-bold ${user.active ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {user.active ? 'Activo' : 'Inactivo'}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Dispositivos:</span>
-                  <span className="font-bold text-gray-900">
+                  <span className="text-slate-500">Dispositivos</span>
+                  <span className="font-bold text-slate-900">
                     {user.devices?.length || 0}
                   </span>
                 </div>
 
                 {/* Actions */}
                 {canManageUsers && !isReadOnly && user.id !== currentUser?.id && (
-                  <div className="flex gap-2 pt-3 border-t border-gray-200">
+                  <div className="flex gap-2 pt-3 border-t border-slate-200">
                     <button
                       onClick={() => handleToggleActive(user)}
                       className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all ${
                         user.active
                           ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                          : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
                       }`}
                     >
                       {user.active ? 'Desactivar' : 'Activar'}
@@ -199,19 +181,12 @@ export default function UsersManagement() {
                     >
                       <Edit2 size={18} />
                     </button>
-
-                    <button
-                      onClick={() => handleDeleteUser(user)}
-                      className="p-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition-all"
-                    >
-                      <Trash2 size={18} />
-                    </button>
                   </div>
                 )}
 
                 {user.id === currentUser?.id && (
-                  <div className="pt-3 border-t border-gray-200">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="pt-3 border-t border-slate-200">
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
                       <Lock size={16} />
                       <span>Este es tu usuario actual</span>
                     </div>

@@ -7,6 +7,7 @@ interface ImportMetaEnv {
   readonly VITE_APP_ENV: string
   readonly VITE_APP_URL: string
   readonly VITE_LOG_LEVEL: string
+  readonly VITE_SUPABASE_PRODUCT_BUCKET?: string
 }
 
 interface ImportMeta {
