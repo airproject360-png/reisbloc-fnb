@@ -25,6 +25,10 @@ const categoryColors: Record<string, string> = {
 export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGridProps) {
   const [filter, setFilter] = useState<'all' | 'food' | 'drinks'>('all')
   const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({})
+
+  const getCategoryIcon = (category: string) => {
+    return category === 'Bebidas' ? Wine : Utensils
+  }
   const isOutOfStock = (product: Product): boolean => {
     return product.hasInventory && (product.currentStock ?? 0) <= 0
   }
@@ -96,41 +100,52 @@ export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGrid
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-          {filteredProducts.map(product => (
+          {filteredProducts.map(product => {
+            const CategoryIcon = getCategoryIcon(product.category)
+            const outOfStock = isOutOfStock(product)
+            const lowStock = isLowStock(product)
+
+            return (
             <button
               key={product.id}
               onClick={() => !disableAdd && onAdd(product)}
               disabled={disableAdd}
               className={`group relative text-left rounded-2xl border-2 p-5 shadow-md transition-all transform hover:scale-105 ${
-                isOutOfStock(product) || disableAdd
+                outOfStock || disableAdd
                   ? 'border-red-300 bg-red-50/50 opacity-60 cursor-not-allowed'
-                  : 'border-transparent bg-gradient-to-br from-white to-gray-50 hover:shadow-xl hover:-translate-y-1'
+                  : 'border-transparent bg-gradient-to-br from-white to-slate-50 hover:shadow-xl hover:-translate-y-1'
               }`}
             >
               {/* Product Image */}
-              <div className="relative mb-4 h-36 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+              <div className="relative mb-4 h-40 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-inner">
                 {product.imageUrl && !brokenImages[product.id] ? (
                   <img
                     src={product.imageUrl}
                     alt={product.name}
                     loading="lazy"
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                     onError={() => {
                       setBrokenImages(prev => ({ ...prev, [product.id]: true }))
                     }}
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 text-slate-500">
-                    <Package size={34} />
+                    <CategoryIcon size={34} />
                   </div>
                 )}
 
-                <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/45 to-transparent" />
-              </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
-              {/* Category Badge */}
-              <div className={`absolute top-3 right-3 bg-gradient-to-r ${getCategoryGradient(product.category)} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg`}>
-                {product.category}
+                <div className={`absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-gradient-to-r ${getCategoryGradient(product.category)} px-3 py-1 text-xs font-bold text-white shadow-lg`}>
+                  <CategoryIcon size={12} />
+                  {product.category}
+                </div>
+
+                {!outOfStock && !disableAdd && (
+                  <div className="absolute bottom-3 right-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-slate-900 shadow-lg opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                    + Agregar
+                  </div>
+                )}
               </div>
 
               <div className="mt-2">
@@ -143,12 +158,12 @@ export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGrid
               {/* Stock Status */}
               {product.hasInventory && (
                 <div className="mt-4">
-                  {isOutOfStock(product) ? (
+                  {outOfStock ? (
                     <div className="flex items-center gap-2 bg-red-100 border border-red-300 rounded-xl px-3 py-2">
                       <AlertTriangle className="text-red-600" size={18} />
                       <span className="text-sm font-bold text-red-700">Agotado</span>
                     </div>
-                  ) : isLowStock(product) ? (
+                  ) : lowStock ? (
                     <div className="flex items-center gap-2 bg-amber-100 border border-amber-300 rounded-xl px-3 py-2">
                       <AlertTriangle className="text-amber-600" size={18} />
                       <span className="text-sm font-bold text-amber-700">
@@ -167,11 +182,11 @@ export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGrid
               )}
 
               {/* Hover Effect */}
-              {!isOutOfStock(product) && (
+              {!outOfStock && (
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/10 group-hover:to-purple-500/10 transition-all pointer-events-none" />
               )}
             </button>
-          ))}
+          )})}
         </div>
       )}
     </div>
