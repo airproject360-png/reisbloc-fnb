@@ -47,12 +47,12 @@ const humanizeDuration = (date: Date) => {
 // Helper para colores de mesas
 const getTableColorStyles = (tableNum: number) => {
   const styles = [
-    { bg: 'bg-blue-50', border: 'border-blue-200', header: 'from-blue-50 to-blue-100', text: 'text-blue-900', icon: 'text-blue-600' },
-    { bg: 'bg-emerald-50', border: 'border-emerald-200', header: 'from-emerald-50 to-emerald-100', text: 'text-emerald-900', icon: 'text-emerald-600' },
-    { bg: 'bg-purple-50', border: 'border-purple-200', header: 'from-purple-50 to-purple-100', text: 'text-purple-900', icon: 'text-purple-600' },
-    { bg: 'bg-amber-50', border: 'border-amber-200', header: 'from-amber-50 to-amber-100', text: 'text-amber-900', icon: 'text-amber-600' },
-    { bg: 'bg-rose-50', border: 'border-rose-200', header: 'from-rose-50 to-rose-100', text: 'text-rose-900', icon: 'text-rose-600' },
-    { bg: 'bg-cyan-50', border: 'border-cyan-200', header: 'from-cyan-50 to-cyan-100', text: 'text-cyan-900', icon: 'text-cyan-600' },
+    { bg: 'bg-slate-50', border: 'border-slate-200', header: 'from-slate-50 to-slate-100', text: 'text-slate-900', icon: 'text-slate-600' },
+    { bg: 'bg-emerald-50', border: 'border-emerald-200', header: 'from-emerald-50 to-teal-50', text: 'text-emerald-900', icon: 'text-emerald-600' },
+    { bg: 'bg-teal-50', border: 'border-teal-200', header: 'from-teal-50 to-cyan-50', text: 'text-teal-900', icon: 'text-teal-600' },
+    { bg: 'bg-amber-50', border: 'border-amber-200', header: 'from-amber-50 to-stone-100', text: 'text-amber-900', icon: 'text-amber-600' },
+    { bg: 'bg-stone-50', border: 'border-stone-200', header: 'from-stone-50 to-slate-100', text: 'text-stone-900', icon: 'text-stone-600' },
+    { bg: 'bg-cyan-50', border: 'border-cyan-200', header: 'from-cyan-50 to-slate-100', text: 'text-cyan-900', icon: 'text-cyan-600' },
   ]
   return styles[(tableNum - 1) % styles.length] || styles[0]
 }
@@ -535,21 +535,21 @@ export default function TableMonitor() {
   const activeOrders = orders.length
 
   return (
-    <div className="min-h-screen relative bg-gray-50">
+    <div className="page-shell bg-[color:var(--bg-canvas)]">
       {/* Background Doodle */}
       <div 
-        className="fixed inset-0 z-0 opacity-40 pointer-events-none bg-repeat"
+        className="fixed inset-0 z-0 opacity-25 pointer-events-none bg-repeat"
         style={{
           backgroundImage: 'url("/doodle_ceviche.png?v=2")',
           backgroundSize: '450px',
         }}
       />
       {/* Gradient Overlay */}
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-200/50 via-blue-100/20 to-slate-200/50 z-0 pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(24,33,46,0.06),transparent_28%),radial-gradient(circle_at_top_right,rgba(15,118,110,0.08),transparent_26%),linear-gradient(180deg,rgba(247,246,242,1),rgba(242,239,232,1))] z-0 pointer-events-none" />
       <div className="relative z-10">
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
         {/* Header */}
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+        <div className="page-hero overflow-hidden">
           <div className="px-6 py-6 sm:px-8 flex flex-col gap-6">
             <div className="flex items-center gap-4">
               <div className="p-4 bg-slate-900 text-white rounded-2xl shadow-lg">
@@ -560,8 +560,8 @@ export default function TableMonitor() {
                 <p className="text-slate-500 font-medium">Vista en tiempo real de la operación</p>
               </div>
               <div className="ml-auto">
-                 <div className="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-bold flex items-center gap-2">
-                    <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
+                  <div className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-sm font-bold flex items-center gap-2">
+                    <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span></span>
                     En Vivo
                  </div>
               </div>
@@ -573,7 +573,7 @@ export default function TableMonitor() {
               </div>
               <div className="bg-slate-50 rounded-xl px-5 py-4 border border-slate-100">
                 <p className="text-slate-500 font-semibold uppercase text-xs tracking-wider">Órdenes abiertas</p>
-                <p className="text-3xl font-black text-blue-600">{activeOrders}</p>
+                <p className="text-3xl font-black text-teal-700">{activeOrders}</p>
               </div>
               <div className="bg-slate-50 rounded-xl px-5 py-4 border border-slate-100">
                 <p className="text-slate-500 font-semibold uppercase text-xs tracking-wider">Capacidad</p>
@@ -592,7 +592,7 @@ export default function TableMonitor() {
 
         {/* Tables */}
         {groupedByTable.length === 0 ? (
-          <div className="bg-white border border-gray-100 rounded-2xl p-8 text-center text-gray-600 shadow-sm">
+          <div className="surface-warm rounded-2xl p-8 text-center text-slate-600 shadow-sm">
             No hay mesas activas ahora.
           </div>
         ) : (
