@@ -75,6 +75,54 @@ async function writeInviteAudit(
   await supabaseAdmin.from('audit_logs').insert([payload])
 }
 
+async function upsertAppUser(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  orgId: string,
+  email: string,
+  role: InviteRole,
+) {
+  const baseUserPayload = {
+    organization_id: orgId,
+    name: email.split('@')[0],
+    username: email.split('@')[0],
+    email,
+    role,
+    active: true,
+    auth_provider: 'google',
+  }
+
+  const { data: existingUser, error: existingUserError } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .eq('organization_id', orgId)
+    .eq('email', email)
+    .maybeSingle()
+
+  if (existingUserError) throw existingUserError
+
+  if (existingUser?.id) {
+    const { error: updateError } = await supabaseAdmin
+      .from('users')
+      .update({
+        ...baseUserPayload,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existingUser.id)
+
+    if (updateError) throw updateError
+    return
+  }
+
+  const { error: insertError } = await supabaseAdmin.from('users').insert([
+    {
+      ...baseUserPayload,
+      pin: null,
+    },
+  ])
+
+  if (insertError) throw insertError
+}
+
 function getClientIp(req: Request): string | null {
   const forwarded = req.headers.get('x-forwarded-for')
   if (forwarded) {
@@ -271,7 +319,7 @@ serve(async (req) => {
   const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString()
   const redirectTo = buildRedirectUrl(appUrl)
 
-  const { data: invitedData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(rawEmail, {
+  const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(rawEmail, {
     redirectTo,
     data: {
       role,
@@ -283,6 +331,57 @@ serve(async (req) => {
   })
 
   if (inviteError) {
+    const inviteErrorMessage = String(inviteError.message || '')
+    const normalizedInviteError = inviteErrorMessage.toLowerCase()
+    const canContinueWithoutEmail =
+      normalizedInviteError.includes('already been registered') ||
+      normalizedInviteError.includes('email rate limit exceeded')
+
+    if (canContinueWithoutEmail) {
+      try {
+        await upsertAppUser(supabaseAdmin, org.id, rawEmail, role)
+      } catch (upsertError: any) {
+        await writeInviteAudit(
+          supabaseAdmin,
+          callerAppUser.organization_id,
+          callerAppUser.id,
+          requestIp,
+          rawEmail,
+          role,
+          true,
+          `upsert_error: ${upsertError?.message || 'unknown error'}`,
+        )
+
+        return response({ error: upsertError?.message || 'Failed to provision user record' }, 500)
+      }
+
+      await writeInviteAudit(
+        supabaseAdmin,
+        callerAppUser.organization_id,
+        callerAppUser.id,
+        requestIp,
+        rawEmail,
+        role,
+        false,
+        `invite_warning: ${inviteErrorMessage}`,
+      )
+
+      return response({
+        success: true,
+        message: 'Usuario habilitado. Si no llega correo, puede entrar con Google usando ese email.',
+        email: rawEmail,
+        role,
+        expiresAt,
+        redirectTo,
+        emailDelivery: 'deferred',
+        organization: {
+          id: org.id,
+          slug: org.slug,
+          name: org.name,
+        },
+      })
+    }
+
     await writeInviteAudit(
       supabaseAdmin,
       callerAppUser.organization_id,
@@ -291,56 +390,16 @@ serve(async (req) => {
       rawEmail,
       role,
       true,
-      `invite_error: ${inviteError.message}`,
+      `invite_error: ${inviteErrorMessage}`,
     )
 
-    return response({ error: inviteError.message, redirectTo }, 400)
+    return response({ error: inviteErrorMessage, redirectTo }, 400)
   }
 
-  const baseUserPayload = {
-    organization_id: org.id,
-    name: rawEmail.split('@')[0],
-    username: rawEmail.split('@')[0],
-    email: rawEmail,
-    role,
-    active: true,
-    auth_provider: 'google',
-  }
-
-  const { data: existingUser, error: existingUserError } = await supabaseAdmin
-    .from('users')
-    .select('id')
-    .eq('organization_id', org.id)
-    .eq('email', rawEmail)
-    .maybeSingle()
-
-  if (existingUserError) {
-    return response({ error: existingUserError.message }, 500)
-  }
-
-  if (existingUser?.id) {
-    const { error: updateError } = await supabaseAdmin
-      .from('users')
-      .update({
-        ...baseUserPayload,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', existingUser.id)
-
-    if (updateError) {
-      return response({ error: updateError.message }, 500)
-    }
-  } else {
-    const { error: insertError } = await supabaseAdmin.from('users').insert([
-      {
-        ...baseUserPayload,
-        pin: null,
-      },
-    ])
-
-    if (insertError) {
-      return response({ error: insertError.message }, 500)
-    }
+  try {
+    await upsertAppUser(supabaseAdmin, org.id, rawEmail, role)
+  } catch (upsertError: any) {
+    return response({ error: upsertError?.message || 'Failed to provision user record' }, 500)
   }
 
   await writeInviteAudit(
