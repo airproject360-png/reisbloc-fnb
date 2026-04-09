@@ -33,6 +33,7 @@ const POS = lazy(() => import('@/pages/POS'))
 const Admin = lazy(() => import('@/pages/Admin'))
 const Inventory = lazy(() => import('@/pages/Inventory'))
 const Reports = lazy(() => import('@/pages/Reports'))
+const Purchases = lazy(() => import('@/pages/Purchases'))
 const TableMonitor = lazy(() => import('@/pages/TableMonitor'))
 const Closing = lazy(() => import('@/pages/Closing'))
 const AuthCallback = lazy(() => import('@/pages/AuthCallback').then(module => ({ default: module.AuthCallback })))
@@ -74,6 +75,8 @@ function App() {
       }, 6000)
       return () => clearTimeout(timer)
     }
+
+    return undefined
   }, [isAuthenticated, permission, showPermissionPrompt])
 
   useEffect(() => {
@@ -229,6 +232,9 @@ function App() {
                                 <Route path="/admin" element={currentUser?.role === 'admin' ? <Admin /> : <Navigate to="/pos" />} />
                                 {APP_CONFIG.EVENT_FEATURES.INVENTORY && (
                                   <Route path="/inventory" element={['admin', 'supervisor'].includes(currentUser?.role || '') ? <Inventory /> : <Navigate to="/pos" />} />
+                                )}
+                                {APP_CONFIG.EVENT_FEATURES.PURCHASES && (
+                                  <Route path="/purchases" element={['admin', 'supervisor'].includes(currentUser?.role || '') ? <Purchases /> : <Navigate to="/pos" />} />
                                 )}
                                 {APP_CONFIG.EVENT_FEATURES.REPORTS && <Route path="/reports" element={<Reports />} />}
                                 {APP_CONFIG.EVENT_FEATURES.CLOSING && (

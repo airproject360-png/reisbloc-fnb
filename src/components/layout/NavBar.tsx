@@ -13,6 +13,7 @@ import {
   DollarSign,
   ShieldCheck,
   Package,
+  Building2,
   LogOut,
   User,
   Eye,
@@ -74,10 +75,12 @@ export default function NavBar() {
     { path: '/pos', label: 'POS', icon: ShoppingCart, roles: ['admin', 'supervisor', 'capitan'] },
     { path: '/tables', label: 'Cuentas', icon: LayoutDashboard, roles: ['admin', 'supervisor', 'capitan'] },
     { path: '/inventory', label: 'Inventario', icon: Package, roles: ['admin', 'supervisor'] },
+    { path: '/purchases', label: 'Compras', icon: Building2, roles: ['admin', 'supervisor'] },
     { path: '/reports', label: 'Reportes', icon: BarChart3, roles: ['admin', 'supervisor'] },
     { path: '/closing', label: 'Cierre', icon: DollarSign, roles: ['admin'] },
     { path: '/admin', label: 'Admin', icon: ShieldCheck, roles: ['admin'] },
   ].filter(item => {
+    if (item.path === '/purchases') return APP_CONFIG.EVENT_FEATURES.PURCHASES
     if (item.path === '/reports') return APP_CONFIG.EVENT_FEATURES.REPORTS
     if (item.path === '/closing') return APP_CONFIG.EVENT_FEATURES.CLOSING
     return true

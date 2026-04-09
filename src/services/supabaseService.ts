@@ -27,6 +27,8 @@ import {
   Sale,
   DailyClose,
   AuditLog,
+  Supplier,
+  Purchase,
 } from '@/types/index'
 
 class SupabaseService {
@@ -1161,6 +1163,177 @@ class SupabaseService {
     } catch (error) {
       logger.error('supabase', 'Error getting closings', error as any)
       return []
+    }
+  }
+
+  // ==================== SUPPLIERS & PURCHASES ====================
+
+  async getSuppliers(): Promise<Supplier[]> {
+    try {
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('*')
+        .eq('organization_id', this.getCurrentOrgId())
+        .eq('active', true)
+        .order('name', { ascending: true })
+
+      if (error) throw error
+
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        organizationId: row.organization_id,
+        name: row.name,
+        contactName: row.contact_name || undefined,
+        email: row.email || undefined,
+        phone: row.phone || undefined,
+        notes: row.notes || undefined,
+        active: row.active ?? true,
+        createdBy: row.created_by || undefined,
+        createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+      }))
+    } catch (error) {
+      logger.error('supabase', 'Error getting suppliers', error as any)
+      return []
+    }
+  }
+
+  async createSupplier(input: {
+    name: string
+    contactName?: string
+    email?: string
+    phone?: string
+    notes?: string
+  }): Promise<string> {
+    try {
+      const currentUserId = useAppStore.getState().currentUser?.id || null
+      const payload = {
+        organization_id: this.getCurrentOrgId(),
+        name: input.name.trim(),
+        contact_name: input.contactName?.trim() || null,
+        email: input.email?.trim() || null,
+        phone: input.phone?.trim() || null,
+        notes: input.notes?.trim() || null,
+        active: true,
+        created_by: currentUserId,
+      }
+
+      const { data, error } = await supabase
+        .from('suppliers')
+        .insert([payload])
+        .select('id')
+        .single()
+
+      if (error) throw error
+      return data.id
+    } catch (error) {
+      logger.error('supabase', 'Error creating supplier', error as any)
+      throw error
+    }
+  }
+
+  async getPurchasesByDateRange(startDate: Date, endDate: Date): Promise<Purchase[]> {
+    try {
+      const from = startDate.toISOString().split('T')[0]
+      const to = endDate.toISOString().split('T')[0]
+
+      const { data, error } = await supabase
+        .from('purchases')
+        .select('*, supplier:suppliers(name)')
+        .eq('organization_id', this.getCurrentOrgId())
+        .gte('purchase_date', from)
+        .lte('purchase_date', to)
+        .order('purchase_date', { ascending: false })
+
+      if (error) throw error
+
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        organizationId: row.organization_id,
+        supplierId: row.supplier_id || undefined,
+        supplierName: row.supplier?.name || 'Sin proveedor',
+        concept: row.concept,
+        category: row.category || 'insumos',
+        amount: Number(row.amount || 0),
+        paymentMethod: (row.payment_method || 'transfer') as Purchase['paymentMethod'],
+        purchaseDate: row.purchase_date ? new Date(`${row.purchase_date}T00:00:00`) : new Date(),
+        invoiceFolio: row.invoice_folio || undefined,
+        notes: row.notes || undefined,
+        createdBy: row.created_by || undefined,
+        createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+      }))
+    } catch (error) {
+      logger.error('supabase', 'Error getting purchases by date range', error as any)
+      return []
+    }
+  }
+
+  async createPurchase(input: {
+    supplierId?: string
+    concept: string
+    category: string
+    amount: number
+    paymentMethod: Purchase['paymentMethod']
+    purchaseDate: string
+    invoiceFolio?: string
+    notes?: string
+  }): Promise<string> {
+    try {
+      const currentUserId = useAppStore.getState().currentUser?.id || null
+      const payload = {
+        organization_id: this.getCurrentOrgId(),
+        supplier_id: input.supplierId || null,
+        concept: input.concept.trim(),
+        category: input.category.trim() || 'insumos',
+        amount: Number(input.amount || 0),
+        payment_method: input.paymentMethod || 'transfer',
+        purchase_date: input.purchaseDate,
+        invoice_folio: input.invoiceFolio?.trim() || null,
+        notes: input.notes?.trim() || null,
+        created_by: currentUserId,
+      }
+
+      const { data, error } = await supabase
+        .from('purchases')
+        .insert([payload])
+        .select('id')
+        .single()
+
+      if (error) throw error
+      return data.id
+    } catch (error) {
+      logger.error('supabase', 'Error creating purchase', error as any)
+      throw error
+    }
+  }
+
+  async getPurchaseMetrics(startDate: Date, endDate: Date): Promise<{
+    totalInvestment: number
+    purchaseCount: number
+    byCategory: Array<{ category: string; total: number }>
+  }> {
+    try {
+      const purchases = await this.getPurchasesByDateRange(startDate, endDate)
+      const byCategoryMap = new Map<string, number>()
+
+      purchases.forEach((purchase) => {
+        const category = purchase.category || 'otros'
+        byCategoryMap.set(category, (byCategoryMap.get(category) || 0) + Number(purchase.amount || 0))
+      })
+
+      return {
+        totalInvestment: purchases.reduce((sum, p) => sum + Number(p.amount || 0), 0),
+        purchaseCount: purchases.length,
+        byCategory: Array.from(byCategoryMap.entries())
+          .map(([category, total]) => ({ category, total }))
+          .sort((a, b) => b.total - a.total),
+      }
+    } catch (error) {
+      logger.error('supabase', 'Error getting purchase metrics', error as any)
+      return {
+        totalInvestment: 0,
+        purchaseCount: 0,
+        byCategory: [],
+      }
     }
   }
 

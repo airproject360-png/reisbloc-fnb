@@ -6,12 +6,11 @@ import supabaseService from '@/services/supabaseService'
 import {
   TrendingUp,
   DollarSign,
+  PiggyBank,
+  Lightbulb,
   Package,
-  Users,
   Calendar,
-  Download,
   Eye,
-  Lock,
   BarChart3,
   Loader,
 } from 'lucide-react'
@@ -29,10 +28,9 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieLabel,
 } from 'recharts'
 
-type ReportTab = 'sales' | 'inventory' | 'employees'
+type ReportTab = 'sales' | 'financial' | 'employees'
 
 export default function Reports() {
   const { currentUser } = useAppStore()
@@ -53,6 +51,8 @@ export default function Reports() {
   const [topProducts, setTopProducts] = useState<any[]>([])
   const [employeeMetrics, setEmployeeMetrics] = useState<any[]>([])
   const [metrics, setMetrics] = useState<any>(null)
+  const [purchaseMetrics, setPurchaseMetrics] = useState<any>(null)
+  const [financialOverview, setFinancialOverview] = useState<any>(null)
 
   useEffect(() => {
     if (dateRange.from && dateRange.to) {
@@ -89,16 +89,47 @@ export default function Reports() {
         }))
 
       // Usar los nuevos métodos de agregación
-      const [topProductsData, employeeMetricsData, metricsData] = await Promise.all([
+      const [topProductsData, employeeMetricsData, metricsData, purchaseMetricsData] = await Promise.all([
         supabaseService.getTopProducts(startDate, endDate, 5),
         supabaseService.getEmployeeMetrics(startDate, endDate),
         supabaseService.getSalesMetrics(startDate, endDate),
+        supabaseService.getPurchaseMetrics(startDate, endDate),
       ])
+
+      const revenue = Number(metricsData?.totalSales || 0)
+      const investment = Number(purchaseMetricsData?.totalInvestment || 0)
+      const grossProfit = revenue - investment
+      const margin = revenue > 0 ? (grossProfit / revenue) * 100 : 0
+      const suggestedReinvestment = grossProfit > 0 ? grossProfit * 0.4 : 0
+      const suggestedPartnerDistribution = grossProfit > 0 ? grossProfit * 0.4 : 0
+      const suggestedReserve = grossProfit > 0 ? grossProfit * 0.2 : 0
+
+      let recommendation = 'Mantener operación actual y seguir monitoreando costos por categoría.'
+      if (revenue === 0) {
+        recommendation = 'Aún no hay ingresos en el período. Registra ventas y compras para recomendaciones confiables.'
+      } else if (margin < 10) {
+        recommendation = 'Margen bajo. Conviene frenar expansión y renegociar compras/proveedores antes de crecer.'
+      } else if (margin < 25) {
+        recommendation = 'Margen saludable moderado. Reinvertir de forma selectiva en productos de mayor rotación.'
+      } else {
+        recommendation = 'Margen fuerte. Conviene reinvertir en capacidad e inventario estratégico para aumentar volumen.'
+      }
 
       setSalesData(chartData)
       setTopProducts(topProductsData)
       setEmployeeMetrics(employeeMetricsData)
       setMetrics(metricsData)
+      setPurchaseMetrics(purchaseMetricsData)
+      setFinancialOverview({
+        revenue,
+        investment,
+        grossProfit,
+        margin,
+        suggestedReinvestment,
+        suggestedPartnerDistribution,
+        suggestedReserve,
+        recommendation,
+      })
     } catch (error) {
       console.error('Error loading reports:', error)
     } finally {
@@ -180,6 +211,7 @@ export default function Reports() {
         <div className="flex gap-3">
           {[
             { id: 'sales' as const, label: '📊 Ventas', enabled: canViewSalesReport },
+            { id: 'financial' as const, label: '💸 Finanzas', enabled: canViewSalesReport },
             { id: 'employees' as const, label: '👥 Empleados', enabled: canViewEmployeeMetrics },
           ]
             .filter(t => t.enabled)
@@ -246,13 +278,13 @@ export default function Reports() {
                           cx="50%"
                           cy="50%"
                           outerRadius={80}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                         >
                           {['#10b981', '#3b82f6', '#f59e0b'].map((color, index) => (
                             <Cell key={`cell-${index}`} fill={color} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
+                        <Tooltip formatter={(value: any) => `$${Number(value || 0).toFixed(2)}`} />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="grid grid-cols-3 gap-3">
@@ -286,7 +318,7 @@ export default function Reports() {
                       <YAxis stroke="#6b7280" />
                       <Tooltip
                         contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                        formatter={(value) => `$${value.toFixed(2)}`}
+                        formatter={(value: any) => `$${Number(value || 0).toFixed(2)}`}
                       />
                       <Legend />
                       <Line type="monotone" dataKey="total" name="Total Ventas" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6' }} />
@@ -310,7 +342,7 @@ export default function Reports() {
                         cx="50%"
                         cy="50%"
                         outerRadius={100}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                       >
                         {topProducts.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -353,6 +385,128 @@ export default function Reports() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Financial Report */}
+        {activeTab === 'financial' && canViewSalesReport && (
+          <div className="space-y-6">
+            {financialOverview && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { label: 'Revenue', value: `$${financialOverview.revenue.toFixed(2)}`, icon: DollarSign, color: 'from-emerald-600 to-teal-700' },
+                  { label: 'Inversión', value: `$${financialOverview.investment.toFixed(2)}`, icon: PiggyBank, color: 'from-rose-600 to-orange-600' },
+                  { label: 'Ganancia Bruta', value: `$${financialOverview.grossProfit.toFixed(2)}`, icon: TrendingUp, color: 'from-slate-800 to-slate-600' },
+                  { label: 'Margen', value: `${financialOverview.margin.toFixed(1)}%`, icon: BarChart3, color: 'from-teal-700 to-cyan-700' },
+                ].map((card, i) => {
+                  const Icon = card.icon
+                  return (
+                    <div key={i} className={`bg-gradient-to-br ${card.color} rounded-2xl p-6 text-white shadow-lg`}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-white/80 text-sm font-medium">{card.label}</p>
+                          <p className="text-3xl font-bold mt-2">{card.value}</p>
+                        </div>
+                        <Icon size={40} className="opacity-30" />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Resumen Revenue vs Inversión</h3>
+                {financialOverview ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart
+                      data={[
+                        {
+                          name: 'Período',
+                          revenue: financialOverview.revenue,
+                          inversion: financialOverview.investment,
+                          ganancia: Math.max(financialOverview.grossProfit, 0),
+                        },
+                      ]}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="name" stroke="#6b7280" />
+                      <YAxis stroke="#6b7280" />
+                      <Tooltip formatter={(value: any) => `$${Number(value).toFixed(2)}`} />
+                      <Legend />
+                      <Bar dataKey="revenue" fill="#10b981" name="Revenue" />
+                      <Bar dataKey="inversion" fill="#f97316" name="Inversión" />
+                      <Bar dataKey="ganancia" fill="#0f172a" name="Ganancia" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-gray-500 text-center py-8">Sin datos disponibles</p>
+                )}
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Sugerencia de Distribución de Ganancia</h3>
+                {financialOverview && financialOverview.grossProfit > 0 ? (
+                  <>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Reinversión sugerida', value: financialOverview.suggestedReinvestment },
+                            { name: 'Reserva operativa', value: financialOverview.suggestedReserve },
+                            { name: 'Distribución de utilidad', value: financialOverview.suggestedPartnerDistribution },
+                          ]}
+                          dataKey="value"
+                          nameKey="name"
+                          outerRadius={90}
+                          label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                        >
+                          <Cell fill="#0f766e" />
+                          <Cell fill="#334155" />
+                          <Cell fill="#f59e0b" />
+                        </Pie>
+                        <Tooltip formatter={(value: any) => `$${Number(value).toFixed(2)}`} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <p className="text-sm text-slate-700 mt-2">
+                      Referencia simple: 40% reinversión, 20% reserva, 40% utilidad distribuible.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-gray-500 text-center py-8">
+                    No hay ganancia positiva en el período para distribuir. Prioriza optimizar costo de compras.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Indicadores y Recomendación</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="bg-emerald-50 border-l-4 border-emerald-500 rounded-lg p-4">
+                  <p className="text-sm text-slate-600">Costo sobre Revenue</p>
+                  <p className="text-2xl font-bold text-emerald-700">
+                    {financialOverview?.revenue > 0
+                      ? `${((financialOverview.investment / financialOverview.revenue) * 100).toFixed(1)}%`
+                      : '0.0%'}
+                  </p>
+                </div>
+                <div className="bg-slate-50 border-l-4 border-slate-600 rounded-lg p-4">
+                  <p className="text-sm text-slate-600">Compras del período</p>
+                  <p className="text-2xl font-bold text-slate-800">{purchaseMetrics?.purchaseCount || 0}</p>
+                </div>
+                <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4">
+                  <p className="text-sm text-slate-600">Categoría principal de costo</p>
+                  <p className="text-xl font-bold text-amber-700">{purchaseMetrics?.byCategory?.[0]?.category || 'Sin datos'}</p>
+                </div>
+              </div>
+
+              <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 flex items-start gap-3">
+                <Lightbulb size={20} className="text-teal-700 mt-0.5" />
+                <p className="text-teal-900 font-medium">{financialOverview?.recommendation || 'Sin recomendación disponible'}</p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -417,122 +571,6 @@ export default function Reports() {
           </div>
         )}
       </div>
-    </div>
-  )
-}
-
-// Componentes de reportes individuales
-function SalesReport({ isReadOnly }: { isReadOnly: boolean }) {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <StatCard
-        title="Ventas Totales"
-        value="$45,230.00"
-        change="+12.5%"
-        positive
-        icon={DollarSign}
-      />
-      <StatCard
-        title="Tickets Promedio"
-        value="$385.00"
-        change="+3.2%"
-        positive
-        icon={TrendingUp}
-      />
-      <StatCard
-        title="Órdenes"
-        value="117"
-        change="+8.1%"
-        positive
-        icon={BarChart3}
-      />
-      <StatCard
-        title="Propinas"
-        value="$2,150.00"
-        change="+15.3%"
-        positive
-        icon={DollarSign}
-      />
-      
-      <div className="col-span-full card-gradient">
-        <h3 className="text-xl font-bold mb-4">Detalle de Ventas</h3>
-        <p className="text-gray-600">Gráficas y tabla detallada en desarrollo...</p>
-        {isReadOnly && (
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2 text-blue-700">
-            <Eye size={18} />
-            <span className="text-sm font-semibold">Modo solo lectura - No puedes modificar datos</span>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function InventoryReport({ isReadOnly }: { isReadOnly: boolean }) {
-  return (
-    <div className="card-gradient">
-      <h3 className="text-xl font-bold mb-4">Estado del Inventario</h3>
-      <p className="text-gray-600">Reporte de inventario en desarrollo...</p>
-      {isReadOnly && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2 text-blue-700">
-          <Eye size={18} />
-          <span className="text-sm font-semibold">Modo solo lectura - No puedes ajustar inventario</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function EmployeesReport({ isReadOnly }: { isReadOnly: boolean }) {
-  return (
-    <div className="card-gradient">
-      <h3 className="text-xl font-bold mb-4">Métricas de Empleados</h3>
-      <p className="text-gray-600">Reporte de empleados en desarrollo...</p>
-    </div>
-  )
-}
-
-function FinancialReport({ isReadOnly }: { isReadOnly: boolean }) {
-  return (
-    <div className="card-gradient">
-      <h3 className="text-xl font-bold mb-4">Resumen Financiero</h3>
-      <p className="text-gray-600">Reporte financiero en desarrollo...</p>
-      {isReadOnly && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2 text-blue-700">
-          <Eye size={18} />
-          <span className="text-sm font-semibold">Modo solo lectura - No puedes realizar ajustes</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Componente reutilizable de tarjeta de estadística
-function StatCard({ 
-  title, 
-  value, 
-  change, 
-  positive, 
-  icon: Icon 
-}: { 
-  title: string
-  value: string
-  change: string
-  positive: boolean
-  icon: any
-}) {
-  return (
-    <div className="card-gradient hover-lift">
-      <div className="flex items-start justify-between mb-4">
-        <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl text-white">
-          <Icon size={24} />
-        </div>
-        <span className={`text-sm font-bold ${positive ? 'text-green-600' : 'text-red-600'}`}>
-          {change}
-        </span>
-      </div>
-      <h3 className="text-gray-600 text-sm font-semibold">{title}</h3>
-      <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
     </div>
   )
 }

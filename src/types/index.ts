@@ -172,6 +172,35 @@ export interface EmployeeMetrics {
   };
 }
 
+export interface Supplier {
+  id: string;
+  organizationId?: string;
+  name: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+  active: boolean;
+  createdBy?: string;
+  createdAt: Date;
+}
+
+export interface Purchase {
+  id: string;
+  organizationId?: string;
+  supplierId?: string;
+  supplierName?: string;
+  concept: string;
+  category: string;
+  amount: number;
+  paymentMethod: 'cash' | 'transfer' | 'card' | 'other';
+  purchaseDate: Date;
+  invoiceFolio?: string;
+  notes?: string;
+  createdBy?: string;
+  createdAt: Date;
+}
+
 export interface ClipPayment {
   id: string;
   saleId: string;
