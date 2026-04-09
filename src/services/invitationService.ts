@@ -21,6 +21,32 @@ export interface InviteUserResult {
   }
 }
 
+function decodeJwtExp(token: string): number | null {
+  try {
+    const parts = token.split('.')
+    if (parts.length < 2) return null
+    const payload = JSON.parse(atob(parts[1]))
+    const exp = Number(payload?.exp)
+    return Number.isFinite(exp) ? exp : null
+  } catch {
+    return null
+  }
+}
+
+function isTokenNearExpiry(token: string, thresholdSeconds = 90): boolean {
+  const exp = decodeJwtExp(token)
+  if (!exp) return false
+  const now = Math.floor(Date.now() / 1000)
+  return exp - now <= thresholdSeconds
+}
+
+function isUnauthorizedFunctionError(error: unknown): boolean {
+  const err = error as any
+  const message = String(err?.message || '').toLowerCase()
+  const status = Number(err?.status || err?.context?.status || err?.context?.response?.status)
+  return status === 401 || message.includes('401') || message.includes('unauthorized')
+}
+
 async function getFreshAccessToken(): Promise<string> {
   const {
     data: { session },
@@ -31,7 +57,7 @@ async function getFreshAccessToken(): Promise<string> {
     throw new Error('No se pudo validar la sesion actual. Vuelve a iniciar sesion con Google.')
   }
 
-  if (session?.access_token) {
+  if (session?.access_token && !isTokenNearExpiry(session.access_token)) {
     return session.access_token
   }
 
@@ -61,7 +87,7 @@ export async function inviteUserToEvento(params: InviteUserParams): Promise<Invi
   let { data, error } = await invokeInvite(accessToken, params)
 
   // Si el JWT expiró entre getSession e invoke, refrescamos y reintentamos una sola vez.
-  if (error?.message?.includes('401')) {
+  if (isUnauthorizedFunctionError(error)) {
     const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession()
     const retryToken = refreshed.session?.access_token
     if (!refreshError && retryToken) {
@@ -72,7 +98,7 @@ export async function inviteUserToEvento(params: InviteUserParams): Promise<Invi
   }
 
   if (error) {
-    if (error.message?.includes('401')) {
+    if (isUnauthorizedFunctionError(error)) {
       throw new Error('No autorizado para invitar. Cierra sesion e inicia de nuevo con Google como admin.')
     }
     throw new Error(error.message || 'No se pudo enviar la invitacion')
