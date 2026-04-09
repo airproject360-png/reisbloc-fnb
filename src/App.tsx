@@ -81,7 +81,7 @@ function App() {
         data: { session },
       } = await supabase.auth.getSession()
 
-      if (session?.user && !isAuthenticated) {
+      if (session?.user && (!isAuthenticated || !currentUser?.organizationId)) {
         const orgId = await resolveCurrentOrganizationId(session.user)
         const mapped = mapAuthUserToAppUser(session.user)
         setCurrentUser({ ...mapped, organizationId: orgId || mapped.organizationId })
@@ -109,7 +109,7 @@ function App() {
     return () => {
       authListener.subscription.unsubscribe()
     }
-  }, [isAuthenticated, setAuthenticated, setCurrentUser])
+  }, [isAuthenticated, currentUser?.organizationId, setAuthenticated, setCurrentUser])
 
   const handleAcceptNotifications = async () => {
     await requestPermission()

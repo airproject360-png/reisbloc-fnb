@@ -53,6 +53,16 @@ export async function resolveCurrentOrganizationId(authUser?: any): Promise<stri
     return metadataOrg
   }
 
+  const { data: bootstrappedOrgId, error: bootstrapError } = await supabase.rpc('ensure_current_user_profile')
+  if (!bootstrapError && bootstrappedOrgId) {
+    persistOrganizationId(bootstrappedOrgId)
+    return bootstrappedOrgId
+  }
+
+  if (bootstrapError) {
+    logger.warn('auth', 'No se pudo bootstrapear perfil OAuth en users', bootstrapError)
+  }
+
   const cachedOrg = getStoredOrganizationId()
   if (cachedOrg) return cachedOrg
 
