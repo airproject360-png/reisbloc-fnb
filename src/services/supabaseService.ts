@@ -19,6 +19,7 @@ import logger from '@/utils/logger'
 import { getStoredToken } from './jwtService'
 import { useAppStore } from '@/store/appStore'
 import { getStoredOrganizationId } from './authService'
+import deviceService from './deviceService'
 import {
   User,
   Device,
@@ -47,6 +48,16 @@ class SupabaseService {
       if (retries <= 0) throw error
       await new Promise(resolve => setTimeout(resolve, delayMs))
       return this.withRetry(operation, retries - 1, delayMs * 2)
+    }
+  }
+
+  private async getClientIP(): Promise<string | undefined> {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json')
+      const data = await response.json()
+      return data.ip
+    } catch {
+      return undefined
     }
   }
 
@@ -1037,27 +1048,61 @@ class SupabaseService {
 
   async createAuditLog(log: Omit<AuditLog, 'id' | 'created_at'>): Promise<void> {
     try {
-      // Mapear campos camelCase a snake_case del schema Supabase
-      const payload = {
-        user_id: log.userId,
-        action: log.action,
-        table_name: log.entityType,
-        record_id: log.entityId,
-        changes: log.oldValue || log.newValue ? { old: log.oldValue, new: log.newValue } : null,
-        ip_address: log.ipAddress,
-        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-        // deviceId se almacena en changes JSONB
-        organization_id: this.getCurrentOrgId()
-      }
-
-      const { error } = await supabase
-        .from('audit_logs')
-        .insert([payload])
+      const { error } = await supabase.rpc('record_audit_log', {
+        p_org_id: this.getCurrentOrgId(),
+        p_user_id: log.userId,
+        p_action: log.action,
+        p_table_name: log.entityType,
+        p_record_id: log.entityId,
+        p_changes: log.oldValue || log.newValue ? { old: log.oldValue, new: log.newValue } : null,
+        p_ip_address: log.ipAddress || (await this.getClientIP()) || null,
+        p_device_id: log.deviceId || null,
+      })
 
       if (error) throw error
       logger.info('supabase', `Audit log created: ${log.action} on ${log.entityType}`)
     } catch (error) {
       logger.error('supabase', 'Error creating audit log', error as any)
+    }
+  }
+
+  async registerLoginSession(params: {
+    userId: string
+    authMethod: 'pin' | 'google_oauth' | 'email'
+    organizationId?: string
+    deviceId?: string | null
+    macAddress?: string | null
+    deviceFingerprint?: string | null
+    ipAddress?: string | null
+    browser?: string | null
+    os?: string | null
+    geolocation?: Record<string, unknown> | null
+    anomalies?: Record<string, unknown> | null
+    requires2FA?: boolean
+  }): Promise<void> {
+    try {
+      const currentDevice = useAppStore.getState().currentDevice
+      const fallbackDevice = currentDevice || (await deviceService.getDeviceInfo())
+
+      const { error } = await supabase.rpc('register_login_session', {
+        p_user_id: params.userId,
+        p_org_id: params.organizationId || this.getCurrentOrgId(),
+        p_device_id: params.deviceId || currentDevice?.id || null,
+        p_mac_address: params.macAddress || currentDevice?.macAddress || fallbackDevice.macAddress || null,
+        p_ip_address: params.ipAddress || (await this.getClientIP()) || '0.0.0.0',
+        p_fingerprint: params.deviceFingerprint || currentDevice?.fingerprint || deviceService.storeDeviceFingerprint(),
+        p_geolocation: params.geolocation || null,
+        p_auth_method: params.authMethod,
+        p_browser: params.browser || currentDevice?.browser || fallbackDevice.browser || null,
+        p_os: params.os || currentDevice?.os || fallbackDevice.os || null,
+        p_anomalies: params.anomalies || {},
+        p_requires_2fa: params.requires2FA ?? false,
+      })
+
+      if (error) throw error
+      logger.info('supabase', 'Login session registered successfully')
+    } catch (error) {
+      logger.error('supabase', 'Error registering login session', error as any)
     }
   }
 
@@ -1081,6 +1126,7 @@ class SupabaseService {
         oldValue: log.changes?.old,
         newValue: log.changes?.new,
         ipAddress: log.ip_address,
+        deviceId: log.device_id,
         timestamp: new Date(log.created_at),
       }))
     } catch (error) {

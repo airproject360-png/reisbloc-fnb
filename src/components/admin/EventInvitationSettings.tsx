@@ -1,15 +1,35 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import logger from '@/utils/logger'
 import { inviteUserToEvento, type EventInviteRole } from '@/services/invitationService'
+import supabaseService from '@/services/supabaseService'
 import { Mail, UserPlus, ShieldCheck } from 'lucide-react'
+import type { AuditLog } from '@/types/index'
 
 export default function EventInvitationSettings() {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<EventInviteRole>('supervisor')
   const [expiresInHours, setExpiresInHours] = useState(48)
   const [loading, setLoading] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [inviteHistory, setInviteHistory] = useState<AuditLog[]>([])
   const [resultMessage, setResultMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      setHistoryLoading(true)
+      try {
+        const logs = await supabaseService.getAuditLogs(50)
+        setInviteHistory(logs.filter((log) => log.action === 'INVITE_SENT' || log.action === 'INVITE_BLOCKED'))
+      } catch (error) {
+        logger.error('admin-invite', 'Error cargando historial de invitaciones', error)
+      } finally {
+        setHistoryLoading(false)
+      }
+    }
+
+    void loadHistory()
+  }, [])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -34,6 +54,8 @@ export default function EventInvitationSettings() {
       )
       setEmail('')
       logger.info('admin-invite', 'Invitacion enviada correctamente', result)
+      const logs = await supabaseService.getAuditLogs(50)
+      setInviteHistory(logs.filter((log) => log.action === 'INVITE_SENT' || log.action === 'INVITE_BLOCKED'))
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error al enviar invitacion'
       setErrorMessage(message)
@@ -122,6 +144,52 @@ export default function EventInvitationSettings() {
             )}
         </div>
       </form>
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="font-bold text-slate-900">Historial de invitaciones</h3>
+            <p className="text-sm text-slate-600">Los últimos envíos y bloqueos quedan aquí, no solo en los logs del servidor.</p>
+          </div>
+          {historyLoading && <span className="text-sm text-slate-500">Cargando historial…</span>}
+        </div>
+
+        {inviteHistory.length === 0 && !historyLoading ? (
+          <div className="text-sm text-slate-500 bg-white rounded-xl border border-dashed border-slate-200 p-4">
+            No hay invitaciones registradas todavía.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {inviteHistory.map((log) => {
+              const blocked = log.action === 'INVITE_BLOCKED'
+              const details = log.newValue as { email?: string; role?: string; reason?: string; blocked?: boolean } | undefined
+
+              return (
+                <div
+                  key={log.id}
+                  className={`rounded-xl border p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 ${
+                    blocked ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50'
+                  }`}
+                >
+                  <div>
+                    <p className={`font-semibold ${blocked ? 'text-red-900' : 'text-emerald-900'}`}>
+                      {blocked ? 'Invitación bloqueada' : 'Invitación enviada'}
+                    </p>
+                    <p className="text-sm text-slate-700 mt-1">
+                      {details?.email || log.entityId} · Rol: {details?.role || 'N/D'}
+                    </p>
+                    {details?.reason && <p className="text-sm text-slate-600 mt-1">Motivo: {details.reason}</p>}
+                  </div>
+                  <div className="text-sm text-slate-500 md:text-right">
+                    <p>{new Date(log.timestamp).toLocaleString('es-MX')}</p>
+                    {log.ipAddress && <p>IP: {log.ipAddress}</p>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

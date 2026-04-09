@@ -215,7 +215,7 @@ class AuditService {
         oldValue: log.changes?.old,
         newValue: log.changes?.new,
         ipAddress: log.ip_address,
-        deviceId: undefined,
+        deviceId: log.device_id,
         timestamp: new Date(log.created_at),
       }))
     } catch (error) {

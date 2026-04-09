@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/config/supabase'
 import { useAppStore } from '@/store/appStore'
 import { authLogout, resolveAuthorizedAppUser } from '@/services/authService'
+import supabaseService from '@/services/supabaseService'
 import logger from '@/utils/logger'
 
 export const AuthCallback = () => {
@@ -37,6 +38,12 @@ export const AuthCallback = () => {
 
       setCurrentUser(authorizedUser)
       setAuthenticated(true)
+
+      await supabaseService.registerLoginSession({
+        userId: authorizedUser.id,
+        organizationId: authorizedUser.organizationId,
+        authMethod: 'google_oauth',
+      })
 
       // Si llegamos aquí, la sesión es válida
       logger.info('auth', 'Sesión social establecida correctamente')
