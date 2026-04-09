@@ -1124,7 +1124,11 @@ class SupabaseService {
         entityType: log.table_name,
         entityId: log.record_id,
         oldValue: log.changes?.old,
-        newValue: log.changes?.new,
+        newValue:
+          log.changes?.new ??
+          (log.changes && typeof log.changes === 'object' && !('old' in log.changes) && !('new' in log.changes)
+            ? log.changes
+            : undefined),
         ipAddress: log.ip_address,
         deviceId: log.device_id,
         timestamp: new Date(log.created_at),

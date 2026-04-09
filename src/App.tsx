@@ -55,7 +55,9 @@ function App() {
 
   const needsDeviceApproval = false;
 
-  logger.info('app', 'Auth state', { isAuthenticated, device: currentDevice, needsApproval: needsDeviceApproval })
+  useEffect(() => {
+    logger.info('app', 'Auth state', { isAuthenticated, device: currentDevice, needsApproval: needsDeviceApproval })
+  }, [isAuthenticated, currentDevice, needsDeviceApproval])
 
   // Solicitar permiso de notificaciones al usuario autenticado
   useEffect(() => {

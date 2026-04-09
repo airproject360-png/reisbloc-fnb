@@ -6,11 +6,11 @@ import logger from '@/utils/logger'
 import { 
   FileText, 
   Filter,
-  Calendar,
   User,
   Eye,
   Search,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -19,6 +19,7 @@ export default function AuditLogsPanel() {
   const { canViewLogs, isReadOnly } = usePermissions()
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [filter, setFilter] = useState({
     action: 'all',
     entityType: 'all',
@@ -33,10 +34,12 @@ export default function AuditLogsPanel() {
 
   const loadLogs = async () => {
     setLoading(true)
+    setLoadError(null)
     try {
       const data = await supabaseService.getAuditLogs()
       setLogs(data || [])
     } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'No se pudieron cargar los logs')
       logger.error('audit-panel', 'Error loading logs', error as any)
     } finally {
       setLoading(false)
@@ -98,6 +101,16 @@ export default function AuditLogsPanel() {
         <p className="text-slate-600 mt-2">
           Historial completo de acciones del sistema · {filteredLogs.length} registro{filteredLogs.length !== 1 ? 's' : ''}
         </p>
+        <div className="mt-3">
+          <button
+            onClick={() => void loadLogs()}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            Recargar logs
+          </button>
+        </div>
       </div>
 
       {/* Read-only info */}
@@ -200,7 +213,12 @@ export default function AuditLogsPanel() {
       </div>
 
       {/* Logs Table */}
-      {loading ? (
+      {loadError ? (
+        <div className="panel-surface border border-red-200 bg-red-50 text-red-800 p-4">
+          <p className="font-semibold">No se pudieron cargar los logs de auditoría.</p>
+          <p className="text-sm mt-1">Detalle: {loadError}</p>
+        </div>
+      ) : loading ? (
         <div className="text-center py-12">
           <div className="spinner mx-auto mb-4" />
           <p className="text-slate-600">Cargando logs...</p>
@@ -209,6 +227,7 @@ export default function AuditLogsPanel() {
         <div className="panel-surface text-center py-12">
           <FileText size={48} className="mx-auto text-slate-400 mb-4" />
           <p className="text-slate-600">No hay logs que coincidan con los filtros</p>
+          <p className="text-xs text-slate-500 mt-2">Tip: en Configuración también puedes ver el historial de invitaciones.</p>
         </div>
       ) : (
         <div className="space-y-3">
