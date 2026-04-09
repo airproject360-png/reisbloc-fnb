@@ -7,6 +7,8 @@ export interface User {
   pin: string;
   role: UserRole;
   email?: string;
+  avatarPath?: string;
+  avatarUrl?: string;
   active: boolean;
   createdAt: Date;
   devices?: string[]; // IDs de dispositivos autorizados

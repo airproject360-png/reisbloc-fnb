@@ -9,7 +9,7 @@ import {
   Edit2, 
   CheckCircle, 
   XCircle, 
-  Shield,
+  Camera,
   Eye,
   Lock,
   UserCog,
@@ -23,6 +23,7 @@ export default function UsersManagement() {
   const { users, setUsers, currentUser } = useAppStore()
   const { canManageUsers, isReadOnly } = usePermissions()
   const [loading, setLoading] = useState(false)
+  const [uploadingAvatarUserId, setUploadingAvatarUserId] = useState<string | null>(null)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
@@ -55,6 +56,32 @@ export default function UsersManagement() {
     } catch (error) {
       console.error('Error toggling user:', error)
       alert('Error al actualizar usuario')
+    }
+  }
+
+  const handleAvatarUpload = async (user: User, file?: File | null) => {
+    if (!canManageUsers || isReadOnly || !file) return
+
+    const isValidType = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
+    if (!isValidType) {
+      alert('Formato no valido. Usa JPG, PNG o WEBP')
+      return
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('La imagen supera 2MB. Usa una imagen mas ligera.')
+      return
+    }
+
+    setUploadingAvatarUserId(user.id)
+    try {
+      await supabaseService.updateUserAvatar(user.id, file, user.username)
+      await loadUsers()
+    } catch (error) {
+      console.error('Error uploading avatar:', error)
+      alert('No se pudo actualizar la foto del usuario')
+    } finally {
+      setUploadingAvatarUserId(null)
     }
   }
 
@@ -127,9 +154,18 @@ export default function UsersManagement() {
               <div className={`bg-gradient-to-r ${roleColors[user.role]} p-4 text-white`}>
                 <div className="flex items-center justify-between text-white">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center border border-white/15">
-                      <UserCog size={24} />
-                    </div>
+                    {user.avatarUrl ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt={`Foto de ${user.username}`}
+                        className="w-12 h-12 rounded-2xl border border-white/20 object-cover bg-white/10"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center border border-white/15">
+                        <UserCog size={24} />
+                      </div>
+                    )}
                     <div>
                       <h3 className="font-bold text-lg">{user.username}</h3>
                       <p className="text-xs opacity-90 inline-flex items-center gap-1"><BadgeCheck size={12} /> {roleLabels[user.role]}</p>
@@ -160,6 +196,26 @@ export default function UsersManagement() {
                     {user.devices?.length || 0}
                   </span>
                 </div>
+
+                {canManageUsers && !isReadOnly && (
+                  <div className="pt-3 border-t border-slate-200">
+                    <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold cursor-pointer transition-colors">
+                      <Camera size={16} />
+                      {uploadingAvatarUserId === user.id ? 'Subiendo foto...' : 'Cambiar foto'}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        disabled={uploadingAvatarUserId === user.id}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0]
+                          void handleAvatarUpload(user, file)
+                          event.currentTarget.value = ''
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
 
                 {/* Actions */}
                 {canManageUsers && !isReadOnly && user.id !== currentUser?.id && (

@@ -35,9 +35,14 @@ import {
 class SupabaseService {
   private warnedMissingOrg = false
   private productImageCache = new Map<string, { url: string; expiresAt: number }>()
+  private userAvatarCache = new Map<string, { url: string; expiresAt: number }>()
 
   private get productImageBucket(): string {
     return import.meta.env.VITE_SUPABASE_PRODUCT_BUCKET || 'product-images'
+  }
+
+  private get userAvatarBucket(): string {
+    return import.meta.env.VITE_SUPABASE_USER_AVATAR_BUCKET || this.productImageBucket
   }
 
   // Reintento simple para operaciones de red propensas a fallos transitorios
@@ -121,7 +126,7 @@ class SupabaseService {
 
       if (error) throw error
       // Map Supabase fields to TypeScript User type
-      const user = data ? { ...data, username: data.name } : null
+      const user = data ? { ...data, username: data.name, avatarPath: data.avatar_path || undefined } : null
       return user as User
     } catch (error) {
       logger.error('supabase', 'Error getting user', error as any)
@@ -139,7 +144,7 @@ class SupabaseService {
 
       if (error) throw error
       // Map Supabase fields to TypeScript User type
-      const user = data ? { ...data, username: data.name } : null
+      const user = data ? { ...data, username: data.name, avatarPath: data.avatar_path || undefined } : null
       return user as User
     } catch (error) {
       logger.error('supabase', 'Error getting user by ID', error as any)
@@ -167,8 +172,20 @@ class SupabaseService {
       console.log('🔍 [Supabase] Error:', error)
       
       if (error) throw error
-      // Map Supabase fields to TypeScript User type
-      return (data || []).map(user => ({ ...user, username: user.name })) as User[]
+      const mappedUsers = (data || []).map(user => ({
+        ...user,
+        username: user.name,
+        avatarPath: user.avatar_path || undefined,
+      })) as User[]
+
+      const usersWithAvatar = await Promise.all(
+        mappedUsers.map(async (user) => ({
+          ...user,
+          avatarUrl: await this.getUserAvatarUrl(user.avatarPath),
+        }))
+      )
+
+      return usersWithAvatar
     }).catch(error => {
       logger.error('supabase', 'Error getting all users', error as any)
       return []
@@ -203,8 +220,11 @@ class SupabaseService {
   async updateUser(userId: string, updates: Partial<User>): Promise<void> {
     try {
       // Map TypeScript User fields to Supabase schema
-      const { username, createdAt, ...rest } = updates as any
+      const { username, createdAt, avatarPath, ...rest } = updates as any
       const supabaseUpdates = username ? { ...rest, name: username, username: username } : rest
+      if (avatarPath !== undefined) {
+        ;(supabaseUpdates as any).avatar_path = avatarPath
+      }
       
       const { error } = await supabase
         .from('users')
@@ -235,6 +255,90 @@ class SupabaseService {
       logger.error('supabase', 'Error deleting user', error as any)
       throw error
     }
+  }
+
+  async uploadUserAvatar(file: File, userId: string, username?: string): Promise<string> {
+    const orgId = this.getCurrentOrgId()
+    if (!orgId) {
+      throw new Error('No se pudo resolver organization_id para subir avatar')
+    }
+
+    const baseName = (username || userId || 'usuario')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 50)
+
+    const extension = file.type.includes('png') ? 'png' : file.type.includes('webp') ? 'webp' : 'jpg'
+    const filePath = `${orgId}/users/${userId}-${Date.now()}-${baseName || 'usuario'}.${extension}`
+
+    const { error } = await supabase.storage
+      .from(this.userAvatarBucket)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type || 'image/jpeg',
+      })
+
+    if (error) {
+      logger.error('supabase', 'Error uploading user avatar', error as any)
+      throw error
+    }
+
+    return filePath
+  }
+
+  async removeUserAvatar(avatarPath?: string): Promise<void> {
+    if (!avatarPath) return
+
+    const { error } = await supabase.storage
+      .from(this.userAvatarBucket)
+      .remove([avatarPath])
+
+    if (error) {
+      logger.warn('supabase', 'Error removing user avatar', error as any)
+    }
+
+    this.userAvatarCache.delete(avatarPath)
+  }
+
+  async getUserAvatarUrl(avatarPath?: string): Promise<string | undefined> {
+    if (!avatarPath) return undefined
+
+    const cached = this.userAvatarCache.get(avatarPath)
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.url
+    }
+
+    const { data, error } = await supabase.storage
+      .from(this.userAvatarBucket)
+      .createSignedUrl(avatarPath, 3600)
+
+    if (error || !data?.signedUrl) {
+      logger.warn('supabase', 'Error generating user avatar signed url', error as any)
+      return undefined
+    }
+
+    this.userAvatarCache.set(avatarPath, {
+      url: data.signedUrl,
+      expiresAt: Date.now() + 55 * 60 * 1000,
+    })
+
+    return data.signedUrl
+  }
+
+  async updateUserAvatar(userId: string, file: File, username?: string): Promise<string> {
+    const currentUser = await this.getUserById(userId)
+    const oldAvatarPath = (currentUser as any)?.avatar_path || (currentUser as any)?.avatarPath
+    const newAvatarPath = await this.uploadUserAvatar(file, userId, username)
+
+    await this.updateUser(userId, { avatarPath: newAvatarPath } as Partial<User>)
+
+    if (oldAvatarPath && oldAvatarPath !== newAvatarPath) {
+      await this.removeUserAvatar(oldAvatarPath)
+    }
+
+    return newAvatarPath
   }
 
   // ==================== DEVICES ====================
