@@ -53,6 +53,7 @@ export default function Reports() {
   const [metrics, setMetrics] = useState<any>(null)
   const [purchaseMetrics, setPurchaseMetrics] = useState<any>(null)
   const [financialOverview, setFinancialOverview] = useState<any>(null)
+  const [weeklyFinancialTrend, setWeeklyFinancialTrend] = useState<any[]>([])
 
   useEffect(() => {
     if (dateRange.from && dateRange.to) {
@@ -89,42 +90,89 @@ export default function Reports() {
         }))
 
       // Usar los nuevos métodos de agregación
-      const [topProductsData, employeeMetricsData, metricsData, purchaseMetricsData] = await Promise.all([
+      const [topProductsData, employeeMetricsData, metricsData, purchaseMetricsData, purchasesData] = await Promise.all([
         supabaseService.getTopProducts(startDate, endDate, 5),
         supabaseService.getEmployeeMetrics(startDate, endDate),
         supabaseService.getSalesMetrics(startDate, endDate),
         supabaseService.getPurchaseMetrics(startDate, endDate),
+        supabaseService.getPurchasesByDateRange(startDate, endDate),
       ])
 
       const revenue = Number(metricsData?.totalSales || 0)
       const investment = Number(purchaseMetricsData?.totalInvestment || 0)
       const grossProfit = revenue - investment
+      const totalTips = Number(metricsData?.totalTips || 0)
+      const netProfit = grossProfit - totalTips
       const margin = revenue > 0 ? (grossProfit / revenue) * 100 : 0
-      const suggestedReinvestment = grossProfit > 0 ? grossProfit * 0.4 : 0
-      const suggestedPartnerDistribution = grossProfit > 0 ? grossProfit * 0.4 : 0
-      const suggestedReserve = grossProfit > 0 ? grossProfit * 0.2 : 0
+      const netMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0
+      const distributableProfit = netProfit > 0 ? netProfit : 0
+      const suggestedReinvestment = distributableProfit > 0 ? distributableProfit * 0.4 : 0
+      const suggestedPartnerDistribution = distributableProfit > 0 ? distributableProfit * 0.4 : 0
+      const suggestedReserve = distributableProfit > 0 ? distributableProfit * 0.2 : 0
 
       let recommendation = 'Mantener operación actual y seguir monitoreando costos por categoría.'
       if (revenue === 0) {
         recommendation = 'Aún no hay ingresos en el período. Registra ventas y compras para recomendaciones confiables.'
-      } else if (margin < 10) {
+      } else if (netMargin < 8) {
         recommendation = 'Margen bajo. Conviene frenar expansión y renegociar compras/proveedores antes de crecer.'
-      } else if (margin < 25) {
+      } else if (netMargin < 20) {
         recommendation = 'Margen saludable moderado. Reinvertir de forma selectiva en productos de mayor rotación.'
       } else {
         recommendation = 'Margen fuerte. Conviene reinvertir en capacidad e inventario estratégico para aumentar volumen.'
       }
+
+      const toWeekStart = (date: Date) => {
+        const copy = new Date(date)
+        const day = copy.getDay()
+        const diff = day === 0 ? -6 : 1 - day // Monday as week start
+        copy.setDate(copy.getDate() + diff)
+        copy.setHours(0, 0, 0, 0)
+        return copy
+      }
+
+      const weeklyMap = new Map<string, { weekStart: Date; revenue: number; investment: number }>()
+
+      sales.forEach((sale: any) => {
+        const saleDate = sale.created_at ? new Date(sale.created_at) : new Date()
+        const weekStart = toWeekStart(saleDate)
+        const key = weekStart.toISOString().split('T')[0]
+        const current = weeklyMap.get(key) || { weekStart, revenue: 0, investment: 0 }
+        current.revenue += Number(sale.total || 0)
+        weeklyMap.set(key, current)
+      })
+
+      purchasesData.forEach((purchase: any) => {
+        const purchaseDate = purchase.purchaseDate ? new Date(purchase.purchaseDate) : new Date()
+        const weekStart = toWeekStart(purchaseDate)
+        const key = weekStart.toISOString().split('T')[0]
+        const current = weeklyMap.get(key) || { weekStart, revenue: 0, investment: 0 }
+        current.investment += Number(purchase.amount || 0)
+        weeklyMap.set(key, current)
+      })
+
+      const weeklyTrend = Array.from(weeklyMap.values())
+        .sort((a, b) => a.weekStart.getTime() - b.weekStart.getTime())
+        .map((item) => ({
+          week: item.weekStart.toLocaleDateString('es-MX', { month: 'short', day: 'numeric' }),
+          revenue: item.revenue,
+          investment: item.investment,
+          net: item.revenue - item.investment,
+        }))
 
       setSalesData(chartData)
       setTopProducts(topProductsData)
       setEmployeeMetrics(employeeMetricsData)
       setMetrics(metricsData)
       setPurchaseMetrics(purchaseMetricsData)
+      setWeeklyFinancialTrend(weeklyTrend)
       setFinancialOverview({
         revenue,
         investment,
         grossProfit,
+        netProfit,
         margin,
+        netMargin,
+        totalTips,
         suggestedReinvestment,
         suggestedPartnerDistribution,
         suggestedReserve,
@@ -392,12 +440,14 @@ export default function Reports() {
         {activeTab === 'financial' && canViewSalesReport && (
           <div className="space-y-6">
             {financialOverview && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 {[
                   { label: 'Revenue', value: `$${financialOverview.revenue.toFixed(2)}`, icon: DollarSign, color: 'from-emerald-600 to-teal-700' },
                   { label: 'Inversión', value: `$${financialOverview.investment.toFixed(2)}`, icon: PiggyBank, color: 'from-rose-600 to-orange-600' },
                   { label: 'Ganancia Bruta', value: `$${financialOverview.grossProfit.toFixed(2)}`, icon: TrendingUp, color: 'from-slate-800 to-slate-600' },
-                  { label: 'Margen', value: `${financialOverview.margin.toFixed(1)}%`, icon: BarChart3, color: 'from-teal-700 to-cyan-700' },
+                  { label: 'Margen Bruto', value: `${financialOverview.margin.toFixed(1)}%`, icon: BarChart3, color: 'from-teal-700 to-cyan-700' },
+                  { label: 'Utilidad Neta', value: `$${financialOverview.netProfit.toFixed(2)}`, icon: TrendingUp, color: 'from-indigo-700 to-slate-700' },
+                  { label: 'Margen Neto', value: `${financialOverview.netMargin.toFixed(1)}%`, icon: BarChart3, color: 'from-cyan-700 to-blue-700' },
                 ].map((card, i) => {
                   const Icon = card.icon
                   return (
@@ -447,7 +497,7 @@ export default function Reports() {
 
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <h3 className="text-xl font-bold text-gray-900 mb-4">Sugerencia de Distribución de Ganancia</h3>
-                {financialOverview && financialOverview.grossProfit > 0 ? (
+                {financialOverview && financialOverview.netProfit > 0 ? (
                   <>
                     <ResponsiveContainer width="100%" height={240}>
                       <PieChart>
@@ -470,13 +520,53 @@ export default function Reports() {
                       </PieChart>
                     </ResponsiveContainer>
                     <p className="text-sm text-slate-700 mt-2">
-                      Referencia simple: 40% reinversión, 20% reserva, 40% utilidad distribuible.
+                      Referencia simple sobre utilidad neta: 40% reinversión, 20% reserva, 40% utilidad distribuible.
                     </p>
                   </>
                 ) : (
                   <p className="text-gray-500 text-center py-8">
                     No hay ganancia positiva en el período para distribuir. Prioriza optimizar costo de compras.
                   </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Costo por Categoría</h3>
+                {purchaseMetrics?.byCategory?.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={purchaseMetrics.byCategory.slice(0, 8)}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="category" stroke="#6b7280" />
+                      <YAxis stroke="#6b7280" />
+                      <Tooltip formatter={(value: any) => `$${Number(value || 0).toFixed(2)}`} />
+                      <Legend />
+                      <Bar dataKey="total" fill="#f97316" name="Inversión" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-gray-500 text-center py-8">Sin compras registradas en el período</p>
+                )}
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Tendencia Semanal (Revenue, Inversión, Neto)</h3>
+                {weeklyFinancialTrend.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={weeklyFinancialTrend}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="week" stroke="#6b7280" />
+                      <YAxis stroke="#6b7280" />
+                      <Tooltip formatter={(value: any) => `$${Number(value || 0).toFixed(2)}`} />
+                      <Legend />
+                      <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#10b981" strokeWidth={2} />
+                      <Line type="monotone" dataKey="investment" name="Inversión" stroke="#f97316" strokeWidth={2} />
+                      <Line type="monotone" dataKey="net" name="Neto" stroke="#0f172a" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-gray-500 text-center py-8">Sin datos para tendencia semanal</p>
                 )}
               </div>
             </div>
@@ -499,6 +589,10 @@ export default function Reports() {
                 <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4">
                   <p className="text-sm text-slate-600">Categoría principal de costo</p>
                   <p className="text-xl font-bold text-amber-700">{purchaseMetrics?.byCategory?.[0]?.category || 'Sin datos'}</p>
+                </div>
+                <div className="bg-indigo-50 border-l-4 border-indigo-500 rounded-lg p-4">
+                  <p className="text-sm text-slate-600">Costo en propinas</p>
+                  <p className="text-2xl font-bold text-indigo-700">${(financialOverview?.totalTips || 0).toFixed(2)}</p>
                 </div>
               </div>
 
