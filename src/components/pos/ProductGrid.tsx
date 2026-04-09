@@ -24,6 +24,7 @@ const categoryColors: Record<string, string> = {
 
 export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGridProps) {
   const [filter, setFilter] = useState<'all' | 'food' | 'drinks'>('all')
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({})
   const isOutOfStock = (product: Product): boolean => {
     return product.hasInventory && (product.currentStock ?? 0) <= 0
   }
@@ -106,6 +107,27 @@ export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGrid
                   : 'border-transparent bg-gradient-to-br from-white to-gray-50 hover:shadow-xl hover:-translate-y-1'
               }`}
             >
+              {/* Product Image */}
+              <div className="relative mb-4 h-36 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+                {product.imageUrl && !brokenImages[product.id] ? (
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                    onError={() => {
+                      setBrokenImages(prev => ({ ...prev, [product.id]: true }))
+                    }}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 text-slate-500">
+                    <Package size={34} />
+                  </div>
+                )}
+
+                <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/45 to-transparent" />
+              </div>
+
               {/* Category Badge */}
               <div className={`absolute top-3 right-3 bg-gradient-to-r ${getCategoryGradient(product.category)} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg`}>
                 {product.category}

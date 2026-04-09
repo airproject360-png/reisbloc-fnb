@@ -984,7 +984,6 @@ class SupabaseService {
         tip_percentage: 0,
         total: parseFloat(String(sale.total)) || 0,
         payment_method: String(sale.paymentMethod) || 'cash',
-        device_id: null,
         organization_id: this.getCurrentOrgId()
       }
       
