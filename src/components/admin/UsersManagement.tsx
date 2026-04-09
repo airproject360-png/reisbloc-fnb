@@ -123,15 +123,6 @@ export default function UsersManagement() {
     }
   }
 
-  const roleColors = {
-    admin: 'from-purple-500 to-indigo-600',
-    capitan: 'from-blue-500 to-cyan-600',
-    mesero: 'from-teal-500 to-green-600',
-    cocina: 'from-orange-500 to-red-600',
-    bar: 'from-green-500 to-emerald-600',
-    supervisor: 'from-gray-500 to-gray-700',
-  }
-
   const roleLabels = {
     admin: 'Administrador',
     capitan: 'Capitán',
@@ -182,57 +173,65 @@ export default function UsersManagement() {
           <p className="text-gray-600">Cargando usuarios...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7">
           {users.map(user => (
             <div
               key={user.id}
-              className="panel-surface hover-lift overflow-hidden"
+              className="panel-surface hover-lift overflow-hidden border border-slate-200 bg-white shadow-lg rounded-3xl"
             >
-              {/* Header con rol */}
-              <div className={`bg-gradient-to-r ${roleColors[user.role]} p-4 text-white`}>
-                <div className="flex items-center justify-between text-white">
-                  <div className="flex items-center gap-3">
+              {/* Hero */}
+              <div className="relative bg-[linear-gradient(180deg,rgba(248,250,252,1),rgba(241,245,249,1))] px-6 pt-6 pb-5 border-b border-slate-200">
+                <div className="absolute right-4 top-4">
+                  {user.active ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 text-emerald-700 px-3 py-1 text-xs font-semibold border border-emerald-200">
+                      <CheckCircle size={12} />
+                      Activo
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 text-rose-700 px-3 py-1 text-xs font-semibold border border-rose-200">
+                      <XCircle size={12} />
+                      Inactivo
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-col items-center text-center gap-4">
+                  <div className="relative">
                     {user.avatarUrl ? (
                       <img
                         src={user.avatarUrl}
                         alt={`Foto de ${user.username}`}
-                        className="w-14 h-14 rounded-full border-2 border-white/25 object-cover bg-white/10 shadow-sm"
+                        className="w-28 h-28 rounded-full object-cover border-4 border-white shadow-xl ring-1 ring-slate-200"
                         loading="lazy"
                       />
                     ) : (
-                      <div className="w-14 h-14 bg-white/15 rounded-full flex items-center justify-center border border-white/15 shadow-sm">
-                        <UserCog size={24} />
+                      <div className="w-28 h-28 rounded-full bg-slate-100 flex items-center justify-center border-4 border-white shadow-xl ring-1 ring-slate-200 text-slate-500">
+                        <UserCog size={44} />
                       </div>
                     )}
-                    <div>
-                      <h3 className="font-bold text-lg">{user.username}</h3>
-                      <p className="text-xs opacity-90 inline-flex items-center gap-1"><BadgeCheck size={12} /> {roleLabels[user.role]}</p>
-                    </div>
                   </div>
 
-                  {/* Status badge */}
-                  {user.active ? (
-                    <CheckCircle size={24} />
-                  ) : (
-                    <XCircle size={24} className="opacity-60" />
-                  )}
+                  <div className="space-y-2">
+                    <h3 className="font-black text-2xl text-slate-900 leading-tight">{user.username}</h3>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-slate-900 text-white px-3 py-1.5 text-xs font-semibold tracking-wide">
+                      <BadgeCheck size={12} />
+                      {roleLabels[user.role]}
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Body */}
-              <div className="space-y-3 p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">Estado</span>
-                  <span className={`font-bold ${user.active ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {user.active ? 'Activo' : 'Inactivo'}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">Dispositivos</span>
-                  <span className="font-bold text-slate-900">
-                    {user.devices?.length || 0}
-                  </span>
+              <div className="space-y-4 p-6">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Dispositivos</p>
+                    <p className="mt-1 text-xl font-black text-slate-900">{user.devices?.length || 0}</p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Rol</p>
+                    <p className="mt-1 text-xl font-black text-slate-900">{user.role}</p>
+                  </div>
                 </div>
 
                 {canManageUsers && !isReadOnly && (
@@ -240,7 +239,7 @@ export default function UsersManagement() {
                     <p className="text-xs text-slate-500 mb-2">
                       La foto se recorta al centro en formato cuadrado antes de subirla.
                     </p>
-                    <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold cursor-pointer transition-colors">
+                    <label className="inline-flex w-full items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold cursor-pointer transition-colors">
                       <Camera size={16} />
                       {uploadingAvatarUserId === user.id ? 'Subiendo foto...' : 'Cambiar foto'}
                       <input
@@ -263,10 +262,10 @@ export default function UsersManagement() {
                   <div className="flex gap-2 pt-3 border-t border-slate-200">
                     <button
                       onClick={() => handleToggleActive(user)}
-                      className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all ${
+                      className={`flex-1 px-4 py-3 rounded-2xl font-semibold transition-all ${
                         user.active
-                          ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                          : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                          ? 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+                          : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
                       }`}
                     >
                       {user.active ? 'Desactivar' : 'Activar'}
@@ -274,7 +273,7 @@ export default function UsersManagement() {
 
                     <button
                       onClick={() => setEditingUser(user)}
-                      className="p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-all"
+                      className="p-3 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-2xl transition-all"
                     >
                       <Edit2 size={18} />
                     </button>
