@@ -358,8 +358,6 @@ function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSucces
             >
               <option value="mesero">Mesero</option>
               <option value="capitan">Capitán</option>
-              <option value="cocina">Cocina</option>
-              <option value="bar">Bar</option>
               <option value="supervisor">Supervisor</option>
               <option value="admin">Administrador</option>
             </select>

@@ -8,6 +8,15 @@ export const CLIP_CONFIG = {
 
 // Configuración de aplicación
 export const APP_CONFIG = {
+  EVENT_MODE: true,
+  EVENT_FEATURES: {
+    POS: true,
+    TABLES: true,
+    ADMIN: true,
+    REPORTS: false,
+    CLOSING: false,
+  },
+
   // Tiempo de bloqueo para eliminar productos (en minutos)
   PRODUCT_DELETE_TIMEOUT: 5,
   DEFAULT_TIP_PERCENTAGE: 15, // Propina sugerida por defecto

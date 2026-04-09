@@ -26,6 +26,7 @@ import { Bell, Share, PlusSquare } from 'lucide-react'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { supabase } from '@/config/supabase'
 import { mapAuthUserToAppUser, resolveCurrentOrganizationId } from '@/services/authService'
+import { APP_CONFIG } from '@/config/constants'
 
 const Login = lazy(() => import('@/pages/Login'))
 const POS = lazy(() => import('@/pages/POS'))
@@ -214,8 +215,10 @@ function App() {
                                 <Route path="/tables" element={['admin', 'supervisor', 'capitan'].includes(currentUser?.role || '') ? <TableMonitor /> : <Navigate to="/pos" />} />
                                 <Route path="/mesas" element={['admin', 'supervisor', 'capitan'].includes(currentUser?.role || '') ? <TableMonitor /> : <Navigate to="/pos" />} />
                                 <Route path="/admin" element={currentUser?.role === 'admin' ? <Admin /> : <Navigate to="/pos" />} />
-                                <Route path="/reports" element={<Reports />} />
-                                <Route path="/closing" element={currentUser?.role === 'admin' ? <Closing /> : <Navigate to="/pos" />} />
+                                {APP_CONFIG.EVENT_FEATURES.REPORTS && <Route path="/reports" element={<Reports />} />}
+                                {APP_CONFIG.EVENT_FEATURES.CLOSING && (
+                                  <Route path="/closing" element={currentUser?.role === 'admin' ? <Closing /> : <Navigate to="/pos" />} />
+                                )}
                                 <Route path="*" element={<NotFound />} />
               </>
             )}
