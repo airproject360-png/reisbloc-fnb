@@ -56,12 +56,12 @@ export default function Admin() {
         }}
       />
       {/* Gradient Overlay */}
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_30%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.1),transparent_28%),linear-gradient(180deg,rgba(248,250,252,0.9),rgba(241,245,249,1))] z-0 pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(15,118,110,0.1),transparent_30%),radial-gradient(circle_at_top_right,rgba(24,33,46,0.1),transparent_28%),linear-gradient(180deg,rgba(247,246,242,0.92),rgba(242,239,232,1))] z-0 pointer-events-none" />
 
       <div className="relative z-10">
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
-        <header className="page-hero p-6 md:p-8 text-white bg-[linear-gradient(130deg,rgba(15,23,42,0.97),rgba(3,105,161,0.92),rgba(16,185,129,0.82))] flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+        <header className="page-hero p-6 md:p-8 text-white bg-[linear-gradient(130deg,rgba(24,33,46,0.98),rgba(15,118,110,0.9),rgba(139,111,71,0.82))] flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="p-4 bg-white/15 rounded-2xl backdrop-blur-sm border border-white/15">
               <ShieldCheck size={32} />
@@ -91,7 +91,7 @@ export default function Admin() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
                   selectedTab === tab.id
-                    ? 'bg-gradient-to-r from-slate-900 to-cyan-700 text-white shadow-lg'
+                    ? 'bg-gradient-to-r from-slate-900 to-teal-700 text-white shadow-lg'
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >

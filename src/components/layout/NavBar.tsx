@@ -88,15 +88,15 @@ export default function NavBar() {
   )
 
   return (
-    <nav className="bg-gradient-to-r from-cyan-900 via-blue-900 to-cyan-900 text-white shadow-2xl sticky top-0 z-50 border-b border-white/10">
+    <nav className="bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 text-white shadow-2xl sticky top-0 z-50 border-b border-white/10">
       <div className="max-w-7xl mx-auto px-2 sm:px-4">
         <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
           {/* Logo / Brand - Marca Blanca y Premium */}
           <div className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-cyan-400 via-blue-500 to-teal-400 rounded-xl flex items-center justify-center font-black text-lg sm:text-xl shadow-lg shadow-cyan-500/20 ring-1 ring-white/20 text-white">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-slate-200 via-teal-300 to-emerald-400 rounded-xl flex items-center justify-center font-black text-lg sm:text-xl shadow-lg shadow-teal-500/15 ring-1 ring-white/20 text-slate-950">
               {currentUser?.businessName?.[0] || 'R'}
             </div>
-            <h1 className="font-black text-sm sm:text-lg tracking-tighter hidden xs:block bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-gray-400">
+            <h1 className="font-black text-sm sm:text-lg tracking-tighter hidden xs:block bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-teal-200">
               {currentUser?.businessName || 'CEVICHERIA MEXA'}
             </h1>
           </div>
@@ -118,7 +118,7 @@ export default function NavBar() {
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-semibold transition-all whitespace-nowrap ${
                     isActive
                       ? 'bg-white text-slate-900 shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-105'
-                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                      : 'text-slate-400 hover:bg-white/5 hover:text-white'
                   }`}
                 >
                   <Icon size={18} className="sm:w-5 sm:h-5" />
@@ -134,7 +134,7 @@ export default function NavBar() {
             {supportsFullscreen && (
               <button
                 onClick={toggleFullScreen}
-                className="flex p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                className="flex p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                 title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
               >
                 {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
@@ -152,7 +152,7 @@ export default function NavBar() {
 
             {/* User Badge - Compacto en móvil */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-gray-700 to-gray-600 flex items-center justify-center">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-slate-700 to-slate-500 flex items-center justify-center">
                 <User size={14} className="text-gray-300" />
               </div>
               <div className="text-xs">
@@ -167,7 +167,7 @@ export default function NavBar() {
             {/* Logout Button - Icono solo en móvil */}
             <button
               onClick={handleLogout}
-              className="p-2 sm:px-4 sm:py-2 bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white rounded-xl transition-all border border-red-500/20 hover:border-red-600 shadow-lg hover:shadow-red-600/20"
+              className="p-2 sm:px-4 sm:py-2 bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white rounded-xl transition-all border border-rose-500/20 hover:border-rose-600 shadow-lg hover:shadow-rose-600/20"
               title="Cerrar Sesión"
             >
               <LogOut size={18} />
