@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   DollarSign,
   ShieldCheck,
+  Package,
   LogOut,
   User,
   Eye,
@@ -72,6 +73,7 @@ export default function NavBar() {
   const navItems = [
     { path: '/pos', label: 'POS', icon: ShoppingCart, roles: ['admin', 'supervisor', 'capitan'] },
     { path: '/tables', label: 'Mesas', icon: LayoutDashboard, roles: ['admin', 'supervisor', 'capitan'] },
+    { path: '/admin?tab=inventory', label: 'Inventario', icon: Package, roles: ['admin'] },
     { path: '/reports', label: 'Reportes', icon: BarChart3, roles: ['admin', 'supervisor'] },
     { path: '/closing', label: 'Cierre', icon: DollarSign, roles: ['admin'] },
     { path: '/admin', label: 'Admin', icon: ShieldCheck, roles: ['admin'] },
@@ -103,7 +105,12 @@ export default function NavBar() {
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 px-1 flex-1 justify-center sm:justify-start">
             {visibleItems.map(item => {
               const Icon = item.icon
-              const isActive = location.pathname === item.path
+              const pathOnly = item.path.split('?')[0]
+              const isActive =
+                location.pathname === pathOnly &&
+                (item.path.includes('?')
+                  ? location.search === `?${item.path.split('?')[1]}`
+                  : !location.search)
               return (
                 <Link
                   key={item.path}

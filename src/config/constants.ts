@@ -13,8 +13,8 @@ export const APP_CONFIG = {
     POS: true,
     TABLES: true,
     ADMIN: true,
-    REPORTS: false,
-    CLOSING: false,
+    REPORTS: true,
+    CLOSING: true,
   },
 
   // Tiempo de bloqueo para eliminar productos (en minutos)
