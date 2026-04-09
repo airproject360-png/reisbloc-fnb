@@ -978,10 +978,7 @@ class SupabaseService {
         order_id: (sale as any).orderIds?.[0] || null,
         waiter_id: (sale as any).saleBy || null,
         table_number: Number(sale.tableNumber),
-        items: sale.items || [],
-        subtotal: parseFloat(String(sale.subtotal)) || 0,
         tip_amount: parseFloat(String(sale.tip || 0)) || 0,
-        tip_percentage: 0,
         total: parseFloat(String(sale.total)) || 0,
         payment_method: String(sale.paymentMethod) || 'cash',
         organization_id: this.getCurrentOrgId()
@@ -991,10 +988,9 @@ class SupabaseService {
       logger.info('supabase', '   - order_id:', payload.order_id)
       logger.info('supabase', '   - waiter_id:', payload.waiter_id)
       logger.info('supabase', '   - table_number:', payload.table_number, typeof payload.table_number)
-      logger.info('supabase', '   - subtotal:', payload.subtotal, typeof payload.subtotal)
       logger.info('supabase', '   - total:', payload.total, typeof payload.total)
       logger.info('supabase', '   - payment_method:', payload.payment_method)
-      logger.info('supabase', '   - items count:', payload.items?.length || 0)
+      logger.info('supabase', '   - tip_amount:', payload.tip_amount, typeof payload.tip_amount)
       
       // DEBUG: Verificar usuario actual antes de insertar
       const { data: { user } } = await supabase.auth.getUser()
