@@ -58,11 +58,11 @@ export default function AuditLogsPanel() {
     LOGOUT: { label: 'Cierre de sesión', color: 'text-gray-700 bg-gray-100' },
     PRODUCT_CREATED: { label: 'Producto creado', color: 'text-blue-700 bg-blue-100' },
     PRODUCT_UPDATED: { label: 'Producto actualizado', color: 'text-indigo-700 bg-indigo-100' },
-    PRODUCT_DELETED: { label: 'Producto eliminado', color: 'text-red-700 bg-red-100' },
+    PRODUCT_DELETED: { label: 'Producto archivado', color: 'text-red-700 bg-red-100' },
     INVENTORY_CHANGE: { label: 'Cambio de inventario', color: 'text-purple-700 bg-purple-100' },
     USER_CREATED: { label: 'Usuario creado', color: 'text-green-700 bg-green-100' },
     USER_MODIFIED: { label: 'Usuario modificado', color: 'text-amber-700 bg-amber-100' },
-    USER_DELETED: { label: 'Usuario eliminado', color: 'text-red-700 bg-red-100' },
+    USER_DELETED: { label: 'Usuario archivado', color: 'text-red-700 bg-red-100' },
     VIEW_REPORT: { label: 'Reporte visto', color: 'text-cyan-700 bg-cyan-100' },
     SALE_COMPLETED: { label: 'Venta completada', color: 'text-emerald-700 bg-emerald-100' },
     DELETE_PRODUCT_FROM_ORDER: { label: 'Producto eliminado de orden', color: 'text-orange-700 bg-orange-100' },
@@ -91,8 +91,9 @@ export default function AuditLogsPanel() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Logs de Auditoría</h2>
-        <p className="text-gray-600 mt-1">
+        <p className="section-kicker bg-slate-900 text-white w-fit">System trace</p>
+        <h2 className="section-title mt-2">Logs de Auditoría</h2>
+        <p className="text-slate-600 mt-2">
           Historial completo de acciones del sistema · {filteredLogs.length} registro{filteredLogs.length !== 1 ? 's' : ''}
         </p>
       </div>
@@ -109,10 +110,10 @@ export default function AuditLogsPanel() {
       )}
 
       {/* Filters */}
-      <div className="card-gradient">
+      <div className="panel-surface p-5 md:p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Filter size={20} className="text-gray-600" />
-          <h3 className="font-bold text-gray-900">Filtros</h3>
+          <Filter size={20} className="text-slate-600" />
+          <h3 className="font-bold text-slate-900">Filtros</h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -200,12 +201,12 @@ export default function AuditLogsPanel() {
       {loading ? (
         <div className="text-center py-12">
           <div className="spinner mx-auto mb-4" />
-          <p className="text-gray-600">Cargando logs...</p>
+          <p className="text-slate-600">Cargando logs...</p>
         </div>
       ) : filteredLogs.length === 0 ? (
-        <div className="card-gradient text-center py-12">
-          <FileText size={48} className="mx-auto text-gray-400 mb-4" />
-          <p className="text-gray-600">No hay logs que coincidan con los filtros</p>
+        <div className="panel-surface text-center py-12">
+          <FileText size={48} className="mx-auto text-slate-400 mb-4" />
+          <p className="text-slate-600">No hay logs que coincidan con los filtros</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -214,10 +215,10 @@ export default function AuditLogsPanel() {
             const EntityIcon = entityTypeIcons[log.entityType] || FileText
 
             return (
-              <div key={log.id} className="card-gradient hover-lift">
+              <div key={log.id} className="panel-surface p-4 md:p-5 hover-lift">
                 <div className="flex items-start gap-4">
                   {/* Icon */}
-                  <div className={`p-3 rounded-xl ${actionInfo.color}`}>
+                  <div className={`p-3 rounded-2xl ${actionInfo.color}`}>
                     <EntityIcon size={24} />
                   </div>
 
@@ -225,12 +226,12 @@ export default function AuditLogsPanel() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4 mb-2">
                       <div>
-                        <h4 className="font-bold text-gray-900">{actionInfo.label}</h4>
-                        <p className="text-sm text-gray-600">
+                        <h4 className="font-bold text-slate-900">{actionInfo.label}</h4>
+                        <p className="text-sm text-slate-600">
                           por <span className="font-semibold">{log.userId}</span>
                         </p>
                       </div>
-                      <div className="text-right text-sm text-gray-600">
+                      <div className="text-right text-sm text-slate-600">
                         <div className="font-semibold">
                           {format(new Date(log.timestamp), 'dd MMM yyyy', { locale: es })}
                         </div>
@@ -241,19 +242,19 @@ export default function AuditLogsPanel() {
                     </div>
 
                     {/* Entity details */}
-                    <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                       <div>
-                        <span className="text-gray-600">Tipo:</span>{' '}
-                        <span className="font-semibold text-gray-900">{log.entityType}</span>
+                        <span className="text-slate-500">Tipo:</span>{' '}
+                        <span className="font-semibold text-slate-900">{log.entityType}</span>
                       </div>
                       <div>
-                        <span className="text-gray-600">ID:</span>{' '}
-                        <span className="font-mono text-xs text-gray-900">{log.entityId}</span>
+                        <span className="text-slate-500">ID:</span>{' '}
+                        <span className="font-mono text-xs text-slate-900">{log.entityId}</span>
                       </div>
                       {log.deviceId && (
                         <div className="col-span-2">
-                          <span className="text-gray-600">Dispositivo:</span>{' '}
-                          <span className="font-mono text-xs text-gray-900">{log.deviceId}</span>
+                          <span className="text-slate-500">Dispositivo:</span>{' '}
+                          <span className="font-mono text-xs text-slate-900">{log.deviceId}</span>
                         </div>
                       )}
                     </div>

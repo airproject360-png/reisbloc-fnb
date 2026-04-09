@@ -13,6 +13,7 @@ export const APP_CONFIG = {
     POS: true,
     TABLES: true,
     ADMIN: true,
+    INVENTORY: true,
     REPORTS: true,
     CLOSING: true,
   },

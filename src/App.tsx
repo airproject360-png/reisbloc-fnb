@@ -31,6 +31,7 @@ import { APP_CONFIG } from '@/config/constants'
 const Login = lazy(() => import('@/pages/Login'))
 const POS = lazy(() => import('@/pages/POS'))
 const Admin = lazy(() => import('@/pages/Admin'))
+const Inventory = lazy(() => import('@/pages/Inventory'))
 const Reports = lazy(() => import('@/pages/Reports'))
 const TableMonitor = lazy(() => import('@/pages/TableMonitor'))
 const Closing = lazy(() => import('@/pages/Closing'))
@@ -215,6 +216,9 @@ function App() {
                                 <Route path="/tables" element={['admin', 'supervisor', 'capitan'].includes(currentUser?.role || '') ? <TableMonitor /> : <Navigate to="/pos" />} />
                                 <Route path="/mesas" element={['admin', 'supervisor', 'capitan'].includes(currentUser?.role || '') ? <TableMonitor /> : <Navigate to="/pos" />} />
                                 <Route path="/admin" element={currentUser?.role === 'admin' ? <Admin /> : <Navigate to="/pos" />} />
+                                {APP_CONFIG.EVENT_FEATURES.INVENTORY && (
+                                  <Route path="/inventory" element={['admin', 'supervisor'].includes(currentUser?.role || '') ? <Inventory /> : <Navigate to="/pos" />} />
+                                )}
                                 {APP_CONFIG.EVENT_FEATURES.REPORTS && <Route path="/reports" element={<Reports />} />}
                                 {APP_CONFIG.EVENT_FEATURES.CLOSING && (
                                   <Route path="/closing" element={currentUser?.role === 'admin' ? <Closing /> : <Navigate to="/pos" />} />

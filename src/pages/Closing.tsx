@@ -519,13 +519,13 @@ export default function Closing() {
                   <span className="text-gray-700">Descuentos</span>
                   <span className="text-lg font-semibold text-red-600">-${(closingData.totalDiscounts || 0).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between items-center py-3 border-b border-gray-200">
-                  <span className="text-gray-700">Propinas</span>
-                  <span className="text-lg font-semibold text-green-600">+${(closingData.totalTips || 0).toFixed(2)}</span>
+                <div className="flex justify-between items-center py-3 border-b border-slate-200">
+                  <span className="text-slate-700">Propinas</span>
+                  <span className="text-lg font-semibold text-emerald-700">+${(closingData.totalTips || 0).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between items-center py-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
-                  <span className="font-bold text-gray-900">Total a Depositar</span>
-                  <span className="text-2xl font-bold text-blue-600">
+                <div className="flex justify-between items-center py-4 bg-gradient-to-r from-slate-50 to-emerald-50 rounded-lg p-4 border border-slate-200">
+                  <span className="font-bold text-slate-900">Total a Depositar</span>
+                  <span className="text-2xl font-bold text-slate-900">
                     ${((closingData.totalSales || 0) - (closingData.totalDiscounts || 0) + (closingData.totalTips || 0)).toFixed(2)}
                   </span>
                 </div>
@@ -536,43 +536,43 @@ export default function Closing() {
 
         {/* Employee Metrics */}
         {employeeMetrics && employeeMetrics.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Desempeño de Empleados</h3>
+          <div className="surface-warm p-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-4">Desempeño de Empleados</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={employeeMetrics}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="userName" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="userName" stroke="#64748b" />
+                  <YAxis stroke="#64748b" />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}
                   formatter={(value: any) => `$${value.toFixed(2)}`}
                 />
                 <Legend />
-                <Bar dataKey="totalSales" name="Ventas" fill="#3b82f6" />
-                <Bar dataKey="totalTips" name="Propinas" fill="#10b981" />
+                  <Bar dataKey="totalSales" name="Ventas" fill="#0f172a" />
+                  <Bar dataKey="totalTips" name="Propinas" fill="#0f766e" />
               </BarChart>
             </ResponsiveContainer>
 
             {/* Employee Table */}
             <div className="overflow-x-auto mt-6">
               <table className="w-full">
-                <thead className="bg-gray-100">
+                <thead className="bg-slate-100">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Empleado</th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Ventas</th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Tickets</th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Propinas</th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Ganancias</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Empleado</th>
+                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">Ventas</th>
+                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">Tickets</th>
+                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">Propinas</th>
+                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">Ganancias</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-slate-200">
                   {employeeMetrics.map((emp: any) => (
-                    <tr key={emp.userId} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium text-gray-900">{emp.userName}</td>
-                      <td className="px-6 py-4 text-right font-semibold text-green-600">${emp.totalSales.toFixed(2)}</td>
-                      <td className="px-6 py-4 text-right text-gray-700">{emp.salesCount}</td>
-                      <td className="px-6 py-4 text-right text-orange-600 font-semibold">${emp.totalTips.toFixed(2)}</td>
-                      <td className="px-6 py-4 text-right text-lg font-bold text-blue-600">
+                    <tr key={emp.userId} className="hover:bg-slate-50">
+                      <td className="px-6 py-4 font-medium text-slate-900">{emp.userName}</td>
+                      <td className="px-6 py-4 text-right font-semibold text-emerald-700">${emp.totalSales.toFixed(2)}</td>
+                      <td className="px-6 py-4 text-right text-slate-700">{emp.salesCount}</td>
+                      <td className="px-6 py-4 text-right text-amber-700 font-semibold">${emp.totalTips.toFixed(2)}</td>
+                      <td className="px-6 py-4 text-right text-lg font-bold text-slate-900">
                         ${(emp.totalSales + emp.totalTips).toFixed(2)}
                       </td>
                     </tr>
@@ -584,26 +584,26 @@ export default function Closing() {
         )}
 
         {/* Notes Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Notas del Cierre</h3>
+        <div className="surface-warm p-6">
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Notas del Cierre</h3>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Ej: Descrepancia en caja, cliente reclamo, etc."
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-600 focus:outline-none resize-none"
+            className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-teal-600 focus:outline-none resize-none"
             rows={4}
           />
         </div>
 
         {/* Confirmation Section */}
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border-2 border-amber-200 p-6 space-y-4">
+        <div className="surface-muted rounded-2xl border-2 border-amber-200 p-6 space-y-4">
           <div className="flex items-start gap-3">
-            <div className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center flex-shrink-0 mt-1">
+            <div className="w-6 h-6 rounded-full bg-amber-700 text-white flex items-center justify-center flex-shrink-0 mt-1">
               <AlertCircle size={16} />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900">Confirmación de Cierre</h3>
-              <p className="text-gray-700 text-sm mt-1">Al confirmar, este cierre de caja se registrará permanentemente en el sistema.</p>
+              <h3 className="font-bold text-slate-900">Confirmación de Cierre</h3>
+              <p className="text-slate-700 text-sm mt-1">Al confirmar, este cierre de caja se registrará permanentemente en el sistema.</p>
             </div>
           </div>
 
@@ -612,9 +612,9 @@ export default function Closing() {
               type="checkbox"
               checked={confirmed}
               onChange={(e) => setConfirmed(e.target.checked)}
-              className="w-5 h-5 rounded accent-amber-600"
+              className="w-5 h-5 rounded accent-amber-700"
             />
-            <span className="font-semibold text-gray-900">
+            <span className="font-semibold text-slate-900">
               Confirmo que todos los datos son correctos y autorizo el cierre de caja
             </span>
           </label>
@@ -624,7 +624,7 @@ export default function Closing() {
             <button
               onClick={handleSubmitClosing}
               disabled={!confirmed || submitting}
-              className="flex-1 min-w-[200px] bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+              className="flex-1 min-w-[200px] bg-gradient-to-r from-slate-900 to-amber-800 hover:brightness-110 disabled:from-gray-400 disabled:to-gray-400 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
             >
               {submitting ? (
                 <>
@@ -640,21 +640,21 @@ export default function Closing() {
             </button>
             <button
               onClick={handlePrintClosing}
-              className="px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all flex items-center gap-2"
+              className="px-6 bg-teal-700 hover:bg-teal-800 text-white font-semibold py-3 rounded-xl transition-all flex items-center gap-2"
             >
               <Printer size={20} />
               <span className="hidden md:inline">Imprimir</span>
             </button>
             <button
               onClick={handleSendEmail}
-              className="px-6 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition-all flex items-center gap-2"
+              className="px-6 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-3 rounded-xl transition-all flex items-center gap-2"
             >
               <Mail size={20} />
               <span className="hidden md:inline">Enviar por Correo</span>
             </button>
             <button
               onClick={loadClosingData}
-              className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-900 font-semibold py-3 rounded-xl transition-all"
+              className="px-6 bg-slate-200 hover:bg-slate-300 text-slate-900 font-semibold py-3 rounded-xl transition-all"
             >
               Recargar
             </button>

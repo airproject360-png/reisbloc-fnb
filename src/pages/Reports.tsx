@@ -113,7 +113,7 @@ export default function Reports() {
   const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4']
 
   return (
-    <div className="min-h-screen relative bg-gray-50 p-6">
+    <div className="page-shell bg-[color:var(--bg-canvas)] p-6">
       {/* Background Doodle */}
       <div 
         className="fixed inset-0 z-0 opacity-40 pointer-events-none bg-repeat"
@@ -123,19 +123,19 @@ export default function Reports() {
         }}
       />
       {/* Gradient Overlay */}
-      <div className="fixed inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-gray-500/5 z-0 pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(24,33,46,0.06),transparent_28%),radial-gradient(circle_at_top_right,rgba(15,118,110,0.08),transparent_26%),linear-gradient(180deg,rgba(247,246,242,1),rgba(242,239,232,1))] z-0 pointer-events-none" />
 
       <div className="relative z-10 max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-8 text-white shadow-xl">
+        <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 rounded-3xl p-8 text-white shadow-xl border border-white/10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-4 bg-white/20 rounded-xl backdrop-blur-sm">
+              <div className="p-4 bg-white/15 rounded-2xl backdrop-blur-sm border border-white/10">
                 <BarChart3 size={36} />
               </div>
               <div>
                 <h1 className="text-4xl font-bold">Reportes</h1>
-                <p className="text-blue-100 mt-2">Análisis y métricas del negocio</p>
+                <p className="text-cyan-50/85 mt-2">Análisis y métricas del negocio</p>
               </div>
             </div>
             {isReadOnly && (
@@ -148,27 +148,27 @@ export default function Reports() {
         </div>
 
         {/* Date Range Selector */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
+        <div className="surface-warm p-6">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <Calendar size={20} className="text-blue-600" />
-              <span className="font-semibold text-gray-700">Período:</span>
+              <Calendar size={20} className="text-teal-700" />
+              <span className="font-semibold text-slate-700">Período:</span>
             </div>
             <input
               type="date"
               value={dateRange.from}
               onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
-              className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-600 focus:outline-none"
+              className="px-4 py-2 border-2 border-slate-200 rounded-lg focus:border-teal-600 focus:outline-none"
             />
-            <span className="text-gray-500">hasta</span>
+            <span className="text-slate-500">hasta</span>
             <input
               type="date"
               value={dateRange.to}
               onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
-              className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-600 focus:outline-none"
+              className="px-4 py-2 border-2 border-slate-200 rounded-lg focus:border-teal-600 focus:outline-none"
             />
             {loading && (
-              <div className="flex items-center gap-2 text-blue-600 ml-auto">
+              <div className="flex items-center gap-2 text-teal-700 ml-auto">
                 <Loader size={18} className="animate-spin" />
                 <span>Cargando...</span>
               </div>
@@ -189,8 +189,8 @@ export default function Reports() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-6 py-3 rounded-xl font-semibold transition-all ${
                   activeTab === tab.id
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
-                    : 'bg-white text-gray-700 shadow-md hover:shadow-lg'
+                    ? 'bg-gradient-to-r from-slate-900 to-teal-700 text-white shadow-lg'
+                    : 'bg-white text-slate-700 shadow-md hover:shadow-lg border border-slate-200'
                 }`}
               >
                 {tab.label}
@@ -205,10 +205,10 @@ export default function Reports() {
             {metrics && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: 'Total Ventas', value: `$${metrics.totalSales?.toFixed(2)}`, icon: DollarSign, color: 'from-green-500 to-emerald-600' },
-                  { label: 'Transacciones', value: metrics.transactionCount || 0, icon: Package, color: 'from-blue-500 to-cyan-600' },
-                  { label: 'Ticket Promedio', value: `$${metrics.averageTicket?.toFixed(2)}`, icon: TrendingUp, color: 'from-purple-500 to-pink-600' },
-                  { label: 'Propinas', value: `$${metrics.totalTips?.toFixed(2)}`, icon: DollarSign, color: 'from-orange-500 to-red-600' },
+                  { label: 'Total Ventas', value: `$${metrics.totalSales?.toFixed(2)}`, icon: DollarSign, color: 'from-emerald-600 to-teal-700' },
+                  { label: 'Transacciones', value: metrics.transactionCount || 0, icon: Package, color: 'from-slate-800 to-slate-600' },
+                  { label: 'Ticket Promedio', value: `$${metrics.averageTicket?.toFixed(2)}`, icon: TrendingUp, color: 'from-teal-700 to-cyan-700' },
+                  { label: 'Propinas', value: `$${metrics.totalTips?.toFixed(2)}`, icon: DollarSign, color: 'from-amber-600 to-stone-600' },
                 ].map((card, i) => {
                   const Icon = card.icon
                   return (

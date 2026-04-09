@@ -520,7 +520,7 @@ export default function POS() {
               {readyOrdersCount > 0 && (
                 <div 
                   onClick={() => navigate('/ready')}
-                  className="relative px-5 py-3 bg-red-600 rounded-lg font-bold flex items-center gap-2 animate-pulse shadow-lg cursor-pointer hover:scale-105 transition-transform"
+                  className="relative px-5 py-3 bg-rose-600 rounded-xl font-bold flex items-center gap-2 animate-pulse shadow-lg cursor-pointer hover:scale-105 transition-transform"
                 >
                   <Bell size={24} className="animate-bounce" />
                   <div>
@@ -557,7 +557,7 @@ export default function POS() {
             <button
               onClick={() => setActiveTab('order')}
               className={`flex-1 px-4 py-2 rounded-lg font-semibold ${
-                activeTab === 'order' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+                activeTab === 'order' ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 border border-slate-200'
               }`}
             >
               Orden
@@ -565,7 +565,7 @@ export default function POS() {
             <button
               onClick={() => setActiveTab('products')}
               className={`flex-1 px-4 py-2 rounded-lg font-semibold ${
-                activeTab === 'products' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+                activeTab === 'products' ? 'bg-teal-700 text-white' : 'bg-white text-slate-700 border border-slate-200'
               }`}
             >
               Productos
@@ -578,7 +578,7 @@ export default function POS() {
           <div className={`fixed bottom-4 left-4 right-4 z-50 animate-bounce-in ${activeTab === 'order' ? 'hidden xl:block' : ''}`}>
             <button
               onClick={() => setActiveTab('order')}
-              className="w-full bg-indigo-600 text-white p-4 rounded-xl shadow-2xl flex justify-between items-center border-2 border-indigo-400"
+              className="w-full bg-gradient-to-r from-slate-900 to-teal-800 text-white p-4 rounded-xl shadow-2xl flex justify-between items-center border border-white/10"
             >
               <div className="flex items-center gap-3">
                 <span className="bg-white text-indigo-600 px-3 py-1 rounded-lg font-black text-sm">
@@ -607,8 +607,8 @@ export default function POS() {
                       onClick={() => setCurrentTable(num)}
                       className={`rounded-lg px-4 py-3 text-sm font-semibold transition-colors ${
                         tableNumber === num
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                          ? 'bg-slate-900 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
                       }`}
                     >
                       Mesa {num}
@@ -708,8 +708,8 @@ export default function POS() {
                     onClick={() => setCurrentTable(num)}
                     className={`rounded-lg px-4 py-3 text-sm font-semibold transition-colors ${
                       tableNumber === num
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
                     }`}
                   >
                     Mesa {num}
