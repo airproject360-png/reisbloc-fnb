@@ -213,10 +213,11 @@ function App() {
 
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
+            <Route path="/auth/callback" element={<AuthCallback />} />
+
             {!isAuthenticated ? (
               <>
                 <Route path="/login" element={<Login />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
               </>
             ) : needsDeviceApproval ? (
