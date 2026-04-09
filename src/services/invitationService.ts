@@ -21,7 +21,7 @@ export interface InviteUserResult {
   }
 }
 
-export async function inviteUserToEvento(params: InviteUserParams): Promise<InviteUserResult> {
+async function getFreshAccessToken(): Promise<string> {
   const {
     data: { session },
     error: sessionError,
@@ -31,12 +31,20 @@ export async function inviteUserToEvento(params: InviteUserParams): Promise<Invi
     throw new Error('No se pudo validar la sesion actual. Vuelve a iniciar sesion con Google.')
   }
 
-  const accessToken = session?.access_token
-  if (!accessToken) {
+  if (session?.access_token) {
+    return session.access_token
+  }
+
+  const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession()
+  if (refreshError || !refreshed.session?.access_token) {
     throw new Error('Tu sesion no es valida para enviar invitaciones. Inicia sesion con Google e intenta de nuevo.')
   }
 
-  const { data, error } = await supabase.functions.invoke('invite-event-user', {
+  return refreshed.session.access_token
+}
+
+async function invokeInvite(accessToken: string, params: InviteUserParams) {
+  return supabase.functions.invoke('invite-event-user', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -45,6 +53,23 @@ export async function inviteUserToEvento(params: InviteUserParams): Promise<Invi
       appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
     },
   })
+}
+
+export async function inviteUserToEvento(params: InviteUserParams): Promise<InviteUserResult> {
+  const accessToken = await getFreshAccessToken()
+
+  let { data, error } = await invokeInvite(accessToken, params)
+
+  // Si el JWT expiró entre getSession e invoke, refrescamos y reintentamos una sola vez.
+  if (error?.message?.includes('401')) {
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession()
+    const retryToken = refreshed.session?.access_token
+    if (!refreshError && retryToken) {
+      const retry = await invokeInvite(retryToken, params)
+      data = retry.data
+      error = retry.error
+    }
+  }
 
   if (error) {
     if (error.message?.includes('401')) {
