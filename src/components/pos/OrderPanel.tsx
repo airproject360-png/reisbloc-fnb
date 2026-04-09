@@ -4,6 +4,7 @@ import { ShoppingBag, Plus, Minus, Trash2, Clock, Pencil } from 'lucide-react'
 interface OrderPanelProps {
   tableNumber: number
   items: OrderItem[]
+  readOnly?: boolean
   activeOrders?: Order[] // Órdenes ya enviadas a cocina
   onIncrement: (itemId: string) => void
   onDecrement: (itemId: string) => void
@@ -16,7 +17,7 @@ const currency = new Intl.NumberFormat('es-MX', {
   currency: 'MXN',
 })
 
-export function OrderPanel({ tableNumber, items, activeOrders = [], onIncrement, onDecrement, onRemove, onEditNote }: OrderPanelProps) {
+export function OrderPanel({ tableNumber, items, readOnly = false, activeOrders = [], onIncrement, onDecrement, onRemove, onEditNote }: OrderPanelProps) {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-6">
@@ -84,6 +85,7 @@ export function OrderPanel({ tableNumber, items, activeOrders = [], onIncrement,
                 <div className="flex items-center">
                   <button
                     onClick={() => onEditNote(item)}
+                    disabled={readOnly}
                     className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all"
                     title="Agregar nota"
                   >
@@ -91,6 +93,7 @@ export function OrderPanel({ tableNumber, items, activeOrders = [], onIncrement,
                   </button>
                   <button
                     onClick={() => onRemove(item.id)}
+                    disabled={readOnly}
                     className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
                     title="Eliminar"
                   >
@@ -107,6 +110,7 @@ export function OrderPanel({ tableNumber, items, activeOrders = [], onIncrement,
                 <div className="flex items-center gap-2 bg-white rounded-xl shadow-sm p-1">
                   <button
                     onClick={() => onDecrement(item.id)}
+                    disabled={readOnly}
                     className="h-9 w-9 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-700 hover:from-gray-200 hover:to-gray-300 font-bold transition-all transform hover:scale-110"
                   >
                     <Minus size={16} strokeWidth={3} />
@@ -114,6 +118,7 @@ export function OrderPanel({ tableNumber, items, activeOrders = [], onIncrement,
                   <span className="w-12 text-center text-lg font-black text-gray-900">{item.quantity}</span>
                   <button
                     onClick={() => onIncrement(item.id)}
+                    disabled={readOnly}
                     className="h-9 w-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white hover:from-indigo-600 hover:to-purple-700 font-bold transition-all transform hover:scale-110"
                   >
                     <Plus size={16} strokeWidth={3} />

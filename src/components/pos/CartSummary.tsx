@@ -6,6 +6,8 @@ import { ShoppingCart, Send, Trash2, AlertTriangle } from 'lucide-react'
 interface CartSummaryProps {
   tableNumber: number
   items: OrderItem[]
+  readOnly?: boolean
+  disableSend?: boolean
   onSend: () => void
   onClear: () => void
   sending: boolean
@@ -18,7 +20,7 @@ const currency = new Intl.NumberFormat('es-MX', {
   currency: 'MXN',
 })
 
-export function CartSummary({ tableNumber, items, onSend, onClear, sending, products = [], stockError }: CartSummaryProps) {
+export function CartSummary({ tableNumber, items, readOnly = false, disableSend = false, onSend, onClear, sending, products = [], stockError }: CartSummaryProps) {
   const totals = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
     const tax = subtotal * 0.16
@@ -33,7 +35,7 @@ export function CartSummary({ tableNumber, items, onSend, onClear, sending, prod
     })
   }, [items, products])
 
-  const isDisabled = items.length === 0 || sending || hasStockIssue
+  const isDisabled = disableSend || items.length === 0 || sending || hasStockIssue
 
   const handlePrint = async () => {
     if (items.length === 0) return
@@ -101,7 +103,7 @@ export function CartSummary({ tableNumber, items, onSend, onClear, sending, prod
         </div>
         <button
           onClick={onClear}
-          disabled={items.length === 0}
+          disabled={items.length === 0 || readOnly}
           className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-red-600 disabled:cursor-not-allowed disabled:text-gray-300 transition-colors p-2 rounded-lg hover:bg-red-50"
         >
           <Trash2 size={18} />
@@ -171,6 +173,11 @@ export function CartSummary({ tableNumber, items, onSend, onClear, sending, prod
             <>
               <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
               Enviando...
+            </>
+          ) : disableSend ? (
+            <>
+              <AlertTriangle size={20} />
+              Envío deshabilitado
             </>
           ) : hasStockIssue ? (
             <>

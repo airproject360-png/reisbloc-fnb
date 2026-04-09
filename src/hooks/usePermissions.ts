@@ -9,11 +9,11 @@ export function usePermissions() {
   const role = currentUser?.role
 
   // Permisos administrativos completos
-  const canManageUsers = role === 'admin' || role === 'supervisor'
-  const canManageInventory = role === 'admin' || role === 'supervisor'
-  const canManageDevices = role === 'admin' || role === 'supervisor'
+  const canManageUsers = role === 'admin'
+  const canManageInventory = role === 'admin'
+  const canManageDevices = role === 'admin'
   const canViewLogs = role === 'admin' || role === 'supervisor'
-  const canExportReports = role === 'admin' || role === 'supervisor'
+  const canExportReports = role === 'admin'
   
   // Permisos operativos
   const canCreateSales = ['admin', 'capitan', 'mesero', 'bar'].includes(role || '')
@@ -21,7 +21,7 @@ export function usePermissions() {
   const canDeleteProducts = role === 'admin'
   const canAccessKitchen = ['admin', 'cocina'].includes(role || '')
   const canAccessBar = ['admin', 'bar'].includes(role || '')
-  const canManageTables = ['admin', 'capitan', 'supervisor'].includes(role || '')
+  const canManageTables = ['admin', 'capitan'].includes(role || '')
   // Solo admin/capitan/supervisor acceden a monitor - mesero usa OrdersToServe
   const canAccessTableMonitor = canManageTables
   

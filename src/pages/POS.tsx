@@ -55,7 +55,7 @@ export default function POS() {
 
   const tableNumber = currentTableNumber || 1
   const items = draftOrders[tableNumber] || []
-  const isReadOnly = false
+  const isReadOnly = currentUser?.role === 'supervisor'
 
   useEffect(() => {
     // Audio de notificación
@@ -318,6 +318,11 @@ export default function POS() {
   }
 
   const handleOpenPaymentPanel = () => {
+    if (isReadOnly) {
+      alert('El rol supervisor es de solo lectura y no puede cobrar cuentas.')
+      return
+    }
+
     const payableStatuses = ['sent', 'preparing', 'ready', 'served']
     const payableOrders = activeTableOrders.filter(order => payableStatuses.includes(order.status))
 
@@ -649,6 +654,7 @@ export default function POS() {
               <OrderPanel
                 tableNumber={tableNumber}
                 items={items}
+                readOnly={isReadOnly}
                 activeOrders={activeTableOrders} // Pasamos las órdenes vivas
                 onIncrement={itemId => {
                   if (isReadOnly) return
@@ -671,6 +677,8 @@ export default function POS() {
               <CartSummary
                 tableNumber={tableNumber}
                 items={items}
+                disableSend
+                readOnly={isReadOnly}
                 onSend={handleSendToKitchen}
                 onClear={() => {
                   if (isReadOnly) return
@@ -683,9 +691,14 @@ export default function POS() {
 
               <button
                 onClick={handleOpenPaymentPanel}
-                className="w-full rounded-xl px-6 py-4 text-base font-bold text-white shadow-lg transition-all transform flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 hover:scale-[1.02]"
+                disabled={isReadOnly}
+                className={`w-full rounded-xl px-6 py-4 text-base font-bold text-white shadow-lg transition-all transform flex items-center justify-center gap-3 ${
+                  isReadOnly
+                    ? 'bg-gray-300 cursor-not-allowed shadow-none'
+                    : 'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 hover:scale-[1.02]'
+                }`}
               >
-                Abrir caja / cobrar cuenta
+                {isReadOnly ? 'Solo lectura (Supervisor)' : 'Abrir caja / cobrar cuenta'}
               </button>
             </>
           ) : (
@@ -750,6 +763,7 @@ export default function POS() {
             <OrderPanel
               tableNumber={tableNumber}
               items={items}
+              readOnly={isReadOnly}
               activeOrders={activeTableOrders} // Pasamos las órdenes vivas
               onIncrement={itemId => {
                 if (isReadOnly) return
@@ -772,6 +786,8 @@ export default function POS() {
             <CartSummary
               tableNumber={tableNumber}
               items={items}
+              disableSend
+              readOnly={isReadOnly}
               onSend={handleSendToKitchen}
               onClear={() => {
                 if (isReadOnly) return
@@ -784,9 +800,14 @@ export default function POS() {
 
             <button
               onClick={handleOpenPaymentPanel}
-              className="w-full rounded-xl px-6 py-4 text-base font-bold text-white shadow-lg transition-all transform flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 hover:scale-[1.02]"
+              disabled={isReadOnly}
+              className={`w-full rounded-xl px-6 py-4 text-base font-bold text-white shadow-lg transition-all transform flex items-center justify-center gap-3 ${
+                isReadOnly
+                  ? 'bg-gray-300 cursor-not-allowed shadow-none'
+                  : 'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 hover:scale-[1.02]'
+              }`}
             >
-              Abrir caja / cobrar cuenta
+              {isReadOnly ? 'Solo lectura (Supervisor)' : 'Abrir caja / cobrar cuenta'}
             </button>
           </div>
 
