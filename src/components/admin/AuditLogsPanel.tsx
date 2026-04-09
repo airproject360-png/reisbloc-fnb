@@ -63,6 +63,8 @@ export default function AuditLogsPanel() {
     USER_CREATED: { label: 'Usuario creado', color: 'text-green-700 bg-green-100' },
     USER_MODIFIED: { label: 'Usuario modificado', color: 'text-amber-700 bg-amber-100' },
     USER_DELETED: { label: 'Usuario archivado', color: 'text-red-700 bg-red-100' },
+    INVITE_SENT: { label: 'Invitación enviada', color: 'text-teal-700 bg-teal-100' },
+    INVITE_BLOCKED: { label: 'Invitación bloqueada', color: 'text-rose-700 bg-rose-100' },
     VIEW_REPORT: { label: 'Reporte visto', color: 'text-cyan-700 bg-cyan-100' },
     SALE_COMPLETED: { label: 'Venta completada', color: 'text-emerald-700 bg-emerald-100' },
     DELETE_PRODUCT_FROM_ORDER: { label: 'Producto eliminado de orden', color: 'text-orange-700 bg-orange-100' },
