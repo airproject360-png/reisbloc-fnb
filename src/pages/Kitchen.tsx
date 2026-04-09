@@ -74,10 +74,10 @@ export default function Kitchen() {
       // Notificar cuando la orden está lista
       if (newStatus === 'ready' && order && order.tableNumber) {
         try {
-          showOrderToast('✓ Orden Lista', `Mesa ${order.tableNumber} - ${order.items?.length || 0} platillo(s)`, 5000)
+          showOrderToast('✓ Orden Lista', `Cuenta ${order.tableNumber} - ${order.items?.length || 0} platillo(s)`, 5000)
           await sendNotificationToUsers({
             roles: ['mesero', 'capitan'],
-            title: `Orden lista - Mesa ${order.tableNumber}`,
+            title: `Orden lista - Cuenta ${order.tableNumber}`,
             body: `${order.items?.length || 0} platillo(s) listo(s) para servir`,
             type: 'order',
             priority: 'high',
@@ -246,7 +246,7 @@ export default function Kitchen() {
                   {/* Header */}
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <p className="text-3xl font-bold text-white">Mesa {order.tableNumber}</p>
+                      <p className="text-3xl font-bold text-white">Cuenta {order.tableNumber}</p>
                       <div className="flex items-center gap-2 mt-1 text-gray-400 text-sm">
                         <Clock size={14} />
                         <span>Hace {elapsed} min</span>

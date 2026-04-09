@@ -223,7 +223,7 @@ export default function SplitBillModal({ order, onClose, onConfirmSplit }: Split
             <div>
               <h2 className="text-2xl font-bold">Dividir Cuenta</h2>
               <p className="text-purple-100">
-                Mesa {order.tableNumber} - Total: ${orderTotal.toFixed(2)}
+                Cuenta {order.tableNumber} - Total: ${orderTotal.toFixed(2)}
               </p>
             </div>
           </div>

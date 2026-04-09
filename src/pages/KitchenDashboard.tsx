@@ -113,7 +113,7 @@ export default function KitchenDashboard() {
           <div className="flex items-center gap-2">
             {status === 'sent' && <Flame size={28} className="text-red-600 animate-bounce" />}
             {status === 'ready' && <CheckCircle size={28} className="text-green-600" />}
-            <span className="font-bold text-xl">Mesa {order.tableNumber}</span>
+            <span className="font-bold text-xl">Cuenta {order.tableNumber}</span>
           </div>
           <span className="text-sm text-gray-600">
             {order.createdAt instanceof Date

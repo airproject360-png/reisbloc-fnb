@@ -95,7 +95,7 @@ export default function PaymentPanel({
           // Usamos processDirectPayment que ahora es un mock local
           const payment = await mercadopagoService.processDirectPayment({
             amount: total,
-            description: `Mesa ${tableNumber} - ${ids.length} orden${ids.length > 1 ? 'es' : ''}`,
+            description: `Cuenta ${tableNumber} - ${ids.length} orden${ids.length > 1 ? 'es' : ''}`,
             orderId: ids[0],
             email: 'customer@restaurant.com',
             paymentMethodId: paymentMethod
@@ -138,7 +138,7 @@ export default function PaymentPanel({
           <div className="flex justify-between items-center relative z-10">
             <div>
               <h2 className="text-2xl font-bold text-white">Procesar Pago</h2>
-              <p className="text-cyan-50/80 text-sm mt-1">Mesa {tableNumber}</p>
+              <p className="text-cyan-50/80 text-sm mt-1">Cuenta {tableNumber}</p>
             </div>
             <button
               onClick={onCancel}

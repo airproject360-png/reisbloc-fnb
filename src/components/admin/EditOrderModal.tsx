@@ -91,7 +91,7 @@ export default function EditOrderModal({ order, onClose, onSave, onCancel }: Edi
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
-              Editar Orden - Mesa {order.tableNumber}
+              Editar Orden - Cuenta {order.tableNumber}
             </h2>
             <p className="text-sm text-gray-500 mt-1">
               Estado: <span className="font-semibold">{order.status}</span>

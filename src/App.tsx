@@ -224,7 +224,8 @@ function App() {
                                 <Route path="/login" element={<Navigate to="/pos" replace />} />
                                 <Route path="/pos" element={<POS />} />
                                 <Route path="/tables" element={['admin', 'supervisor', 'capitan'].includes(currentUser?.role || '') ? <TableMonitor /> : <Navigate to="/pos" />} />
-                                <Route path="/mesas" element={['admin', 'supervisor', 'capitan'].includes(currentUser?.role || '') ? <TableMonitor /> : <Navigate to="/pos" />} />
+                                <Route path="/cuentas" element={['admin', 'supervisor', 'capitan'].includes(currentUser?.role || '') ? <TableMonitor /> : <Navigate to="/pos" />} />
+                                <Route path="/mesas" element={<Navigate to="/cuentas" replace />} />
                                 <Route path="/admin" element={currentUser?.role === 'admin' ? <Admin /> : <Navigate to="/pos" />} />
                                 {APP_CONFIG.EVENT_FEATURES.INVENTORY && (
                                   <Route path="/inventory" element={['admin', 'supervisor'].includes(currentUser?.role || '') ? <Inventory /> : <Navigate to="/pos" />} />

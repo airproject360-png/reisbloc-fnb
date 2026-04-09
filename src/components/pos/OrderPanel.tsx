@@ -23,7 +23,7 @@ export function OrderPanel({ tableNumber, items, activeOrders = [], onIncrement,
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <ShoppingBag className="text-indigo-600" size={28} />
-            Mesa {tableNumber}
+            Cuenta {tableNumber}
           </h2>
           <p className="text-sm text-gray-500 mt-1">
             {items.length} productos · {activeOrders.length > 0 ? 'Con órdenes previas' : 'Nueva orden'}

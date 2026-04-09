@@ -69,10 +69,10 @@ export default function Bar() {
       // Notificar cuando la orden está lista
       if (newStatus === 'ready' && order && order.tableNumber) {
         try {
-          showOrderToast('✓ Bebidas Listas', `Mesa ${order.tableNumber} - ${order.items?.length || 0} bebida(s)`, 5000)
+          showOrderToast('✓ Bebidas Listas', `Cuenta ${order.tableNumber} - ${order.items?.length || 0} bebida(s)`, 5000)
           await sendNotificationToUsers({
             roles: ['mesero', 'capitan'],
-            title: `Bebidas listas - Mesa ${order.tableNumber}`,
+            title: `Bebidas listas - Cuenta ${order.tableNumber}`,
             body: `${order.items?.length || 0} bebida(s) listo(s) para servir`,
             type: 'order',
             priority: 'high',
@@ -238,7 +238,7 @@ export default function Bar() {
                   {/* Header */}
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <p className="text-3xl font-bold text-white">Mesa {order.tableNumber}</p>
+                      <p className="text-3xl font-bold text-white">Cuenta {order.tableNumber}</p>
                       <div className="flex items-center gap-2 mt-1 text-purple-300 text-sm">
                         <Clock size={14} />
                         <span>Hace {elapsed} min</span>

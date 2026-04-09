@@ -162,7 +162,7 @@ export default function OrdersToServe() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div className="bg-white/10 rounded-2xl px-4 py-3">
-                <p className="text-blue-100">Mesas con órdenes</p>
+                <p className="text-blue-100">Cuentas con órdenes</p>
                 <p className="text-3xl font-bold">{byTable.length}</p>
               </div>
               <div className="bg-white/10 rounded-2xl px-4 py-3">
@@ -199,7 +199,7 @@ export default function OrdersToServe() {
               >
                 <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4">
                   <div>
-                    <p className="text-sm text-blue-600 font-semibold">MESA</p>
+                    <p className="text-sm text-blue-600 font-semibold">CUENTA</p>
                     <p className="text-4xl font-bold text-blue-900">{group.tableNumber}</p>
                   </div>
                   <div className="flex items-center gap-2 bg-blue-600 text-white rounded-full px-4 py-2">

@@ -146,7 +146,7 @@ export default function POS() {
         <div style="text-align:center;margin-bottom:8px;border-bottom:1px solid #000;">
           <div style="font-weight:bold;font-size:12px;">REISBLOC F&B</div>
           <div style="font-size:9px;">reisbloc.com</div>
-          <div style="font-size:9px;">Mesa ${tableNumber}</div>
+          <div style="font-size:9px;">Cuenta ${tableNumber}</div>
         </div>
         <div style="margin-bottom:6px;font-size:9px;">
           <div>Fecha: ${date}</div>
@@ -247,7 +247,7 @@ export default function POS() {
         try {
           await sendNotificationToUsers({
             roles: ['cocina'],
-            title: `🍽️ Nueva orden cocina - Mesa ${tableNumber}`,
+            title: `🍽️ Nueva orden cocina - Cuenta ${tableNumber}`,
             body: `${foodItems.length} platillo(s)`,
             type: 'order',
             priority: 'high',
@@ -278,7 +278,7 @@ export default function POS() {
         try {
           await sendNotificationToUsers({
             roles: ['bar'],
-            title: `🍹 Nueva orden bar - Mesa ${tableNumber}`,
+            title: `🍹 Nueva orden bar - Cuenta ${tableNumber}`,
             body: `${drinkItems.length} bebida(s)`,
             type: 'order',
             priority: 'high',
@@ -305,7 +305,7 @@ export default function POS() {
       const summary = []
       if (foodItems.length > 0) summary.push(`${foodItems.length} comida`)
       if (drinkItems.length > 0) summary.push(`${drinkItems.length} bebidas`)
-      alert(`✅ Orden enviada - Mesa ${tableNumber}\n${summary.join(' + ')}`)
+      alert(`✅ Orden enviada - Cuenta ${tableNumber}\n${summary.join(' + ')}`)
       
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error al enviar orden'
@@ -417,8 +417,8 @@ export default function POS() {
             <div style="text-align:center;margin-bottom:8px;border-bottom:1px solid #000;">
               <div style="font-weight:bold;font-size:12px;">REISBLOC F&B</div>
               <div style="font-size:9px;">reisbloc.com</div>
-              <div style="font-size:9px;">Mesa ${tableNumber}</div>
-              <div style="font-size:9px;">Ticket: ${orderIds[0] ? orderIds[0].slice(0, 8) : `MESA-${tableNumber}`}</div>
+              <div style="font-size:9px;">Cuenta ${tableNumber}</div>
+              <div style="font-size:9px;">Ticket: ${orderIds[0] ? orderIds[0].slice(0, 8) : `CUENTA-${tableNumber}`}</div>
             </div>
             <div style="margin-bottom:6px;font-size:9px;">
               <div>Fecha: ${date}</div>
@@ -546,7 +546,7 @@ export default function POS() {
               </div>
 
               <div className="text-right">
-                <p className="text-sm text-cyan-50/85">Mesa actual</p>
+                <p className="text-sm text-cyan-50/85">Cuenta actual</p>
                 <p className="text-2xl font-bold">{tableNumber}</p>
               </div>
             </div>
@@ -601,7 +601,7 @@ export default function POS() {
             <>
               <div className="card">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Mesas</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">Cuentas</h2>
                   <span className="text-xs font-medium text-gray-500">Selecciona para editar</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
@@ -615,7 +615,7 @@ export default function POS() {
                           : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
                       }`}
                     >
-                      Mesa {num}
+                      Cuenta {num}
                     </button>
                   ))}
                 </div>
@@ -629,7 +629,7 @@ export default function POS() {
                         : 'bg-gray-900 text-white hover:bg-black'
                     }`}
                   >
-                    Imprimir Cuenta (Mesa)
+                    Imprimir Cuenta
                   </button>
                 </div>
                 {APP_CONFIG.TABLES.HAS_COURTESY_TABLE && (
@@ -641,7 +641,7 @@ export default function POS() {
                         : 'bg-green-100 text-green-800 hover:bg-green-200'
                     }`}
                   >
-                    Mesa de cortesía
+                    Cuenta de cortesía
                   </button>
                 )}
               </div>
@@ -685,7 +685,7 @@ export default function POS() {
                 onClick={handleOpenPaymentPanel}
                 className="w-full rounded-xl px-6 py-4 text-base font-bold text-white shadow-lg transition-all transform flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 hover:scale-[1.02]"
               >
-                Abrir caja / cobrar mesa
+                Abrir caja / cobrar cuenta
               </button>
             </>
           ) : (
@@ -702,7 +702,7 @@ export default function POS() {
           <div className="space-y-6 sticky top-24 h-fit">
             <div className="card">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Mesas</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Cuentas</h2>
                 <span className="text-xs font-medium text-gray-500">Selecciona para editar</span>
               </div>
               <div className="grid grid-cols-3 gap-2">
@@ -716,7 +716,7 @@ export default function POS() {
                         : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
                     }`}
                   >
-                    Mesa {num}
+                    Cuenta {num}
                   </button>
                 ))}
               </div>
@@ -730,7 +730,7 @@ export default function POS() {
                         : 'bg-gray-900 text-white hover:bg-black'
                     }`}
                   >
-                    Imprimir Cuenta (Mesa)
+                    Imprimir Cuenta
                   </button>
                 </div>
               {APP_CONFIG.TABLES.HAS_COURTESY_TABLE && (
@@ -742,7 +742,7 @@ export default function POS() {
                       : 'bg-green-100 text-green-800 hover:bg-green-200'
                   }`}
                 >
-                  Mesa de cortesía
+                  Cuenta de cortesía
                 </button>
               )}
             </div>
@@ -786,7 +786,7 @@ export default function POS() {
               onClick={handleOpenPaymentPanel}
               className="w-full rounded-xl px-6 py-4 text-base font-bold text-white shadow-lg transition-all transform flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 hover:scale-[1.02]"
             >
-              Abrir caja / cobrar mesa
+              Abrir caja / cobrar cuenta
             </button>
           </div>
 

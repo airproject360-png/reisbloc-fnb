@@ -53,7 +53,7 @@ export function CartSummary({ tableNumber, items, onSend, onClear, sending, prod
         <div style="text-align:center;margin-bottom:8px;border-bottom:1px solid #000;">
           <div style="font-weight:bold;font-size:12px;">REISBLOC F&B</div>
           <div style="font-size:9px;">reisbloc.com</div>
-          <div style="font-size:9px;">Mesa ${tableNumber}</div>
+          <div style="font-size:9px;">Cuenta ${tableNumber}</div>
         </div>
         <div style="margin-bottom:6px;font-size:9px;">
           <div>Fecha: ${date}</div>
@@ -97,7 +97,7 @@ export function CartSummary({ tableNumber, items, onSend, onClear, sending, prod
             <ShoppingCart className="text-indigo-600" size={28} />
             Resumen
           </h2>
-          <p className="text-sm font-semibold text-indigo-600 mt-1">Mesa {tableNumber}</p>
+          <p className="text-sm font-semibold text-indigo-600 mt-1">Cuenta {tableNumber}</p>
         </div>
         <button
           onClick={onClear}

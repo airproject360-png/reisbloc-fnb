@@ -84,7 +84,7 @@ export default function ReceiptTicket({
       {/* Ticket Info */}
       <div style={{ marginBottom: '6px', fontSize: '9px' }}>
         <div>Ticket: {order.id?.slice(0, 8) || 'N/A'}</div>
-        <div>Mesa: {tableNumber}</div>
+        <div>Cuenta: {tableNumber}</div>
         <div>Fecha: {new Date().toLocaleString('es-MX')}</div>
       </div>
 

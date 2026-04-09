@@ -94,7 +94,7 @@ export default function TableMonitor() {
         <div style="text-align:center;margin-bottom:8px;border-bottom:1px dashed #000;padding-bottom:8px;">
           <div style="font-weight:bold;font-size:14px;margin-bottom:4px;">REISBLOC F&B</div>
           <div style="font-size:10px;">reisbloc.com</div>
-          <div style="font-size:10px;margin-top:4px;">Mesa: ${tableNumber}</div>
+          <div style="font-size:10px;margin-top:4px;">Cuenta: ${tableNumber}</div>
           <div style="font-size:10px;">${title}</div>
           <div style="font-size:10px;">${date}</div>
         </div>
@@ -170,7 +170,7 @@ export default function TableMonitor() {
         <div style="text-align:center;margin-bottom:8px;border-bottom:1px dashed #000;padding-bottom:8px;">
           <div style="font-weight:bold;font-size:14px;margin-bottom:4px;">REISBLOC F&B</div>
           <div style="font-size:10px;">reisbloc.com</div>
-          <div style="font-size:10px;margin-top:4px;">Mesa ${tableNumber} · Persona ${split.personNumber}</div>
+          <div style="font-size:10px;margin-top:4px;">Cuenta ${tableNumber} · Persona ${split.personNumber}</div>
           <div style="font-size:10px;">${title}</div>
           <div style="font-size:10px;">${date}</div>
         </div>
@@ -311,7 +311,7 @@ export default function TableMonitor() {
     try {
       await supabaseService.updateOrder(orderId, { tableNumber: target })
     } catch (err: any) {
-      setError(err?.message || 'No se pudo transferir la mesa')
+      setError(err?.message || 'No se pudo transferir la cuenta')
     } finally {
       setBusyOrders(prev => ({ ...prev, [orderId]: false }))
     }
@@ -324,7 +324,7 @@ export default function TableMonitor() {
     try {
       await supabaseService.updateOrder(orderId, { status: 'completed', closedBy: currentUser.id, closedAt: new Date() })
     } catch (err: any) {
-      setError(err?.message || 'No se pudo cerrar la mesa')
+      setError(err?.message || 'No se pudo cerrar la cuenta')
     } finally {
       setBusyOrders(prev => ({ ...prev, [orderId]: false }))
     }
@@ -399,7 +399,7 @@ export default function TableMonitor() {
           orderIds: paymentOrder.ids,
         })
       } else {
-        const errorMsg = 'Error: Número de mesa inválido'
+        const errorMsg = 'Error: Número de cuenta inválido'
         logger.error('payment', errorMsg, {
           paymentOrder,
           recoveredTable: recovered,
@@ -488,7 +488,7 @@ export default function TableMonitor() {
       
       logger.info('payment', 'Payment process completed successfully ✅')
       setPaymentOrder(null)
-      alert('✅ Pago registrado y mesa cerrada')
+      alert('✅ Pago registrado y cuenta cerrada')
     } catch (err: any) {
       const errorMsg = err?.message || 'No se pudo registrar el pago'
       logger.error('payment', `Payment failed: ${errorMsg}`, err)
@@ -526,7 +526,7 @@ export default function TableMonitor() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center text-gray-600">Cargando monitor de mesas...</div>
+        <div className="text-center text-gray-600">Cargando monitor de cuentas...</div>
       </div>
     )
   }
@@ -557,7 +557,7 @@ export default function TableMonitor() {
                 <LayoutDashboard size={28} />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Monitor de Mesas</h1>
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Monitor de Cuentas</h1>
                 <p className="text-slate-500 font-medium">Vista en tiempo real de la operación</p>
               </div>
               <div className="ml-auto">
@@ -569,7 +569,7 @@ export default function TableMonitor() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
               <div className="bg-slate-50 rounded-xl px-5 py-4 border border-slate-100">
-                <p className="text-slate-500 font-semibold uppercase text-xs tracking-wider">Mesas activas</p>
+                <p className="text-slate-500 font-semibold uppercase text-xs tracking-wider">Cuentas activas</p>
                 <p className="text-3xl font-black text-slate-900">{activeTables}</p>
               </div>
               <div className="bg-slate-50 rounded-xl px-5 py-4 border border-slate-100">
@@ -594,7 +594,7 @@ export default function TableMonitor() {
         {/* Tables */}
         {groupedByTable.length === 0 ? (
           <div className="surface-warm rounded-2xl p-8 text-center text-slate-600 shadow-sm">
-            No hay mesas activas ahora.
+            No hay cuentas activas ahora.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -607,7 +607,7 @@ export default function TableMonitor() {
               >
                 <div className={`flex items-center justify-between rounded-xl p-3 bg-gradient-to-r ${styles.header}`}>
                   <div>
-                    <p className={`text-sm font-semibold ${styles.text} opacity-70`}>Mesa</p>
+                    <p className={`text-sm font-semibold ${styles.text} opacity-70`}>Cuenta</p>
                     <p className={`text-3xl font-black ${styles.text}`}>{group.tableNumber}</p>
                   </div>
                   <div className={`flex items-center gap-2 text-sm font-medium ${styles.text}`}>
@@ -628,7 +628,7 @@ export default function TableMonitor() {
                           <div key="consolidated" className="border-2 border-amber-400 bg-gradient-to-br from-amber-100 to-orange-100 rounded-xl p-4 space-y-3 shadow-sm">
                             <div className="flex items-center justify-between gap-2">
                               <div>
-                                <p className="text-xs text-amber-700 font-bold uppercase tracking-wider">Total Mesa</p>
+                                <p className="text-xs text-amber-700 font-bold uppercase tracking-wider">Total Cuenta</p>
                                 <p className="text-lg font-black text-amber-900">{consolidated.orders.length} órdenes</p>
                               </div>
                               <div className="text-right">
@@ -649,7 +649,7 @@ export default function TableMonitor() {
                             {canModifyOrders && (
                               <div className="grid grid-cols-2 gap-2">
                                 <button
-                                  onClick={() => handlePrintTable(consolidated.orders, group.tableNumber, 'Cuenta Mesa')}
+                                  onClick={() => handlePrintTable(consolidated.orders, group.tableNumber, 'Cuenta')}
                                   className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gray-900 text-white font-bold hover:bg-black transition-all"
                                 >
                                   Imprimir Cuenta
@@ -663,7 +663,7 @@ export default function TableMonitor() {
                                   disabled={consolidated.orders.some(o => busyOrders[o.id])}
                                   className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold disabled:opacity-60 hover:shadow-lg transition-all"
                                 >
-                                  <CreditCard size={18} /> Cobrar Mesa Completa
+                                  <CreditCard size={18} /> Cobrar Cuenta Completa
                                 </button>
                               </div>
                             )}
@@ -766,7 +766,7 @@ export default function TableMonitor() {
                                   {status === 'served' && !consolidated && (
                                     <div className="flex flex-wrap gap-2 w-full">
                                       <button
-                                        onClick={() => handlePrintTable([order], order.tableNumber, 'Cuenta Mesa')}
+                                        onClick={() => handlePrintTable([order], order.tableNumber, 'Cuenta')}
                                         className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold"
                                       >
                                         Imprimir Cuenta
@@ -810,7 +810,7 @@ export default function TableMonitor() {
                                     >
                                       {availableTables.map(num => (
                                         <option key={num} value={num}>
-                                          Mesa {num}
+                                          Cuenta {num}
                                         </option>
                                       ))}
                                     </select>

@@ -72,7 +72,7 @@ export default function KitchenTicket({
         {/* Orden Info */}
         <div style={{ marginBottom: '8px', borderBottom: '1px dashed #000', paddingBottom: '6px', fontSize: '11px' }}>
           <div>
-            <strong>Mesa:</strong> {tableNumber}
+            <strong>Cuenta:</strong> {tableNumber}
           </div>
           <div>
             <strong>Hora:</strong> {new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
