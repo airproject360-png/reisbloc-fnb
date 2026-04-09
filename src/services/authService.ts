@@ -66,6 +66,16 @@ export async function resolveCurrentOrganizationId(authUser?: any): Promise<stri
     logger.warn('auth', 'No se pudo resolver organization_id por RPC', error)
   }
 
+  const { data: primaryOrgId, error: primaryOrgError } = await supabase.rpc('get_primary_organization_id')
+  if (!primaryOrgError && primaryOrgId) {
+    persistOrganizationId(primaryOrgId)
+    return primaryOrgId
+  }
+
+  if (primaryOrgError) {
+    logger.warn('auth', 'No se pudo resolver organization_id primario', primaryOrgError)
+  }
+
   if (FALLBACK_EVENT_ORG_ID) {
     persistOrganizationId(FALLBACK_EVENT_ORG_ID)
   }
