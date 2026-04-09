@@ -98,6 +98,13 @@ function response(body: unknown, status = 200) {
   })
 }
 
+function buildRedirectUrl(appUrlRaw: string | null | undefined) {
+  const fallback = 'https://reisbloc-fnb.vercel.app'
+  const base = String(appUrlRaw || '').trim() || fallback
+  const normalized = base.endsWith('/') ? base.slice(0, -1) : base
+  return `${normalized}/auth/callback`
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { status: 200, headers: corsHeaders })
@@ -225,6 +232,7 @@ serve(async (req) => {
   const role: InviteRole = body.role === 'admin' ? 'admin' : 'supervisor'
   const organizationSlug = String(body.organizationSlug || '').trim().toLowerCase()
   const expiresInHours = Math.max(1, Math.min(Number(body.expiresInHours || 48), 168))
+  const appUrl = String(body.appUrl || req.headers.get('origin') || '').trim()
 
   if (!rawEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
     return response({ error: 'Invalid email address' }, 400)
@@ -261,7 +269,7 @@ serve(async (req) => {
   }
 
   const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString()
-  const redirectTo = `${req.headers.get('origin') || 'http://localhost:5173'}/auth/callback`
+  const redirectTo = buildRedirectUrl(appUrl)
 
   const { data: invitedData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(rawEmail, {
     redirectTo,
@@ -275,7 +283,18 @@ serve(async (req) => {
   })
 
   if (inviteError) {
-    return response({ error: inviteError.message }, 400)
+    await writeInviteAudit(
+      supabaseAdmin,
+      callerAppUser.organization_id,
+      callerAppUser.id,
+      requestIp,
+      rawEmail,
+      role,
+      true,
+      `invite_error: ${inviteError.message}`,
+    )
+
+    return response({ error: inviteError.message, redirectTo }, 400)
   }
 
   const baseUserPayload = {

@@ -42,6 +42,7 @@ export async function inviteUserToEvento(params: InviteUserParams): Promise<Invi
     },
     body: {
       ...params,
+      appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
     },
   })
 
