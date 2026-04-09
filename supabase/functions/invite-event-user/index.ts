@@ -138,7 +138,7 @@ serve(async (req) => {
   const { data: callerAppUser, error: callerRoleError } = await supabaseAdmin
     .from('users')
     .select('id, role, organization_id')
-    .or(`auth_id.eq.${caller.id},email.eq.${callerEmail}`)
+    .or(`id.eq.${caller.id},email.eq.${callerEmail}`)
     .eq('active', true)
     .limit(1)
     .maybeSingle()
@@ -258,8 +258,6 @@ serve(async (req) => {
     return response({ error: inviteError.message }, 400)
   }
 
-  const authUserId = invitedData.user?.id
-
   const baseUserPayload = {
     organization_id: org.id,
     name: rawEmail.split('@')[0],
@@ -286,7 +284,6 @@ serve(async (req) => {
       .from('users')
       .update({
         ...baseUserPayload,
-        auth_id: authUserId || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', existingUser.id)
@@ -298,7 +295,6 @@ serve(async (req) => {
     const { error: insertError } = await supabaseAdmin.from('users').insert([
       {
         ...baseUserPayload,
-        auth_id: authUserId || null,
         pin: null,
       },
     ])
