@@ -119,6 +119,68 @@ export const mapAuthUserToAppUser = (authUser: any): User => {
   }
 }
 
+export async function resolveAuthorizedAppUser(authUser: any): Promise<User | null> {
+  try {
+    const authId = String(authUser?.id || '').trim()
+    const email = String(authUser?.email || '').toLowerCase().trim()
+
+    if (!authId || !email) {
+      logger.warn('auth', 'OAuth user inválido para autorización', { authId, email })
+      return null
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name, username, email, role, active, organization_id, created_at')
+      .or(`id.eq.${authId},email.eq.${email}`)
+      .eq('active', true)
+      .limit(1)
+      .maybeSingle()
+
+    if (error) {
+      logger.error('auth', 'Error validando usuario OAuth contra users', error)
+      return null
+    }
+
+    if (!data) {
+      logger.warn('auth', 'OAuth bloqueado: usuario no invitado/no registrado', {
+        authId,
+        email,
+      })
+      return null
+    }
+
+    const role = FORCED_ADMIN_EMAILS.has(email)
+      ? 'admin'
+      : (String(data.role || 'supervisor') as User['role'])
+
+    const username = data.username || data.name || email
+    const orgId = data.organization_id || getStoredOrganizationId() || FALLBACK_EVENT_ORG_ID
+
+    if (!orgId) {
+      logger.warn('auth', 'OAuth bloqueado: usuario sin organization_id', { authId, email })
+      return null
+    }
+
+    persistOrganizationId(orgId)
+
+    return {
+      id: authId,
+      username,
+      pin: '',
+      role,
+      email,
+      active: true,
+      createdAt: data.created_at ? new Date(data.created_at) : new Date(),
+      devices: [],
+      organizationId: orgId,
+    }
+  } catch (error) {
+    logger.error('auth', 'Error resolviendo usuario OAuth autorizado', error as any)
+    return null
+  }
+}
+
 export async function authLoginWithGoogle(): Promise<{ success: boolean; error?: string }> {
   try {
     const redirectTo = `${window.location.origin}/auth/callback`

@@ -25,7 +25,7 @@ import { useNotifications } from '@/hooks/useNotifications'
 import { Bell, Share, PlusSquare } from 'lucide-react'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { supabase } from '@/config/supabase'
-import { mapAuthUserToAppUser, resolveCurrentOrganizationId } from '@/services/authService'
+import { authLogout, resolveAuthorizedAppUser } from '@/services/authService'
 import { APP_CONFIG } from '@/config/constants'
 
 const Login = lazy(() => import('@/pages/Login'))
@@ -83,9 +83,14 @@ function App() {
       } = await supabase.auth.getSession()
 
       if (session?.user && (!isAuthenticated || !currentUser?.organizationId)) {
-        const orgId = await resolveCurrentOrganizationId(session.user)
-        const mapped = mapAuthUserToAppUser(session.user)
-        setCurrentUser({ ...mapped, organizationId: orgId || mapped.organizationId })
+        const authorizedUser = await resolveAuthorizedAppUser(session.user)
+        if (!authorizedUser) {
+          await authLogout()
+          setCurrentUser(null)
+          setAuthenticated(false)
+          return
+        }
+        setCurrentUser(authorizedUser)
         setAuthenticated(true)
       }
     }
@@ -95,9 +100,14 @@ function App() {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         void (async () => {
-          const orgId = await resolveCurrentOrganizationId(session.user)
-          const mapped = mapAuthUserToAppUser(session.user)
-          setCurrentUser({ ...mapped, organizationId: orgId || mapped.organizationId })
+          const authorizedUser = await resolveAuthorizedAppUser(session.user)
+          if (!authorizedUser) {
+            await authLogout()
+            setCurrentUser(null)
+            setAuthenticated(false)
+            return
+          }
+          setCurrentUser(authorizedUser)
           setAuthenticated(true)
         })()
         return

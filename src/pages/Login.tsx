@@ -17,6 +17,11 @@ function Login() {
   useEffect(() => {
     if (searchParams.get('error') === 'auth_failed') {
       setUiError('No se pudo completar la autenticación con Google. Intenta de nuevo.')
+      return
+    }
+
+    if (searchParams.get('error') === 'not_invited') {
+      setUiError('Tu cuenta Google no está invitada o no está activa para este evento. Pide acceso al administrador.')
     }
   }, [searchParams])
 

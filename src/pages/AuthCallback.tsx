@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/config/supabase'
 import { useAppStore } from '@/store/appStore'
-import { mapAuthUserToAppUser, resolveCurrentOrganizationId } from '@/services/authService'
+import { authLogout, resolveAuthorizedAppUser } from '@/services/authService'
 import logger from '@/utils/logger'
 
 export const AuthCallback = () => {
@@ -27,13 +27,15 @@ export const AuthCallback = () => {
         return
       }
 
-      const organizationId = await resolveCurrentOrganizationId(session.user)
-      const baseUser = mapAuthUserToAppUser(session.user)
-      const mappedUser = {
-        ...baseUser,
-        organizationId: organizationId || baseUser.organizationId,
+      const authorizedUser = await resolveAuthorizedAppUser(session.user)
+      if (!authorizedUser) {
+        await authLogout()
+        logger.warn('auth', 'OAuth bloqueado: usuario no invitado/no activo')
+        navigate('/login?error=not_invited', { replace: true })
+        return
       }
-      setCurrentUser(mappedUser)
+
+      setCurrentUser(authorizedUser)
       setAuthenticated(true)
 
       // Si llegamos aquí, la sesión es válida
