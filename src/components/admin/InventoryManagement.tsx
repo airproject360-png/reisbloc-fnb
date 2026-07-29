@@ -16,6 +16,9 @@ import {
   Archive,
 } from 'lucide-react'
 
+import demoSeedService from '@/services/demoSeedService'
+import { Sparkles, RefreshCw } from 'lucide-react'
+
 export default function InventoryManagement() {
   const { products, setProducts, currentUser } = useAppStore()
   const { canManageInventory, isReadOnly } = usePermissions()
@@ -23,6 +26,25 @@ export default function InventoryManagement() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [filter, setFilter] = useState<'all' | 'active' | 'low-stock'>('all')
+  const [activeTab, setActiveTab] = useState<'products' | 'ingredients'>('products')
+  const [seedSuccessMsg, setSeedSuccessMsg] = useState<string | null>(null)
+
+  const handleSeedDemoData = async () => {
+    if (!confirm('¿Seguro que deseas BORRAR el inventario actual y cargar el Menú Demo F&B México (Desayunos, Comidas, Cenas, Bebidas y Combos con recetas)?')) {
+      return
+    }
+
+    setLoading(true)
+    const result = await demoSeedService.resetAndSeedFnBDemoData()
+    setLoading(false)
+
+    if (result.success) {
+      setSeedSuccessMsg(result.message)
+      await loadProducts()
+    } else {
+      alert(`Error al poblar demo: ${result.message}`)
+    }
+  }
 
   useEffect(() => {
     void loadProducts()
@@ -125,13 +147,34 @@ export default function InventoryManagement() {
           </p>
         </div>
 
-        {canManageInventory && !isReadOnly && (
-          <button onClick={() => setShowCreateModal(true)} className="btn-primary flex items-center gap-2">
-            <Plus size={20} />
-            Nuevo Producto
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {canManageInventory && !isReadOnly && (
+            <>
+              <button
+                onClick={handleSeedDemoData}
+                disabled={loading}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold flex items-center gap-2 shadow-lg transition-all"
+                title="Borrar inventario y cargar menú demo de México (Desayunos, Comidas, Cenas, Bebidas y Combos con recetas)"
+              >
+                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                <span>Restablecer Demo F&B México</span>
+              </button>
+
+              <button onClick={() => setShowCreateModal(true)} className="btn-primary flex items-center gap-2">
+                <Plus size={20} />
+                Nuevo Producto
+              </button>
+            </>
+          )}
+        </div>
       </div>
+
+      {seedSuccessMsg && (
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold flex items-center justify-between">
+          <span>{seedSuccessMsg}</span>
+          <button onClick={() => setSeedSuccessMsg(null)} className="text-emerald-600 text-xs font-bold underline">Cerrar</button>
+        </div>
+      )}
 
       {isReadOnly && (
         <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 flex items-center gap-3">

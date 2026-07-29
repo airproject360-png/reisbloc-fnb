@@ -15,6 +15,7 @@ import { Product, OrderItem } from '@/types/index'
 import { sendNotificationToUsers } from '@/services/sendNotificationHelper'
 import { Bell, ShoppingCart, Pencil, User } from 'lucide-react'
 import printService from '@/services/printService'
+import { DEMO_PRODUCTS } from '@/services/demoSeedService'
 
 export default function POS() {
   const navigate = useNavigate()
@@ -97,9 +98,14 @@ export default function POS() {
     setLoading(true)
     try {
       const prods = await supabaseService.getAllProducts()
-      setProducts(prods)
+      if (prods && prods.length > 0) {
+        setProducts(prods)
+      } else {
+        setProducts(DEMO_PRODUCTS)
+      }
     } catch (error) {
-      logger.error('pos', 'Error loading products', error as any)
+      logger.error('pos', 'Error loading products, using demo menu', error as any)
+      setProducts(DEMO_PRODUCTS)
     } finally {
       setLoading(false)
     }
