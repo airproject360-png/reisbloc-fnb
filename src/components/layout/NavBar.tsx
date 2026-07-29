@@ -22,7 +22,8 @@ import {
   ChefHat,
   Wine,
   Users,
-  Sparkles
+  Sparkles,
+  Utensils
 } from 'lucide-react'
 import AIAssistantModal from '@/components/ui/AIAssistantModal'
 
@@ -79,6 +80,7 @@ export default function NavBar() {
 
   const navItems = [
     { path: '/pos', label: 'POS', icon: ShoppingCart, roles: ['admin', 'supervisor', 'capitan', 'mesero'] },
+    { path: '/menu', label: 'Menú Digital', icon: Utensils, roles: ['admin', 'supervisor', 'capitan', 'mesero', 'cocina', 'bar'] },
     { path: '/tables', label: 'Cuentas', icon: LayoutDashboard, roles: ['admin', 'supervisor', 'capitan', 'mesero'] },
     { path: '/kitchen', label: 'Cocina', icon: ChefHat, roles: ['admin', 'supervisor', 'cocina', 'capitan', 'mesero'] },
     { path: '/bar', label: 'Barra', icon: Wine, roles: ['admin', 'supervisor', 'bar', 'capitan', 'mesero'] },

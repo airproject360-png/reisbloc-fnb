@@ -80,7 +80,7 @@ export const DEMO_INGREDIENTS: DemoIngredient[] = [
   { id: 'ing-28', name: 'Set de Cubiertos & Servilletas', category: 'Empaques To-Go', unitType: 'units', currentStock: 500, reorderLevel: 100, wasteMarginPercent: 1 }
 ]
 
-// 3. PRODUCTOS DEL MENÚ CON RECETAS E INSUMOS ASOCIADOS
+// 3. PRODUCTOS DEL MENÚ CON RECETAS E INSUMOS ASOCIADOS Y FOTOS ALTA RESOLUCIÓN
 export const DEMO_PRODUCTS: DemoProduct[] = [
   // --- DESAYUNOS ---
   {
@@ -91,10 +91,11 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Desayunos',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1599789197514-47270cd526b4?w=800&auto=format&fit=crop',
     recipeIngredients: [
-      { ingredientId: 'ing-10', quantityRequired: 0.15 }, // 150g totopos
-      { ingredientId: 'ing-01', quantityRequired: 0.10 }, // 100g pollo
-      { ingredientId: 'ing-05', quantityRequired: 0.03 }  // 30g queso
+      { ingredientId: 'ing-10', quantityRequired: 0.15 },
+      { ingredientId: 'ing-01', quantityRequired: 0.10 },
+      { ingredientId: 'ing-05', quantityRequired: 0.03 }
     ]
   },
   {
@@ -105,10 +106,11 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Desayunos',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=800&auto=format&fit=crop',
     recipeIngredients: [
-      { ingredientId: 'ing-04', quantityRequired: 2 },    // 2 huevos
-      { ingredientId: 'ing-08', quantityRequired: 0.08 }, // tortillas
-      { ingredientId: 'ing-11', quantityRequired: 0.10 }  // frijoles
+      { ingredientId: 'ing-04', quantityRequired: 2 },
+      { ingredientId: 'ing-08', quantityRequired: 0.08 },
+      { ingredientId: 'ing-11', quantityRequired: 0.10 }
     ]
   },
   {
@@ -119,11 +121,12 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Desayunos',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1509722747041-616f39b57569?w=800&auto=format&fit=crop',
     recipeIngredients: [
-      { ingredientId: 'ing-09', quantityRequired: 1 },    // 1 bolillo
-      { ingredientId: 'ing-11', quantityRequired: 0.08 }, // frijol
-      { ingredientId: 'ing-05', quantityRequired: 0.05 }, // queso oaxaca
-      { ingredientId: 'ing-07', quantityRequired: 0.04 }  // chorizo
+      { ingredientId: 'ing-09', quantityRequired: 1 },
+      { ingredientId: 'ing-11', quantityRequired: 0.08 },
+      { ingredientId: 'ing-05', quantityRequired: 0.05 },
+      { ingredientId: 'ing-07', quantityRequired: 0.04 }
     ]
   },
   {
@@ -134,10 +137,11 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Desayunos',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1510693206972-df098062cb71?w=800&auto=format&fit=crop',
     recipeIngredients: [
-      { ingredientId: 'ing-04', quantityRequired: 3 },    // 3 huevos
-      { ingredientId: 'ing-16', quantityRequired: 0.08 }, // nopal
-      { ingredientId: 'ing-13', quantityRequired: 0.05 }  // aguacate
+      { ingredientId: 'ing-04', quantityRequired: 3 },
+      { ingredientId: 'ing-16', quantityRequired: 0.08 },
+      { ingredientId: 'ing-13', quantityRequired: 0.05 }
     ]
   },
 
@@ -150,11 +154,12 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Comidas',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=800&auto=format&fit=crop',
     recipeIngredients: [
-      { ingredientId: 'ing-09', quantityRequired: 1 },    // 1 bolillo
-      { ingredientId: 'ing-02', quantityRequired: 0.15 }, // milanesa res
-      { ingredientId: 'ing-05', quantityRequired: 0.05 }, // quesillo
-      { ingredientId: 'ing-13', quantityRequired: 0.04 }  // aguacate
+      { ingredientId: 'ing-09', quantityRequired: 1 },
+      { ingredientId: 'ing-02', quantityRequired: 0.15 },
+      { ingredientId: 'ing-05', quantityRequired: 0.05 },
+      { ingredientId: 'ing-13', quantityRequired: 0.04 }
     ]
   },
   {
@@ -165,10 +170,11 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Comidas',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=800&auto=format&fit=crop',
     recipeIngredients: [
-      { ingredientId: 'ing-08', quantityRequired: 0.20 }, // 200g tortillas
-      { ingredientId: 'ing-01', quantityRequired: 0.15 }, // pollo/guisado
-      { ingredientId: 'ing-26', quantityRequired: 1 }     // empaque to-go
+      { ingredientId: 'ing-08', quantityRequired: 0.20 },
+      { ingredientId: 'ing-01', quantityRequired: 0.15 },
+      { ingredientId: 'ing-26', quantityRequired: 1 }
     ]
   },
   {
@@ -179,6 +185,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Comidas',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
     recipeIngredients: [
       { ingredientId: 'ing-08', quantityRequired: 0.15 },
       { ingredientId: 'ing-01', quantityRequired: 0.12 },
@@ -193,6 +200,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Comidas',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1535400255456-984241443b29?w=800&auto=format&fit=crop',
     recipeIngredients: [
       { ingredientId: 'ing-14', quantityRequired: 0.10 },
       { ingredientId: 'ing-15', quantityRequired: 0.05 },
@@ -209,6 +217,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Cenas',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1615870216519-2f9fa575fa5c?w=800&auto=format&fit=crop',
     recipeIngredients: [
       { ingredientId: 'ing-08', quantityRequired: 0.12 },
       { ingredientId: 'ing-01', quantityRequired: 0.12 },
@@ -223,6 +232,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Cenas',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=800&auto=format&fit=crop',
     recipeIngredients: [
       { ingredientId: 'ing-03', quantityRequired: 0.18 },
       { ingredientId: 'ing-08', quantityRequired: 0.15 },
@@ -239,9 +249,10 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Bebidas',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=800&auto=format&fit=crop',
     recipeIngredients: [
-      { ingredientId: 'ing-23', quantityRequired: 0.20 }, // 200ml concentrado
-      { ingredientId: 'ing-27', quantityRequired: 1 }     // vaso to-go
+      { ingredientId: 'ing-23', quantityRequired: 0.20 },
+      { ingredientId: 'ing-27', quantityRequired: 1 }
     ]
   },
   {
@@ -252,6 +263,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Bebidas',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=800&auto=format&fit=crop',
     recipeIngredients: [
       { ingredientId: 'ing-22', quantityRequired: 0.20 },
       { ingredientId: 'ing-27', quantityRequired: 1 }
@@ -265,6 +277,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Bebidas',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1610970881699-44a5587cabec?w=800&auto=format&fit=crop',
     recipeIngredients: [
       { ingredientId: 'ing-16', quantityRequired: 0.05 },
       { ingredientId: 'ing-17', quantityRequired: 0.10 },
@@ -280,18 +293,20 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Bebidas',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop',
     recipeIngredients: [
-      { ingredientId: 'ing-24', quantityRequired: 0.02 } // 20g café
+      { ingredientId: 'ing-24', quantityRequired: 0.02 }
     ]
   },
   {
     id: 'prod-beb-05',
     name: 'Matcha Latte Saludable (Leche de Almendra)',
-    description: 'Té verde matcha orgánico en polvo batido al momento con leche de almendras baja en calorías.',
+    description: 'Té verde matcha orgánico en polvo batido al momento con leche de almendra baja en calorías.',
     price: 60,
     category: 'Bebidas',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=800&auto=format&fit=crop',
     recipeIngredients: [
       { ingredientId: 'ing-25', quantityRequired: 0.005 },
       { ingredientId: 'ing-21', quantityRequired: 0.25 }
@@ -307,6 +322,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Combos',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1493770348161-369560ae357d?w=800&auto=format&fit=crop',
     recipeIngredients: [
       { ingredientId: 'ing-10', quantityRequired: 0.15 },
       { ingredientId: 'ing-01', quantityRequired: 0.10 },
@@ -323,6 +339,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Combos',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=800&auto=format&fit=crop',
     recipeIngredients: [
       { ingredientId: 'ing-09', quantityRequired: 1 },
       { ingredientId: 'ing-02', quantityRequired: 0.15 },
@@ -339,6 +356,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Combos',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=800&auto=format&fit=crop',
     recipeIngredients: [
       { ingredientId: 'ing-08', quantityRequired: 0.20 },
       { ingredientId: 'ing-01', quantityRequired: 0.15 },
@@ -356,7 +374,8 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 50,
     category: 'Postres',
     active: true,
-    hasInventory: true
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1528975604071-b4dc52a2d18c?w=800&auto=format&fit=crop'
   },
   {
     id: 'prod-pos-02',
@@ -366,6 +385,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Postres',
     active: true,
     hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=800&auto=format&fit=crop',
     recipeIngredients: [
       { ingredientId: 'ing-19', quantityRequired: 0.05 }
     ]
