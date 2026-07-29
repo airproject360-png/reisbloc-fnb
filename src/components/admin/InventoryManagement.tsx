@@ -16,8 +16,9 @@ import {
   Archive,
 } from 'lucide-react'
 
-import demoSeedService from '@/services/demoSeedService'
-import { Sparkles, RefreshCw } from 'lucide-react'
+import demoSeedService, { DemoProduct } from '@/services/demoSeedService'
+import DarkKitchenRecipeModal from '@/components/admin/DarkKitchenRecipeModal'
+import { Sparkles, RefreshCw, ChefHat } from 'lucide-react'
 
 export default function InventoryManagement() {
   const { products, setProducts, currentUser } = useAppStore()
@@ -28,6 +29,7 @@ export default function InventoryManagement() {
   const [filter, setFilter] = useState<'all' | 'active' | 'low-stock'>('all')
   const [activeTab, setActiveTab] = useState<'products' | 'ingredients'>('products')
   const [seedSuccessMsg, setSeedSuccessMsg] = useState<string | null>(null)
+  const [selectedRecipeProduct, setSelectedRecipeProduct] = useState<DemoProduct | null>(null)
 
   const handleSeedDemoData = async () => {
     if (!confirm('¿Seguro que deseas BORRAR el inventario actual y cargar el Menú Demo F&B México (Desayunos, Comidas, Cenas, Bebidas y Combos con recetas)?')) {
@@ -316,6 +318,14 @@ export default function InventoryManagement() {
                       </button>
 
                       <button
+                        onClick={() => setSelectedRecipeProduct(product as DemoProduct)}
+                        className="w-full mt-2 py-1.5 px-3 bg-teal-50 border border-teal-200 text-teal-800 hover:bg-teal-100 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+                      >
+                        <ChefHat size={14} />
+                        <span>Ver Escandallo / Receta Dark Kitchen</span>
+                      </button>
+
+                      <button
                         onClick={() => setEditingProduct(product)}
                         className="p-2 bg-sky-100 text-sky-700 hover:bg-sky-200 rounded-lg transition-all"
                         title="Editar"
@@ -329,6 +339,10 @@ export default function InventoryManagement() {
             )
           })}
         </div>
+      )}
+
+      {selectedRecipeProduct && (
+        <DarkKitchenRecipeModal product={selectedRecipeProduct} onClose={() => setSelectedRecipeProduct(null)} />
       )}
 
       {showCreateModal && <ProductModal onClose={() => setShowCreateModal(false)} onSuccess={loadProducts} />}

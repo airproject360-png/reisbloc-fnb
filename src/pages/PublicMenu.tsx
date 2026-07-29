@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
-import { Utensils, Search, ShoppingBag, Plus, Minus, X, Check, Flame, Sparkles, Clock, MapPin } from 'lucide-react'
+import { Utensils, Search, ShoppingBag, Plus, Minus, X, Check, Sparkles, MapPin, ChefHat } from 'lucide-react'
 import { DEMO_PRODUCTS, DemoProduct } from '@/services/demoSeedService'
 import { useAppStore } from '@/store/appStore'
 import supabaseService from '@/services/supabaseService'
 import { OrderItem } from '@/types'
+import DarkKitchenRecipeModal from '@/components/admin/DarkKitchenRecipeModal'
 
 export default function PublicMenu() {
   const { products: storeProducts } = useAppStore()
@@ -18,6 +19,7 @@ export default function PublicMenu() {
   const [tableNumber, setTableNumber] = useState<number>(1)
   const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>('dine-in')
   const [selectedProductModal, setSelectedProductModal] = useState<DemoProduct | null>(null)
+  const [recipeModalProduct, setRecipeModalProduct] = useState<DemoProduct | null>(null)
   const [itemNote, setItemNote] = useState('')
   const [orderSuccessMsg, setOrderSuccessMsg] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -121,13 +123,13 @@ export default function PublicMenu() {
           <div className="text-center md:text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-bold mb-3">
               <Sparkles size={14} className="animate-spin" />
-              <span>Menú Digital & Comandas Online</span>
+              <span>Dark Kitchen & Comandas Online</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">
               Reisbloc <span className="text-teal-400">F&B</span>
             </h1>
             <p className="text-slate-400 text-sm md:text-base mt-2 max-w-lg">
-              Sabores auténticos mexicanos, desayunos, comidas, cenas y bebidas 100% naturales.
+              Dark Kitchen Mexicana: Desayunos, Comidas, Baguettes Gourmet, Bebidas 100% Naturales y Combos To-Go.
             </p>
           </div>
 
@@ -167,7 +169,7 @@ export default function PublicMenu() {
             <Search className="absolute left-4 top-3.5 text-slate-500" size={18} />
             <input
               type="text"
-              placeholder="Buscar platillo, chilaquiles, tacos, smoothies, matcha..."
+              placeholder="Buscar platillo, chilaquiles, baguettes, tacos, smoothies, matcha..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-11 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:border-teal-500 transition-colors"
@@ -251,10 +253,17 @@ export default function PublicMenu() {
               </div>
 
               {/* Action Button */}
-              <div className="px-5 pb-5 pt-2">
+              <div className="px-5 pb-5 pt-2 flex gap-2">
+                <button
+                  onClick={() => setRecipeModalProduct(product)}
+                  className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-teal-400 border border-slate-700"
+                  title="Ver Escandallo & Empaques To-Go"
+                >
+                  <ChefHat size={18} />
+                </button>
                 <button
                   onClick={() => setSelectedProductModal(product)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-teal-600 text-slate-200 hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition-all border border-slate-700 hover:border-teal-500"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-teal-600 text-slate-200 hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition-all border border-slate-700 hover:border-teal-500"
                 >
                   <Plus size={16} />
                   <span>Agregar a Comanda</span>
@@ -308,7 +317,19 @@ export default function PublicMenu() {
 
             <h3 className="text-xl font-bold text-white">{selectedProductModal.name}</h3>
             <p className="text-xs text-slate-400 mt-1">{selectedProductModal.description}</p>
-            <div className="text-2xl font-black text-teal-400 mt-2">${selectedProductModal.price} MXN</div>
+
+            <div className="flex items-center justify-between mt-3">
+              <div className="text-2xl font-black text-teal-400">${selectedProductModal.price} MXN</div>
+              <button
+                onClick={() => {
+                  setRecipeModalProduct(selectedProductModal)
+                }}
+                className="px-3 py-1.5 rounded-lg bg-teal-950/80 border border-teal-500/30 text-teal-300 text-xs font-bold flex items-center gap-1.5 hover:bg-teal-900/80 transition-colors"
+              >
+                <ChefHat size={14} />
+                <span>Ver Escandallo & Empaques</span>
+              </button>
+            </div>
 
             <div className="mt-4">
               <label className="block text-xs font-semibold text-slate-400 mb-1">
@@ -339,6 +360,11 @@ export default function PublicMenu() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Recipe Escandallo Modal */}
+      {recipeModalProduct && (
+        <DarkKitchenRecipeModal product={recipeModalProduct} onClose={() => setRecipeModalProduct(null)} />
       )}
 
       {/* Cart Drawer */}
