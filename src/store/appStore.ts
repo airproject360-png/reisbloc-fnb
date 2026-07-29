@@ -16,6 +16,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { User, Device, Product, OrderItem } from '@/types'
+import { DEMO_PRODUCTS, DEMO_ADMIN_USER } from '@/services/demoSeedService'
 
 const generateId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -60,8 +61,8 @@ const initialState: AppState = {
   currentDevice: null,
   tables: Array.from({ length: 12 }, (_, i) => i + 1),
   currentTableNumber: 1,
-  products: [],
-  users: [],
+  products: DEMO_PRODUCTS,
+  users: [DEMO_ADMIN_USER],
   draftOrders: {},
 }
 
