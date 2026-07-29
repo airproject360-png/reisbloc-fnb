@@ -18,8 +18,13 @@ import {
   User,
   Eye,
   Maximize,
-  Minimize
+  Minimize,
+  ChefHat,
+  Wine,
+  Users,
+  Sparkles
 } from 'lucide-react'
+import AIAssistantModal from '@/components/ui/AIAssistantModal'
 
 export default function NavBar() {
   const location = useLocation()
@@ -28,6 +33,7 @@ export default function NavBar() {
   const { isReadOnly, currentRole } = usePermissions()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [supportsFullscreen, setSupportsFullscreen] = useState(true)
+  const [showAIModal, setShowAIModal] = useState(false)
   
   const {
     notifications,
@@ -72,8 +78,11 @@ export default function NavBar() {
   }
 
   const navItems = [
-    { path: '/pos', label: 'POS', icon: ShoppingCart, roles: ['admin', 'supervisor', 'capitan'] },
-    { path: '/tables', label: 'Cuentas', icon: LayoutDashboard, roles: ['admin', 'supervisor', 'capitan'] },
+    { path: '/pos', label: 'POS', icon: ShoppingCart, roles: ['admin', 'supervisor', 'capitan', 'mesero'] },
+    { path: '/tables', label: 'Cuentas', icon: LayoutDashboard, roles: ['admin', 'supervisor', 'capitan', 'mesero'] },
+    { path: '/kitchen', label: 'Cocina', icon: ChefHat, roles: ['admin', 'supervisor', 'cocina', 'capitan', 'mesero'] },
+    { path: '/bar', label: 'Barra', icon: Wine, roles: ['admin', 'supervisor', 'bar', 'capitan', 'mesero'] },
+    { path: '/customers', label: 'Clientes', icon: Users, roles: ['admin', 'supervisor', 'capitan', 'mesero'] },
     { path: '/inventory', label: 'Inventario', icon: Package, roles: ['admin', 'supervisor'] },
     { path: '/purchases', label: 'Compras', icon: Building2, roles: ['admin', 'supervisor'] },
     { path: '/reports', label: 'Reportes', icon: BarChart3, roles: ['admin', 'supervisor'] },
@@ -153,6 +162,16 @@ export default function NavBar() {
               />
             </div>
 
+            {/* AI Assistant Button */}
+            <button
+              onClick={() => setShowAIModal(true)}
+              className="p-2 sm:px-3 sm:py-1.5 bg-gradient-to-r from-purple-600/30 to-indigo-600/30 hover:from-purple-600/50 hover:to-indigo-600/50 text-purple-200 border border-purple-500/40 rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-purple-900/20"
+              title="Asistente IA"
+            >
+              <Sparkles size={18} className="text-purple-300 animate-pulse" />
+              <span className="hidden lg:inline text-xs font-bold">IA F&B</span>
+            </button>
+
             {/* User Badge - Compacto en móvil */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm">
               <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-slate-700 to-slate-500 flex items-center justify-center">
@@ -179,6 +198,8 @@ export default function NavBar() {
           </div>
         </div>
       </div>
+
+      <AIAssistantModal isOpen={showAIModal} onClose={() => setShowAIModal(false)} />
     </nav>
   )
 }

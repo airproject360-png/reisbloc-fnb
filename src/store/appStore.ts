@@ -65,7 +65,7 @@ const initialState: AppState = {
   draftOrders: {},
 }
 
-export const useAppStore = create<AppStore>(
+export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
       ...initialState,

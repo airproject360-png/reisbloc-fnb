@@ -33,7 +33,7 @@ export async function generateAccessToken(payload: LoginPayload): Promise<TokenR
     logger.info('auth', '🔐 Iniciando generación de token con seguridad adaptativa')
     
     // Llamar a Edge Function
-    const { data, error, status } = await supabase.functions.invoke('generate-access-token', {
+    const { data, error } = await supabase.functions.invoke('generate-access-token', {
       body: {
         userId: payload.userId,
         role: 'anon',
@@ -43,6 +43,8 @@ export async function generateAccessToken(payload: LoginPayload): Promise<TokenR
         googleToken: payload.googleToken // Pasar token de Google si está disponible
       }
     })
+
+    const status = (data as any)?.status || (error as any)?.status
 
     // ⚠️ CRÍTICO: Si la Edge Function retorna 403, significa 2FA requerida
     if (status === 403 && data?.requires_2fa) {

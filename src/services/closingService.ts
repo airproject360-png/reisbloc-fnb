@@ -1,5 +1,5 @@
 // Servicio para gestión de propinas y cierre de caja
-import { Sale, DailyClose, TipDistribution, User } from '@types/index';
+import { Sale, DailyClose, TipDistribution, User } from '@/types';
 import auditService from './auditService';
 
 class ClosingService {
@@ -243,7 +243,7 @@ DISTRIBUCIÓN DE PROPINAS
 ────────────────────────────────────
     `;
 
-    dailyClose.tipsDistribution.forEach(dist => {
+    (dailyClose.tipsDistribution || []).forEach(dist => {
       if (dist.amountToPay > 0) {
         output += `
 ${dist.userName}
@@ -261,7 +261,7 @@ AJUSTES
 ────────────────────────────────────
     `;
 
-    dailyClose.adjustments.forEach(adj => {
+    (dailyClose.adjustments || []).forEach(adj => {
       const sign = adj.type === 'income' ? '+' : '-';
       output += `\n${adj.description}: ${sign}$${adj.amount.toFixed(2)}`;
     });

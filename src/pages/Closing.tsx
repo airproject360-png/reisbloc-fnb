@@ -134,6 +134,7 @@ export default function Closing() {
       const closingRecord = {
         date: new Date(),
         closedBy: currentUser?.id || '',
+        closedAt: new Date(),
         totalSales: closingData.totalSales,
         totalCash: closingData.cash,
         totalCard: closingData.card,

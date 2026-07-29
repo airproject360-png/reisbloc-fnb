@@ -5,7 +5,7 @@ import { useAppStore } from '@/store/appStore'
 import { usePermissions } from '@/hooks/usePermissions'
 import supabaseService from '@/services/supabaseService'
 import printService from '@/services/printService'
-import { Order, OrderItem } from '@/types'
+import { Order, OrderItem, SplitPayment } from '@/types'
 import { LayoutDashboard, ArrowLeftRight, XCircle, Timer, Users, Edit, CheckCircle, CreditCard } from 'lucide-react'
 import SplitBillModal from '@/components/pos/SplitBillModal'
 import EditOrderModal from '@/components/admin/EditOrderModal'
@@ -13,17 +13,6 @@ import PaymentPanel, { PaymentResult } from '@/components/pos/PaymentPanel'
 
 interface TransferState {
   [orderId: string]: number
-}
-
-type SplitPayment = {
-  personNumber: number
-  items: { item: OrderItem; quantity: number }[]
-  subtotal: number
-  manualAmount?: number
-  paymentMethods: { method: 'cash' | 'digital' | 'clip'; currency: 'MXN' | 'USD'; amount: number }[]
-  tipAmount?: number
-  tipCurrency?: 'MXN' | 'USD'
-  paid?: boolean
 }
 
 const normalizeDate = (value: any): Date => {

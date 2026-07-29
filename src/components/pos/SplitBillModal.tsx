@@ -1,28 +1,11 @@
 import { useState, useMemo } from 'react'
 import { X, Users, DollarSign, Check, CreditCard, Smartphone, PieChart, List, Trash2 } from 'lucide-react'
-import { Order, OrderItem } from '@/types/index'
+import { Order, OrderItem, SplitPayment } from '@/types/index'
 
 interface SplitBillModalProps {
   order: Order
   onClose: () => void
   onConfirmSplit: (splits: SplitPayment[]) => void
-}
-
-interface SplitPayment {
-  personNumber: number
-  items: Array<{
-    item: OrderItem
-    quantity: number
-  }>
-  subtotal: number
-  paymentMethods: Array<{
-    method: 'cash' | 'card' | 'transfer'
-    currency: 'MXN' | 'USD'
-    amount: number
-  }>
-  tipAmount?: number
-  tipCurrency?: 'MXN' | 'USD'
-  paid: boolean
 }
 
 export default function SplitBillModal({ order, onClose, onConfirmSplit }: SplitBillModalProps) {
@@ -142,7 +125,13 @@ export default function SplitBillModal({ order, onClose, onConfirmSplit }: Split
     method: 'cash' | 'card' | 'transfer'
   ) => {
     const newSplits = [...splits]
-    newSplits[personIndex].paymentMethod = method
+    if (newSplits[personIndex]) {
+      newSplits[personIndex].paymentMethods = [{
+        method,
+        currency: 'MXN',
+        amount: newSplits[personIndex].subtotal
+      }]
+    }
     setSplits(newSplits)
   }
 

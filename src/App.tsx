@@ -36,6 +36,9 @@ const Reports = lazy(() => import('@/pages/Reports'))
 const Purchases = lazy(() => import('@/pages/Purchases'))
 const TableMonitor = lazy(() => import('@/pages/TableMonitor'))
 const Closing = lazy(() => import('@/pages/Closing'))
+const Kitchen = lazy(() => import('@/pages/Kitchen'))
+const Bar = lazy(() => import('@/pages/Bar'))
+const Customers = lazy(() => import('@/pages/Customers'))
 const AuthCallback = lazy(() => import('@/pages/AuthCallback').then(module => ({ default: module.AuthCallback })))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
@@ -229,6 +232,9 @@ function App() {
                                 <Route path="/" element={<Navigate to="/pos" replace />} />
                                 <Route path="/login" element={<Navigate to="/pos" replace />} />
                                 <Route path="/pos" element={<POS />} />
+                                <Route path="/kitchen" element={<Kitchen />} />
+                                <Route path="/bar" element={<Bar />} />
+                                <Route path="/customers" element={<Customers />} />
                                 <Route path="/tables" element={['admin', 'supervisor', 'capitan'].includes(currentUser?.role || '') ? <TableMonitor /> : <Navigate to="/pos" />} />
                                 <Route path="/cuentas" element={['admin', 'supervisor', 'capitan'].includes(currentUser?.role || '') ? <TableMonitor /> : <Navigate to="/pos" />} />
                                 <Route path="/mesas" element={<Navigate to="/cuentas" replace />} />

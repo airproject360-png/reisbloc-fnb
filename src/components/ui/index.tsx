@@ -28,7 +28,7 @@ export {
   classNames,
   getColorClass,
   getButtonClass,
-} from '../styles/designSystem';
+} from '../../styles/designSystem';
 
 // ============================================================
 // TYPE EXPORTS

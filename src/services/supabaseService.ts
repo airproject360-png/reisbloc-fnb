@@ -1116,7 +1116,7 @@ class SupabaseService {
       // Use returning: 'minimal' to avoid SELECT and bypass RLS on select
       const { error } = await supabase
         .from('sales')
-        .insert([payload], { returning: 'minimal' })
+        .insert([payload])
 
       if (error) {
         logger.error('supabase', '❌ Supabase insert error:', {
@@ -1269,7 +1269,7 @@ class SupabaseService {
 
       const { error } = await supabase
         .from('closings')
-        .insert([payload], { returning: 'minimal' })
+        .insert([payload])
 
       if (error) {
         logger.error('supabase', '❌ Error saving closing:', error)

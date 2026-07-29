@@ -13,6 +13,7 @@ export interface User {
   createdAt: Date;
   devices?: string[]; // IDs de dispositivos autorizados
   organizationId?: string; // ID de la organización (Multi-Tenant)
+  businessName?: string;
 }
 
 export interface Device {
@@ -60,13 +61,14 @@ export interface OrderItem {
   deletedAt?: Date;
   deletedBy?: string;
   deleteReason?: string;
+  notes?: string;
 }
 
 export interface Order {
   id: string;
   tableNumber: number;
   items: OrderItem[];
-  status: 'open' | 'sent' | 'ready' | 'served' | 'completed' | 'cancelled';
+  status: 'open' | 'sent' | 'ready' | 'served' | 'completed' | 'cancelled' | 'paid';
   isCourtesy?: boolean; // Mesa cortesía sin costo
   authorizedBy?: string; // Admin que autorizó mesa cortesía
   createdAt: Date;
@@ -114,16 +116,23 @@ export interface Sale {
 
 export interface DailyClose {
   id: string;
-  date: Date;
+  date: Date | string;
   closedBy: string;
-  closedAt: Date;
-  sales: Sale[];
+  closedAt: Date | string;
+  sales?: Sale[];
   totalSales: number;
   totalCash: number;
+  totalCard?: number;
   totalDigital: number;
   totalTips: number;
-  tipsDistribution: TipDistribution[];
-  adjustments: Adjustment[];
+  tipsDistribution?: TipDistribution[];
+  adjustments?: Adjustment[];
+  ordersCount?: number;
+  salesCount?: number;
+  employeeMetrics?: EmployeeMetrics[];
+  paymentMethods?: Record<string, number>;
+  notes?: string;
+  status?: string;
   discrepancy?: number;
 }
 
@@ -147,7 +156,7 @@ export interface Adjustment {
 }
 
 export interface AuditLog {
-  id: string;
+  id?: string;
   userId: string;
   action: string;
   entityType: string;
@@ -156,7 +165,7 @@ export interface AuditLog {
   newValue?: any;
   ipAddress?: string;
   deviceId?: string;
-  timestamp: Date;
+  timestamp?: Date | string;
 }
 
 export interface EmployeeMetrics {
@@ -222,4 +231,22 @@ export interface AuthContext {
   login: (pin: string) => Promise<void>;
   logout: () => Promise<void>;
   registerDevice: (device: Device) => Promise<void>;
+}
+
+export interface SplitPayment {
+  personNumber: number;
+  items: Array<{
+    item: OrderItem;
+    quantity: number;
+  }>;
+  subtotal: number;
+  manualAmount?: number;
+  paymentMethods: Array<{
+    method: 'cash' | 'card' | 'transfer' | 'digital' | 'clip';
+    currency: 'MXN' | 'USD';
+    amount: number;
+  }>;
+  tipAmount?: number;
+  tipCurrency?: 'MXN' | 'USD';
+  paid: boolean;
 }

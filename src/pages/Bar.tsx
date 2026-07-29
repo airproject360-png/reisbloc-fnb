@@ -222,18 +222,22 @@ export default function Bar() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredOrders.map((order) => {
-              const statusConfig = {
+              const statusConfig: Record<string, { label: string; color: string; border: string }> = {
                 sent: { label: 'En preparación', color: 'bg-purple-800 text-purple-200', border: 'border-purple-500' },
                 ready: { label: 'Lista', color: 'bg-green-800 text-green-200', border: 'border-green-500' },
                 served: { label: 'Servida', color: 'bg-indigo-800 text-indigo-200', border: 'border-indigo-500' },
-              }[order.status] || { label: order.status, color: 'bg-gray-800 text-gray-300', border: 'border-gray-600' }
+                open: { label: 'Abierta', color: 'bg-blue-800 text-blue-200', border: 'border-blue-500' },
+                completed: { label: 'Completada', color: 'bg-emerald-800 text-emerald-200', border: 'border-emerald-500' },
+                cancelled: { label: 'Cancelada', color: 'bg-rose-800 text-rose-200', border: 'border-rose-500' },
+              }
+              const currentStatus = statusConfig[order.status] || { label: order.status, color: 'bg-gray-800 text-gray-300', border: 'border-gray-600' }
 
               const elapsed = order.createdAt ? Math.floor((Date.now() - order.createdAt.getTime()) / 60000) : 0
 
               return (
                 <div
                   key={order.id}
-                  className={`rounded-2xl border-2 ${statusConfig.border} bg-purple-950/50 backdrop-blur-sm p-6 shadow-xl`}
+                  className={`rounded-2xl border-2 ${currentStatus.border} bg-purple-950/50 backdrop-blur-sm p-6 shadow-xl`}
                 >
                   {/* Header */}
                   <div className="flex justify-between items-start mb-4">
@@ -244,8 +248,8 @@ export default function Bar() {
                         <span>Hace {elapsed} min</span>
                       </div>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${statusConfig.color}`}>
-                      {statusConfig.label}
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${currentStatus.color}`}>
+                      {currentStatus.label}
                     </div>
                   </div>
 

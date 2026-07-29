@@ -1,5 +1,5 @@
 // Servicio para integración con Clip (Terminal de pagos)
-import { ClipPayment, Sale } from '@types/index';
+import { ClipPayment, Sale } from '@/types';
 import logger from '@/utils/logger'
 
 interface ClipConfig {

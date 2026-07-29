@@ -227,21 +227,23 @@ export default function Kitchen() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredOrders.map((order) => {
-              const statusConfig = {
+              const statusConfig: Record<string, { label: string; color: string; border: string }> = {
                 open: { label: 'Abierta', color: 'bg-yellow-900 text-yellow-200', border: 'border-yellow-600' },
                 sent: { label: 'En cocina', color: 'bg-orange-900 text-orange-200', border: 'border-orange-600' },
                 ready: { label: 'Lista', color: 'bg-green-900 text-green-200', border: 'border-green-600' },
                 served: { label: 'Servida', color: 'bg-blue-900 text-blue-200', border: 'border-blue-600' },
                 cancelled: { label: 'Cancelada', color: 'bg-red-900 text-red-200', border: 'border-red-600' },
-                completed: { label: 'Completada', color: 'bg-purple-900 text-purple-200', border: 'border-purple-600' },
-              }[order.status] || { label: order.status, color: 'bg-gray-800 text-gray-300', border: 'border-gray-600' }
+                completed: { label: 'Completada', color: 'bg-emerald-900 text-emerald-200', border: 'border-emerald-600' },
+                paid: { label: 'Pagada', color: 'bg-teal-900 text-teal-200', border: 'border-teal-600' },
+              }
+              const statusConfigDisplay = statusConfig[order.status] || { label: order.status, color: 'bg-gray-800 text-gray-300', border: 'border-gray-600' }
 
               const elapsed = order.createdAt ? Math.floor((Date.now() - order.createdAt.getTime()) / 60000) : 0
 
               return (
                 <div
                   key={order.id}
-                  className={`rounded-2xl border-2 ${statusConfig.border} bg-gray-800 p-6 shadow-xl`}
+                  className={`rounded-2xl border-2 ${statusConfigDisplay.border} bg-gray-800 p-6 shadow-xl`}
                 >
                   {/* Header */}
                   <div className="flex justify-between items-start mb-4">
@@ -252,8 +254,8 @@ export default function Kitchen() {
                         <span>Hace {elapsed} min</span>
                       </div>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${statusConfig.color}`}>
-                      {statusConfig.label}
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${statusConfigDisplay.color}`}>
+                      {statusConfigDisplay.label}
                     </div>
                   </div>
 

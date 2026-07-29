@@ -1,5 +1,5 @@
 // Servicio para gestión de auditoría
-import { AuditLog } from '@types/index';
+import { AuditLog } from '@/types';
 import databaseService from './databaseService'
 import logger from '@/utils/logger'
 

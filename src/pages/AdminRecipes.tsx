@@ -274,7 +274,7 @@ export function AdminRecipes() {
                         <Button
                           variant={
                             recipe?.status === 'active'
-                              ? 'warning'
+                              ? 'danger'
                               : 'success'
                           }
                           size="sm"
