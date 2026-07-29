@@ -131,11 +131,30 @@ export default function PublicMenu() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl border border-slate-800 text-xs text-slate-300 shadow-xl">
-            <MapPin size={18} className="text-teal-400 shrink-0" />
-            <div>
-              <div className="font-bold text-white">Servicio a Mesa & Para Llevar</div>
-              <div className="text-slate-400">Ordena en vivo directo a Cocina y Barra</div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3 bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl border border-slate-800 text-xs text-slate-300 shadow-xl">
+              <MapPin size={18} className="text-teal-400 shrink-0" />
+              <div>
+                <div className="font-bold text-white">Servicio a Mesa & Para Llevar</div>
+                <div className="text-slate-400">Ordena en vivo directo a Cocina y Barra</div>
+              </div>
+            </div>
+
+            <div className="bg-teal-950/60 border border-teal-500/30 p-3 rounded-2xl text-[11px] text-teal-200 flex items-center justify-around gap-2 text-center">
+              <div>
+                <span className="font-black text-teal-400 block">1. Pedido en Vivo</span>
+                <span>Mesero o QR</span>
+              </div>
+              <span className="text-teal-500 font-bold">→</span>
+              <div>
+                <span className="font-black text-teal-400 block">2. Preparación KDS</span>
+                <span>Cocina / Barra</span>
+              </div>
+              <span className="text-teal-500 font-bold">→</span>
+              <div>
+                <span className="font-black text-teal-400 block">3. Pago Fácil</span>
+                <span>Efectivo / SPEI</span>
+              </div>
             </div>
           </div>
         </div>

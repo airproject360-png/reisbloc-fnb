@@ -77,7 +77,13 @@ export const DEMO_INGREDIENTS: DemoIngredient[] = [
   // Empaques para Llevar (To-Go)
   { id: 'ing-26', name: 'Contenedor Térmico para Llevar', category: 'Empaques To-Go', unitType: 'units', currentStock: 500, reorderLevel: 100, wasteMarginPercent: 1 },
   { id: 'ing-27', name: 'Vaso con Tapa para Bebidas 600ml', category: 'Empaques To-Go', unitType: 'units', currentStock: 600, reorderLevel: 100, wasteMarginPercent: 1 },
-  { id: 'ing-28', name: 'Set de Cubiertos & Servilletas', category: 'Empaques To-Go', unitType: 'units', currentStock: 500, reorderLevel: 100, wasteMarginPercent: 1 }
+  { id: 'ing-28', name: 'Set de Cubiertos & Servilletas', category: 'Empaques To-Go', unitType: 'units', currentStock: 500, reorderLevel: 100, wasteMarginPercent: 1 },
+
+  // Baguettes & Especialidades Gourmet
+  { id: 'ing-29', name: 'Pan Baguette Artesanal de Masa Madre', category: 'Panadería', unitType: 'units', currentStock: 80, reorderLevel: 15, wasteMarginPercent: 2 },
+  { id: 'ing-30', name: 'Arrachera Marinada de Res', category: 'Proteínas', unitType: 'kg', currentStock: 20.0, reorderLevel: 4.0, wasteMarginPercent: 3 },
+  { id: 'ing-31', name: 'Jamón Serrano Español', category: 'Proteínas', unitType: 'kg', currentStock: 10.0, reorderLevel: 2.0, wasteMarginPercent: 2 },
+  { id: 'ing-32', name: 'Salsa Chimichurri & Pesto Casero', category: 'Abarrotes & Masas', unitType: 'kg', currentStock: 8.0, reorderLevel: 1.5, wasteMarginPercent: 1 }
 ]
 
 // 3. PRODUCTOS DEL MENÚ CON RECETAS E INSUMOS ASOCIADOS Y FOTOS ALTA RESOLUCIÓN
@@ -142,6 +148,40 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
       { ingredientId: 'ing-04', quantityRequired: 3 },
       { ingredientId: 'ing-16', quantityRequired: 0.08 },
       { ingredientId: 'ing-13', quantityRequired: 0.05 }
+    ]
+  },
+
+  // --- BAGUETTES GOURMET ---
+  {
+    id: 'prod-bag-01',
+    name: 'Baguette de Arrachera al Chimichurri & Queso',
+    description: 'Pan baguette artesanal de masa madre relleno de arrachera jugosa a la plancha, quesillo oaxaca derretido, cebolla asada y chimichurri casero.',
+    price: 155,
+    category: 'Comidas',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1509722747041-616f39b57569?w=800&auto=format&fit=crop',
+    recipeIngredients: [
+      { ingredientId: 'ing-29', quantityRequired: 1 },
+      { ingredientId: 'ing-30', quantityRequired: 0.16 },
+      { ingredientId: 'ing-05', quantityRequired: 0.05 },
+      { ingredientId: 'ing-32', quantityRequired: 0.03 }
+    ]
+  },
+  {
+    id: 'prod-bag-02',
+    name: 'Baguette Jamón Serrano con Queso Manchego & Pesto',
+    description: 'Baguette artesanal recién horneado con lajas finas de jamón serrano español, queso manchego gratinado, jitomate deshidratado y pesto de albahaca.',
+    price: 145,
+    category: 'Comidas',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=800&auto=format&fit=crop',
+    recipeIngredients: [
+      { ingredientId: 'ing-29', quantityRequired: 1 },
+      { ingredientId: 'ing-31', quantityRequired: 0.10 },
+      { ingredientId: 'ing-06', quantityRequired: 0.05 },
+      { ingredientId: 'ing-32', quantityRequired: 0.03 }
     ]
   },
 
@@ -249,7 +289,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Bebidas',
     active: true,
     hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=800&auto=format&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1556881286-fc6915169721?w=800&auto=format&fit=crop',
     recipeIngredients: [
       { ingredientId: 'ing-23', quantityRequired: 0.20 },
       { ingredientId: 'ing-27', quantityRequired: 1 }
@@ -263,7 +303,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     category: 'Bebidas',
     active: true,
     hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=800&auto=format&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=800&auto=format&fit=crop',
     recipeIngredients: [
       { ingredientId: 'ing-22', quantityRequired: 0.20 },
       { ingredientId: 'ing-27', quantityRequired: 1 }
