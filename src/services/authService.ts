@@ -163,13 +163,7 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
       : (String(data.role || 'supervisor') as User['role'])
 
     const username = data.username || data.name || email
-    const orgId = data.organization_id || getStoredOrganizationId() || FALLBACK_EVENT_ORG_ID
-
-    if (!orgId) {
-      logger.warn('auth', 'OAuth bloqueado: usuario sin organization_id', { authId, email })
-      return null
-    }
-
+    const orgId = data.organization_id || getStoredOrganizationId() || FALLBACK_EVENT_ORG_ID || 'org-reisbloc-fnb'
     persistOrganizationId(orgId)
 
     return {
