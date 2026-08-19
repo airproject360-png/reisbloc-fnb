@@ -17,25 +17,24 @@ import UsersManagement from '@/components/admin/UsersManagement'
 import AuditLogsPanel from '@/components/admin/AuditLogsPanel'
 import EventInvitationSettings from '@/components/admin/EventInvitationSettings'
 
-type AdminTab = 'devices' | 'users' | 'logs' | 'settings'
+type AdminTab = 'users' | 'logs' | 'settings'
 
 export default function Admin() {
   const { currentUser } = useAppStore()
   const { logout } = useAuth()
-  const { canManageUsers, canManageDevices, canViewLogs } = usePermissions()
+  const { canManageUsers, canViewLogs } = usePermissions()
   const [searchParams] = useSearchParams()
-  const initialTab = (searchParams.get('tab') as AdminTab) || 'devices'
-  const [activeTab, setActiveTab] = useState<AdminTab>('devices')
+  const initialTab = (searchParams.get('tab') as AdminTab) || 'users'
+  const [activeTab, setActiveTab] = useState<AdminTab>('users')
 
   if (currentUser?.role !== 'admin') {
     return <Navigate to="/pos" replace />
   }
 
   const tabs = [
-    { id: 'devices' as AdminTab, label: 'Dispositivos', icon: Smartphone, enabled: canManageDevices },
-    { id: 'users' as AdminTab, label: 'Usuarios', icon: Users, enabled: canManageUsers },
+    { id: 'users' as AdminTab, label: 'Usuarios & Accesos', icon: Users, enabled: canManageUsers },
     { id: 'logs' as AdminTab, label: 'Logs de Auditoría', icon: FileText, enabled: canViewLogs },
-    { id: 'settings' as AdminTab, label: 'Configuración', icon: Settings, enabled: true },
+    { id: 'settings' as AdminTab, label: 'Invitaciones', icon: Settings, enabled: true },
   ]
 
   const enabledTabs = tabs.filter(tab => tab.enabled)
@@ -43,7 +42,8 @@ export default function Admin() {
     ? activeTab
     : enabledTabs.some(tab => tab.id === initialTab)
     ? initialTab
-    : enabledTabs[0]?.id || 'devices'
+    : enabledTabs[0]?.id || 'users'
+
 
   return (
     <div className="page-shell bg-slate-100">
@@ -104,10 +104,10 @@ export default function Admin() {
 
         {/* Tab Content */}
         <div className="animate-fadeIn">
-          {selectedTab === 'devices' && <DeviceApprovalPanel />}
           {selectedTab === 'users' && <UsersManagement />}
           {selectedTab === 'logs' && <AuditLogsPanel />}
           {selectedTab === 'settings' && <EventInvitationSettings />}
+
         </div>
       </div>
       </div>

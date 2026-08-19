@@ -206,7 +206,7 @@ export default function PaymentPanel({
           {/* Payment Method Selection */}
           <div className="mb-6">
             <label className="block text-sm font-bold text-gray-900 mb-3">Método de Pago</label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => setPaymentMethod('cash')}
                 disabled={loading || success}
@@ -217,7 +217,7 @@ export default function PaymentPanel({
                 }`}
               >
                 <DollarSign size={24} strokeWidth={2.5} />
-                <span className="text-xs font-semibold">Efectivo</span>
+                <span className="text-sm font-bold">Efectivo</span>
               </button>
 
               <button
@@ -230,35 +230,17 @@ export default function PaymentPanel({
                 }`}
               >
                 <CreditCard size={24} strokeWidth={2.5} />
-                <span className="text-xs font-semibold">SPEI Transferencia</span>
-              </button>
-
-              <button
-                onClick={() => setPaymentMethod('mercadopago')}
-                disabled={loading || success}
-                className={`p-4 rounded-xl flex flex-col items-center gap-2 transition-all transform hover:scale-105 ${
-                  paymentMethod === 'mercadopago'
-                    ? 'bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-lg shadow-slate-500/40'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
-              >
-                <CreditCard size={24} strokeWidth={2.5} />
-                <span className="text-xs font-semibold">Tarjeta / Terminal</span>
+                <span className="text-sm font-bold">Transferencia SPEI</span>
               </button>
             </div>
 
-            {paymentMethod === 'mercadopago' && (
-              <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed">
-                <strong>ℹ️ Aviso Módulo Premium Tarjeta:</strong> Habilitar lector de tarjeta físico (Clip / Mercado Pago Terminal) requiere certificación PCI-DSS y comisiones por transacción (3.5% + IVA). En esta versión demo se simula el cobro exitoso.
-              </div>
-            )}
-
             {paymentMethod === 'transfer' && (
               <div className="mt-3 p-3 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 text-xs leading-relaxed">
-                <strong>📲 SPEI / Transferencia Directa:</strong> Pago confirmado previa verificación de comprobante o a contra entrega. CLABE: 012180001234567890 (Reisbloc F&B).
+                <strong>📲 SPEI / Transferencia Directa:</strong> Confirmar pago previa verificación de comprobante.
               </div>
             )}
           </div>
+
 
           {/* Tip Selection */}
           <div className="mb-6">
