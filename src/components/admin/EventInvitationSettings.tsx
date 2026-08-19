@@ -72,11 +72,12 @@ export default function EventInvitationSettings() {
           <UserPlus size={22} />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Invitar Usuario a Evento</h2>
+          <h2 className="text-xl font-bold text-gray-900">Invitar Usuario a la Plataforma</h2>
           <p className="text-sm text-gray-600">
-            Crea invitacion por correo con expiracion y alta en auth.users, vinculando el usuario a la organizacion Evento.
+            Crea invitación por correo con expiración y alta en auth.users, vinculando el usuario a la organización.
           </p>
         </div>
+
       </div>
 
       <form className="grid grid-cols-1 md:grid-cols-4 gap-4" onSubmit={handleSubmit}>

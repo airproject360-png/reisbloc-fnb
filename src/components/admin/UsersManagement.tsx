@@ -16,8 +16,7 @@ import {
   BadgeCheck,
 } from 'lucide-react'
 
-const MAX_EVENT_ADMINS = 2
-const MAX_EVENT_SUPERVISORS = 4
+
 
 async function cropImageToSquare(file: File): Promise<File> {
   const bitmap = await createImageBitmap(file)
@@ -335,25 +334,7 @@ function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSucces
       return
     }
 
-    try {
-      const existingUsers = await supabaseService.getAllUsers()
-      const adminCount = existingUsers.filter(user => user.role === 'admin').length
-      const supervisorCount = existingUsers.filter(user => user.role === 'supervisor').length
 
-      if (formData.role === 'admin' && adminCount >= MAX_EVENT_ADMINS) {
-        alert(`Solo se permiten ${MAX_EVENT_ADMINS} administradores en la versión evento`)
-        return
-      }
-
-      if (formData.role === 'supervisor' && supervisorCount >= MAX_EVENT_SUPERVISORS) {
-        alert(`Solo se permiten ${MAX_EVENT_SUPERVISORS} supervisores en la versión evento`)
-        return
-      }
-    } catch (error) {
-      console.error('Error validating role limits:', error)
-      alert('No se pudo validar el límite de roles')
-      return
-    }
 
     setLoading(true)
     try {
@@ -476,25 +457,7 @@ function EditUserModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    try {
-      const existingUsers = await supabaseService.getAllUsers()
-      const adminCount = existingUsers.filter(existingUser => existingUser.role === 'admin' && existingUser.id !== user.id).length
-      const supervisorCount = existingUsers.filter(existingUser => existingUser.role === 'supervisor' && existingUser.id !== user.id).length
 
-      if (formData.role === 'admin' && adminCount >= MAX_EVENT_ADMINS) {
-        alert(`Solo se permiten ${MAX_EVENT_ADMINS} administradores en la versión evento`)
-        return
-      }
-
-      if (formData.role === 'supervisor' && supervisorCount >= MAX_EVENT_SUPERVISORS) {
-        alert(`Solo se permiten ${MAX_EVENT_SUPERVISORS} supervisores en la versión evento`)
-        return
-      }
-    } catch (error) {
-      console.error('Error validating role limits:', error)
-      alert('No se pudo validar el límite de roles')
-      return
-    }
     
     setLoading(true)
     try {

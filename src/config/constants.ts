@@ -12,9 +12,7 @@ export const APP_CONFIG = {
   CLIENT_TAGLINE: 'GUISOS & BARRA FRÍA',
   CLIENT_SUBDOMAIN: 'localito.reisbloc.com',
   LOGO_URL: '/logo_localito.jpg',
-  EVENT_MODE: true,
-
-  EVENT_FEATURES: {
+  FEATURES: {
     POS: true,
     TABLES: true,
     ADMIN: true,
@@ -25,6 +23,10 @@ export const APP_CONFIG = {
     AI_ASSISTANT: true,
     AUTOMATED_AUDITS: true,
   },
+  get EVENT_FEATURES() {
+    return this.FEATURES
+  },
+
 
   // Inteligencia Artificial & Auditoría Integrada
   AI_SETTINGS: {

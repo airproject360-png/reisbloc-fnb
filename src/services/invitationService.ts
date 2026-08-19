@@ -110,3 +110,8 @@ export async function inviteUserToEvento(params: InviteUserParams): Promise<Invi
 
   return data as InviteUserResult
 }
+
+export const inviteUser = inviteUserToEvento
+
+
+
