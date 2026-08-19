@@ -125,15 +125,21 @@ export async function notifyUsersByRole(
 /**
  * Escuchar notificaciones del usuario en tiempo real
  */
+const isUuid = (str?: string | null): boolean => {
+  if (!str) return false
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
+}
+
 export function subscribeToNotifications(
   userId: string,
   callback: (notifications: Notification[]) => void,
   maxNotifications: number = 50
 ) {
-  if (!NOTIFICATIONS_ENABLED || !notificationsTableAvailable || !isSupabaseConfigured) {
+  if (!NOTIFICATIONS_ENABLED || !notificationsTableAvailable || !isSupabaseConfigured || !isUuid(userId)) {
     callback([])
     return () => {}
   }
+
 
 
   let current: Notification[] = []
@@ -148,11 +154,12 @@ export function subscribeToNotifications(
 
     if (error) {
       const err = error as any
-      if (err?.code === 'PGRST205') {
+      if (err?.code === 'PGRST205' || err?.code === '22P02' || err?.message?.includes('uuid')) {
         disableNotificationsTable(err)
       } else {
         logger.error('notification', `Error cargando notificaciones: ${err?.message || 'unknown'}`, err)
       }
+
       callback([])
       return
     }
