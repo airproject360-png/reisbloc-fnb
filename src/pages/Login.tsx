@@ -44,15 +44,17 @@ function Login() {
       return
     }
 
-    // Acceso PIN Master (1234, 9999 o cualquier PIN para desarrollo local)
+    // Acceso PIN Master (1234, 9999 o cualquier PIN)
     const masterRole = pin === '9999' ? 'admin' : 'admin'
     const adminUser = {
       ...DEMO_ADMIN_USER,
       username: `Admin Master (${pin})`,
       pin: pin,
       role: masterRole as any,
-      businessName: APP_CONFIG.CLIENT_NAME
+      businessName: APP_CONFIG.CLIENT_NAME,
+      organizationId: (import.meta.env.VITE_EVENT_ORGANIZATION_ID as string) || '1a70643e-23a3-4224-939e-d7daf381c083'
     }
+
 
     setCurrentUser(adminUser)
     setAuthenticated(true)

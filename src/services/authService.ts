@@ -129,10 +129,13 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
       return null
     }
 
+    const targetOrgId = FALLBACK_EVENT_ORG_ID || '1a70643e-23a3-4224-939e-d7daf381c083'
+
     const { data, error } = await supabase
       .from('users')
       .select('id, name, username, email, role, active, organization_id, created_at')
       .or(`id.eq.${authId},email.eq.${email}`)
+      .eq('organization_id', targetOrgId)
       .eq('active', true)
       .limit(1)
       .maybeSingle()
@@ -143,27 +146,29 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
     }
 
     if (!data) {
-      logger.info('auth', 'OAuth usuario auto-autorizado como Admin F&B', { authId, email })
+      logger.info('auth', 'OAuth usuario auto-autorizado como Admin LOCALITO', { authId, email, targetOrgId })
       const authorizedUser: User = {
         id: authId,
-        username: authUser.user_metadata?.full_name || email.split('@')[0] || 'Admin F&B',
+        username: authUser.user_metadata?.full_name || email.split('@')[0] || 'Admin LOCALITO',
         pin: '1234',
         role: 'admin',
         email: email,
         avatarUrl: authUser.user_metadata?.avatar_url,
         active: true,
         createdAt: new Date(),
-        businessName: 'Reisbloc F&B - Restaurante & Café'
+        businessName: 'LOCALITO - Guisos & Barra Fría',
+        organizationId: targetOrgId
       }
+      persistOrganizationId(targetOrgId)
       return authorizedUser
     }
 
     const role = FORCED_ADMIN_EMAILS.has(email)
       ? 'admin'
-      : (String(data.role || 'supervisor') as User['role'])
+      : (String(data.role || 'admin') as User['role'])
 
     const username = data.username || data.name || email
-    const orgId = data.organization_id || getStoredOrganizationId() || FALLBACK_EVENT_ORG_ID || 'org-reisbloc-fnb'
+    const orgId = data.organization_id || targetOrgId
     persistOrganizationId(orgId)
 
     return {
@@ -178,6 +183,7 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
       organizationId: orgId,
     }
   } catch (error) {
+
     logger.error('auth', 'Error resolviendo usuario OAuth autorizado', error as any)
     return null
   }
