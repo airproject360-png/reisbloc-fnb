@@ -11,7 +11,10 @@ import {
   Loader,
   Printer,
   Mail,
+  Sparkles,
 } from 'lucide-react'
+import AIAssistantModal from '@/components/ui/AIAssistantModal'
+
 import {
   BarChart,
   Bar,
@@ -36,6 +39,8 @@ export default function Closing() {
   const [employeeMetrics, setEmployeeMetrics] = useState<any[]>([])
   const [confirmed, setConfirmed] = useState(false)
   const [notes, setNotes] = useState('')
+  const [showAIModal, setShowAIModal] = useState(false)
+
 
   useEffect(() => {
     loadClosingData()
@@ -413,7 +418,7 @@ export default function Closing() {
       <div className="relative z-10 max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 rounded-3xl p-8 text-white shadow-xl border border-white/10">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="p-4 bg-white/15 rounded-2xl backdrop-blur-sm border border-white/10">
                 <DollarSign size={36} />
@@ -425,11 +430,23 @@ export default function Closing() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl">
-              <span className="font-semibold">{currentUser?.username}</span>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowAIModal(true)}
+                className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2 border border-purple-400/30"
+              >
+                <Sparkles size={18} className="animate-pulse text-teal-300" />
+                <span>Auditoría IA de Turno</span>
+              </button>
+
+              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2.5 rounded-xl">
+                <span className="font-semibold">{currentUser?.username}</span>
+              </div>
             </div>
           </div>
         </div>
+
 
         {/* Alert */}
         <div className="surface-muted border-l-4 border-amber-600 rounded-lg p-4 flex items-start gap-3">
@@ -663,6 +680,12 @@ export default function Closing() {
           </div>
         </div>
       </div>
+
+      <AIAssistantModal 
+        isOpen={showAIModal} 
+        onClose={() => setShowAIModal(false)} 
+        closingData={closingData}
+      />
     </div>
   )
 }

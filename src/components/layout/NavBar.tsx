@@ -80,10 +80,9 @@ export default function NavBar() {
 
   const navItems = [
     { path: '/pos', label: 'POS', icon: ShoppingCart, roles: ['admin', 'supervisor', 'capitan', 'mesero'] },
-    { path: '/menu', label: 'Menú Digital', icon: Utensils, roles: ['admin', 'supervisor', 'capitan', 'mesero', 'cocina', 'bar'] },
+    { path: '/menu', label: 'Menú Online (localito.reisbloc.com)', icon: Utensils, roles: ['admin', 'supervisor', 'capitan', 'mesero', 'cocina'] },
     { path: '/tables', label: 'Cuentas', icon: LayoutDashboard, roles: ['admin', 'supervisor', 'capitan', 'mesero'] },
     { path: '/kitchen', label: 'Cocina', icon: ChefHat, roles: ['admin', 'supervisor', 'cocina', 'capitan', 'mesero'] },
-    { path: '/bar', label: 'Barra', icon: Wine, roles: ['admin', 'supervisor', 'bar', 'capitan', 'mesero'] },
     { path: '/customers', label: 'Clientes', icon: Users, roles: ['admin', 'supervisor', 'capitan', 'mesero'] },
     { path: '/inventory', label: 'Inventario', icon: Package, roles: ['admin', 'supervisor'] },
     { path: '/purchases', label: 'Compras', icon: Building2, roles: ['admin', 'supervisor'] },
@@ -91,6 +90,7 @@ export default function NavBar() {
     { path: '/closing', label: 'Cierre', icon: DollarSign, roles: ['admin'] },
     { path: '/admin', label: 'Admin', icon: ShieldCheck, roles: ['admin'] },
   ].filter(item => {
+
     if (item.path === '/purchases') return APP_CONFIG.EVENT_FEATURES.PURCHASES
     if (item.path === '/reports') return APP_CONFIG.EVENT_FEATURES.REPORTS
     if (item.path === '/closing') return APP_CONFIG.EVENT_FEATURES.CLOSING
@@ -105,15 +105,23 @@ export default function NavBar() {
     <nav className="bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 text-white shadow-2xl sticky top-0 z-50 border-b border-white/10">
       <div className="max-w-7xl mx-auto px-2 sm:px-4">
         <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
-          {/* Logo / Brand - Marca Blanca y Premium */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-slate-200 via-teal-300 to-emerald-400 rounded-xl flex items-center justify-center font-black text-lg sm:text-xl shadow-lg shadow-teal-500/15 ring-1 ring-white/20 text-slate-950">
-              {currentUser?.businessName?.[0] || 'R'}
+          {/* Logo / Brand - LOCALITO Guisos & Barra Fría */}
+          <Link to="/pos" className="flex items-center gap-2.5 shrink-0 group">
+            <img 
+              src={APP_CONFIG.LOGO_URL} 
+              alt={APP_CONFIG.CLIENT_NAME}
+              className="h-9 sm:h-11 w-auto object-contain rounded-lg border border-amber-500/30 shadow-md shadow-amber-500/10 group-hover:scale-105 transition-transform"
+            />
+            <div className="hidden xs:block">
+              <h1 className="font-black text-sm sm:text-base tracking-tight text-white leading-tight">
+                {APP_CONFIG.CLIENT_NAME}
+              </h1>
+              <p className="text-[9px] font-extrabold text-amber-400 uppercase tracking-widest leading-none">
+                {APP_CONFIG.CLIENT_TAGLINE}
+              </p>
             </div>
-            <h1 className="font-black text-sm sm:text-lg tracking-tighter hidden xs:block bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-teal-200">
-              {currentUser?.businessName || 'REISBLOC F&B'}
-            </h1>
-          </div>
+          </Link>
+
 
           {/* Navigation Links - UX Fluida */}
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 px-1 flex-1 justify-center sm:justify-start">

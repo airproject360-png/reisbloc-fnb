@@ -24,7 +24,7 @@ import { ToastProvider } from '@/contexts/ToastContext'
 import { useNotifications } from '@/hooks/useNotifications'
 import { Bell, Share, PlusSquare } from 'lucide-react'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
-import { supabase } from '@/config/supabase'
+import { supabase, isSupabaseConfigured } from '@/config/supabase'
 import { authLogout, resolveAuthorizedAppUser } from '@/services/authService'
 import { APP_CONFIG } from '@/config/constants'
 
@@ -66,15 +66,12 @@ function App() {
   // Solicitar permiso de notificaciones al usuario autenticado
   useEffect(() => {
     if (isAuthenticated && permission === 'default' && !showPermissionPrompt) {
-      // Mostrar prompt después de 3 segundos de estar autenticado
       const timer = setTimeout(() => {
         setShowPermissionPrompt(true)
       }, 3000)
-      
       return () => clearTimeout(timer)
     }
 
-    // Mostrar prompt de instalación iOS si aplica
     if (isAuthenticated && isIOS && !isStandalone) {
       const timer = setTimeout(() => {
         setShowIOSPrompt(true)
@@ -86,6 +83,11 @@ function App() {
   }, [isAuthenticated, permission, showPermissionPrompt])
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      // En modo local/offline sin credenciales de Supabase, no ejecutamos listeners de OAuth
+      return undefined
+    }
+
     const hydrateFromSession = async () => {
       const {
         data: { session },
@@ -122,14 +124,18 @@ function App() {
         return
       }
 
-      setCurrentUser(null)
-      setAuthenticated(false)
+      // Si el usuario se autenticó por PIN Master localmente, NO limpiar sesión cuando Supabase no tenga sesión
+      if (!currentUser?.pin) {
+        setCurrentUser(null)
+        setAuthenticated(false)
+      }
     })
 
     return () => {
       authListener.subscription.unsubscribe()
     }
   }, [isAuthenticated, currentUser?.organizationId, setAuthenticated, setCurrentUser])
+
 
   const handleAcceptNotifications = async () => {
     await requestPermission()
@@ -236,9 +242,9 @@ function App() {
                                 <Route path="/login" element={<Navigate to="/pos" replace />} />
                                 <Route path="/pos" element={<POS />} />
                                 <Route path="/kitchen" element={<Kitchen />} />
-                                <Route path="/bar" element={<Bar />} />
                                 <Route path="/customers" element={<Customers />} />
                                 <Route path="/tables" element={['admin', 'supervisor', 'capitan'].includes(currentUser?.role || '') ? <TableMonitor /> : <Navigate to="/pos" />} />
+
                                 <Route path="/cuentas" element={['admin', 'supervisor', 'capitan'].includes(currentUser?.role || '') ? <TableMonitor /> : <Navigate to="/pos" />} />
                                 <Route path="/mesas" element={<Navigate to="/cuentas" replace />} />
                                 <Route path="/admin" element={currentUser?.role === 'admin' ? <Admin /> : <Navigate to="/pos" />} />

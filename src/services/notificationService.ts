@@ -1,4 +1,4 @@
-import { supabase } from '@/config/supabase'
+import { supabase, isSupabaseConfigured } from '@/config/supabase'
 import logger from '@/utils/logger'
 import type { UserRole } from '../types'
 
@@ -51,7 +51,7 @@ export async function createNotification(
   priority: Notification['priority'] = 'normal',
   data?: Record<string, any>
 ): Promise<void> {
-  if (!NOTIFICATIONS_ENABLED || !notificationsTableAvailable) return
+  if (!NOTIFICATIONS_ENABLED || !notificationsTableAvailable || !isSupabaseConfigured) return
   try {
     const payload = {
       user_id: userId,
@@ -88,7 +88,7 @@ export async function notifyUsersByRole(
   priority: Notification['priority'] = 'normal',
   data?: Record<string, any>
 ): Promise<void> {
-  if (!NOTIFICATIONS_ENABLED || !notificationsTableAvailable) return
+  if (!NOTIFICATIONS_ENABLED || !notificationsTableAvailable || !isSupabaseConfigured) return
   try {
     const roles = Array.isArray(role) ? role : [role]
     const { data: users, error } = await supabase
@@ -130,10 +130,11 @@ export function subscribeToNotifications(
   callback: (notifications: Notification[]) => void,
   maxNotifications: number = 50
 ) {
-  if (!NOTIFICATIONS_ENABLED || !notificationsTableAvailable) {
+  if (!NOTIFICATIONS_ENABLED || !notificationsTableAvailable || !isSupabaseConfigured) {
     callback([])
     return () => {}
   }
+
 
   let current: Notification[] = []
 

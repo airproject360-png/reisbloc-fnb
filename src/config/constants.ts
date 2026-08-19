@@ -6,9 +6,14 @@ export const CLIP_CONFIG = {
   baseUrl: import.meta.env.VITE_CLIP_BASE_URL || 'https://api.clip.mx/v1',
 };
 
-// Configuración de aplicación
+// Configuración de aplicación y cliente
 export const APP_CONFIG = {
+  CLIENT_NAME: import.meta.env.VITE_CLIENT_NAME || 'LOCALITO',
+  CLIENT_TAGLINE: 'GUISOS & BARRA FRÍA',
+  CLIENT_SUBDOMAIN: 'localito.reisbloc.com',
+  LOGO_URL: '/logo_localito.jpg',
   EVENT_MODE: true,
+
   EVENT_FEATURES: {
     POS: true,
     TABLES: true,
@@ -17,6 +22,23 @@ export const APP_CONFIG = {
     PURCHASES: true,
     REPORTS: true,
     CLOSING: true,
+    AI_ASSISTANT: true,
+    AUTOMATED_AUDITS: true,
+  },
+
+  // Inteligencia Artificial & Auditoría Integrada
+  AI_SETTINGS: {
+    ENABLE_UPSELL_RECOMMENDATIONS: true,
+    ENABLE_CLOSING_AUDIT: true,
+    ENABLE_INVENTORY_PREDICTIONS: true,
+    ANOMALY_CONFIDENCE_THRESHOLD: 0.75,
+  },
+
+  // Auditoría y Controles Operativos
+  AUDIT_THRESHOLDS: {
+    MAX_CANCELLATION_MINUTES: 5,
+    HIGH_DISCOUNT_PERCENTAGE: 20, // Alerta en descuentos mayores al 20%
+    MAX_CASH_DISCREPANCY_MXN: 100, // Alerta en descuadres de caja mayores a $100 MXN
   },
 
   // Tiempo de bloqueo para eliminar productos (en minutos)
@@ -28,9 +50,9 @@ export const APP_CONFIG = {
     ADMIN: 'admin',
     CAPITAN: 'capitan',
     COCINA: 'cocina',
-    BAR: 'bar',
     SUPERVISOR: 'supervisor',
   },
+
 
   // Configuración de mesas
   TABLES: {
@@ -55,3 +77,4 @@ export const LOG_CONFIG = {
   ENABLE_REMOTE_LOGS: true,
   LOG_LEVEL: 'info', // 'debug', 'info', 'warn', 'error'
 };
+

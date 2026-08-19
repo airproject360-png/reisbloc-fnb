@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { useMemo } from 'react'
 import printService from '@/services/printService'
 import { OrderItem, Product } from '@/types'
-import { ShoppingCart, Send, Trash2, AlertTriangle } from 'lucide-react'
+import { ShoppingCart, Send, Trash2, AlertTriangle, Sparkles } from 'lucide-react'
+import AIAssistantModal from '@/components/ui/AIAssistantModal'
+
 
 interface CartSummaryProps {
   tableNumber: number
@@ -21,7 +24,10 @@ const currency = new Intl.NumberFormat('es-MX', {
 })
 
 export function CartSummary({ tableNumber, items, readOnly = false, disableSend = false, onSend, onClear, sending, products = [], stockError }: CartSummaryProps) {
+  const [showAIModal, setShowAIModal] = useState(false)
+
   const totals = useMemo(() => {
+
     const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
     const tax = subtotal * 0.16
     const total = subtotal + tax
@@ -147,6 +153,17 @@ export function CartSummary({ tableNumber, items, readOnly = false, disableSend 
         </div>
       </div>
 
+      {/* Botón Asistente IA para la Comanda */}
+      {items.length > 0 && (
+        <button
+          onClick={() => setShowAIModal(true)}
+          className="w-full mb-3 py-2.5 px-4 bg-gradient-to-r from-purple-600/10 via-indigo-600/10 to-teal-600/10 hover:from-purple-600/20 hover:to-indigo-600/20 border border-indigo-200 rounded-xl font-bold text-indigo-700 text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+        >
+          <Sparkles size={16} className="text-indigo-600 animate-pulse" />
+          <span>Sugerencias de Maridaje & Upselling IA</span>
+        </button>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={handlePrint}
@@ -192,6 +209,12 @@ export function CartSummary({ tableNumber, items, readOnly = false, disableSend 
           )}
         </button>
       </div>
+
+      <AIAssistantModal 
+        isOpen={showAIModal} 
+        onClose={() => setShowAIModal(false)}
+        currentCartItems={items}
+      />
     </div>
   )
 }

@@ -98,9 +98,71 @@ export const DEMO_INGREDIENTS: DemoIngredient[] = [
   { id: 'ing-37', name: 'Bolsa de Papel Kraft Dark Kitchen To-Go', category: 'Empaques To-Go', unitType: 'units', currentStock: 500, reorderLevel: 100, wasteMarginPercent: 1, costPerUnit: 2.2 }
 ]
 
-// 3. PRODUCTOS DEL MENÚ CON RECETAS DE DARK KITCHEN & FOTOS AUTÉNTICAS MEXICANAS
+// 3. PRODUCTOS DEL MENÚ CON RECETAS DE GUISOS & BARRA FRÍA LOCALITO
 export const DEMO_PRODUCTS: DemoProduct[] = [
-  // --- DESAYUNOS ---
+  // --- GUISOS DEL DÍA (LOCALITO) ---
+  {
+    id: 'prod-gui-01',
+    name: 'Cazuela de Guisado del Día con Arroz y Frijoles',
+    description: 'Especialidad LOCALITO: Elige tu guisado artesanal favorito (Chicharrón en salsa verde, Cochinita Pibil o Tinga de Pollo) acompañado de arroz mexicano, frijoles refritos y tortillas hechas a mano.',
+    price: 125,
+    category: 'Guisos',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&auto=format&fit=crop',
+    recipeIngredients: [
+      { ingredientId: 'ing-03', ingredientName: 'Carne de Cerdo / Guisado', quantityRequired: 0.20, unitType: 'kg' },
+      { ingredientId: 'ing-11', ingredientName: 'Frijol Negro Refrito', quantityRequired: 0.12, unitType: 'kg' },
+      { ingredientId: 'ing-08', ingredientName: 'Tortilla de Maíz', quantityRequired: 0.10, unitType: 'kg' }
+    ]
+  },
+  {
+    id: 'prod-gui-02',
+    name: 'Tacos de Guisado Fiesteros (Orden de 3)',
+    description: 'Tres tacos bien servidos en doble tortilla de maíz nixtamalizado con tus guisados a elegir de la barra caliente, coronados con frijolitos y salsa de la casa.',
+    price: 110,
+    category: 'Guisos',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
+    recipeIngredients: [
+      { ingredientId: 'ing-08', ingredientName: 'Tortilla de Maíz', quantityRequired: 0.15, unitType: 'kg' },
+      { ingredientId: 'ing-01', ingredientName: 'Pechuga / Guisado', quantityRequired: 0.18, unitType: 'kg' }
+    ]
+  },
+
+  // --- BARRA FRÍA (LOCALITO) ---
+  {
+    id: 'prod-bf-01',
+    name: 'Ceviche Fresco de Barra Fría con Totopos',
+    description: 'Directo de la Barra Fría LOCALITO: Filete de pescado fresco marinado en limón con jitomate bola, cebolla morada, cilantro, aguacate Hass y totopos horneados.',
+    price: 145,
+    category: 'Barra Fría',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1535399831218-d5bd36d1a6b3?w=800&auto=format&fit=crop',
+    recipeIngredients: [
+      { ingredientId: 'ing-13', ingredientName: 'Aguacate Hass Maduro', quantityRequired: 0.08, unitType: 'kg' },
+      { ingredientId: 'ing-10', ingredientName: 'Totopos Crujientes', quantityRequired: 0.15, unitType: 'kg' }
+    ]
+  },
+  {
+    id: 'prod-bf-02',
+    name: 'Ensalada Barra Fría con Pollo a las Hierbas',
+    description: 'Mezcla de lechugas frescas, espinacas, jitomate cherry, aguacate, queso manchego en cubos y 150g de pechuga a la plancha con aderezo casero.',
+    price: 130,
+    category: 'Barra Fría',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&auto=format&fit=crop',
+    recipeIngredients: [
+      { ingredientId: 'ing-01', ingredientName: 'Pechuga de Pollo', quantityRequired: 0.15, unitType: 'kg' },
+      { ingredientId: 'ing-18', ingredientName: 'Apio & Espinaca', quantityRequired: 0.12, unitType: 'kg' },
+      { ingredientId: 'ing-13', ingredientName: 'Aguacate Hass', quantityRequired: 0.06, unitType: 'kg' }
+    ]
+  },
+
+
   {
     id: 'prod-des-01',
     name: 'Chilaquiles Verdes o Rojos con Pollo/Huevo',

@@ -709,10 +709,11 @@ export default function POS() {
             </>
           ) : (
             <ProductGrid
-              products={products}
+              products={products && products.length > 0 ? products : DEMO_PRODUCTS}
               onAdd={handleAddProduct}
               disableAdd={isReadOnly}
             />
+
           )}
         </div>
 
@@ -818,10 +819,11 @@ export default function POS() {
           </div>
 
           <ProductGrid
-            products={products}
+            products={products && products.length > 0 ? products : DEMO_PRODUCTS}
             onAdd={handleAddProduct}
             disableAdd={isReadOnly}
           />
+
         </div>
       </div>
       </div>
