@@ -1138,6 +1138,27 @@ class SupabaseService {
       }
       
       logger.info('supabase', '✅ Sale created successfully (no returning id)')
+
+      // Descontar inventario 1 a 1 para productos embotellados / empaquetados
+      if ((sale as any).items && Array.isArray((sale as any).items)) {
+        for (const item of (sale as any).items) {
+          if (item.productId) {
+            const { data: prod } = await supabase
+              .from('products')
+              .select('id, current_stock, has_inventory')
+              .eq('id', item.productId)
+              .maybeSingle()
+
+            if (prod && prod.has_inventory && typeof prod.current_stock === 'number') {
+              const newStock = Math.max(0, prod.current_stock - (item.quantity || 1))
+              await supabase
+                .from('products')
+                .update({ current_stock: newStock })
+                .eq('id', prod.id)
+            }
+          }
+        }
+      }
       
       // Registrar en auditoría
       this.createAuditLog({
@@ -1155,6 +1176,7 @@ class SupabaseService {
       throw error
     }
   }
+
 
   // ==================== AUDIT LOGS ====================
 
