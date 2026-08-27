@@ -131,7 +131,10 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
       return null
     }
 
-    const targetOrgId = FALLBACK_EVENT_ORG_ID || '1a70643e-23a3-4224-939e-d7daf381c083'
+    const LOCALITO_ORG_ID = '1a70643e-23a3-4224-939e-d7daf381c083'
+    const targetOrgId = (FALLBACK_EVENT_ORG_ID && !FALLBACK_EVENT_ORG_ID.includes('cb86de9f'))
+      ? FALLBACK_EVENT_ORG_ID
+      : LOCALITO_ORG_ID
 
     const { data, error } = await supabase
       .from('users')
