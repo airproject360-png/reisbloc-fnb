@@ -63,56 +63,75 @@ export default function TableMonitor() {
 
   const buildTicketHTML = (ordersList: Order[], tableNumber: number, title = 'Cuenta', paymentDetails?: { tip: number, total: number, method: string }): string => {
     const allItems = ordersList.flatMap(o => o.items || [])
-    const subtotal = allItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
-    const tax = 0
-    const tip = paymentDetails?.tip || 0
-    const total = paymentDetails?.total || subtotal
-    const date = new Date().toLocaleString('es-MX')
+    const total = paymentDetails?.total || allItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+    const dateStr = new Date().toLocaleString('es-MX')
+    const ticketFolio = ordersList[0]?.id ? ordersList[0].id.slice(-8).toUpperCase() : `LOC-${Date.now().toString().slice(-6)}`
+    const isPaymentTicket = Boolean(paymentDetails)
 
     const lines = allItems
       .map(item => `
-        <div style="display:flex;justify-content:space-between;margin:2px 0;">
-          <span>${item.quantity}x ${item.productName}</span>
-          <span>$${(item.unitPrice * item.quantity).toFixed(2)}</span>
+        <div style="margin-bottom:4px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:bold;">
+            <span>${item.quantity}x ${item.productName}</span>
+            <span>$${(item.unitPrice * item.quantity).toFixed(2)}</span>
+          </div>
+          <div style="font-size:9px;color:#555;margin-left:10px;">
+            P.U. $${item.unitPrice.toFixed(2)}
+          </div>
+          ${item.notes ? `<div style="font-size:9px;font-style:italic;margin-left:10px;">↳ ${item.notes}</div>` : ''}
         </div>
       `)
       .join('')
 
     return `
-      <div style="width:58mm;padding:4px;font-family:'Courier New', monospace;font-size:11px;line-height:1.2;color:#000;">
-        <div style="text-align:center;margin-bottom:8px;border-bottom:1px dashed #000;padding-bottom:8px;">
-          <div style="font-weight:bold;font-size:14px;margin-bottom:4px;">REISBLOC F&B</div>
-          <div style="font-size:10px;">reisbloc.com</div>
-          <div style="font-size:10px;margin-top:4px;">Cuenta: ${tableNumber}</div>
-          <div style="font-size:10px;">${title}</div>
-          <div style="font-size:10px;">${date}</div>
-        </div>
-        
-        <div style="margin-bottom:8px;border-bottom:1px dashed #000;padding-bottom:8px;">
-          ${lines || '<div style="text-align:center;">(Sin items)</div>'}
-        </div>
-        
-        <div style="margin-bottom:8px;border-bottom:1px dashed #000;padding-bottom:8px;">
-          <div style="display:flex;justify-content:space-between;margin:2px 0;">
-            <span>Subtotal:</span>
-            <span>$${subtotal.toFixed(2)}</span>
+      <div style="width:58mm;padding:6px;font-family:'Courier New', monospace;font-size:11px;line-height:1.25;color:#000;">
+        <!-- Header Logo & Store Name -->
+        <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
+          <div style="font-weight:900;font-size:16px;letter-spacing:1px;">LOCALITO</div>
+          <div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;">Guisos & Barra Fría</div>
+          <div style="font-size:9px;color:#333;margin-top:2px;">localito.reisbloc.com</div>
+          <div style="font-size:10px;font-weight:bold;margin-top:4px;border:1px solid #000;padding:2px 0;">
+            ${isPaymentTicket ? 'TICKET DE COMPRA' : 'ESTADO DE CUENTA'}
           </div>
-          ${tip > 0 ? `
-          <div style="display:flex;justify-content:space-between;margin:2px 0;">
-            <span>Propina:</span>
-            <span>$${tip.toFixed(2)}</span>
+        </div>
+
+        <!-- Ticket Metadata -->
+        <div style="font-size:9px;border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:6px;">
+          <div style="display:flex;justify-content:space-between;">
+            <span><strong>Cuenta:</strong> #${tableNumber}</span>
+            <span><strong>Folio:</strong> ${ticketFolio}</span>
+          </div>
+          <div style="margin-top:2px;">Fecha: ${dateStr}</div>
+          <div>Atendido por: ${currentUser?.username || currentUser?.name || 'Personal LOCALITO'}</div>
+        </div>
+
+        <!-- Itemized List -->
+        <div style="border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:6px;">
+          <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:9px;border-bottom:1px stroke #ccc;padding-bottom:2px;margin-bottom:4px;">
+            <span>CANT / DESCRIPCIÓN</span>
+            <span>IMPORTE</span>
+          </div>
+          ${lines || '<div style="text-align:center;font-size:10px;">(Sin consumos registrados)</div>'}
+        </div>
+
+        <!-- Totals (Sin Propina) -->
+        <div style="border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:900;">
+            <span>${isPaymentTicket ? 'TOTAL PAGADO:' : 'TOTAL A PAGAR:'}</span>
+            <span>$${total.toFixed(2)} MXN</span>
+          </div>
+          ${paymentDetails ? `
+          <div style="display:flex;justify-content:space-between;font-size:10px;margin-top:4px;">
+            <span>FORMA DE PAGO:</span>
+            <span><strong>${paymentDetails.method.toUpperCase()}</strong></span>
           </div>
           ` : ''}
-          <div style="display:flex;justify-content:space-between;margin:4px 0;font-size:14px;font-weight:bold;">
-            <span>TOTAL${paymentDetails ? '' : ' A PAGAR'}:</span>
-            <span>$${total.toFixed(2)}</span>
-          </div>
         </div>
-        
-        <div style="text-align:center;font-size:10px;margin-top:12px;">
-          ${paymentDetails ? `<div>Pagado: ${paymentDetails.method.toUpperCase()}</div>` : ''}
-          <div>¡Gracias por su visita!</div>
-          <div style="margin-top:4px;">reisbloc.com</div>
+
+        <!-- Fancy Footer -->
+        <div style="text-align:center;font-size:9px;margin-top:6px;">
+          <div style="font-weight:bold;font-size:10px;">¡GRACIAS POR SU PREFERENCIA!</div>
+          <div style="margin-top:4px;font-size:8px;color:#444;">Powered by Reisbloc (reisbloc.com)</div>
         </div>
       </div>
     `
@@ -124,20 +143,24 @@ export default function TableMonitor() {
   }
 
   const buildSplitTicketHTML = (split: SplitPayment, tableNumber: number, title: string) => {
-    const date = new Date().toLocaleString('es-MX')
+    const dateStr = new Date().toLocaleString('es-MX')
     const baseAmount = typeof split.manualAmount === 'number' ? split.manualAmount : split.subtotal
-    const tip = split.tipAmount || 0
-    const total = baseAmount + tip
+    const total = baseAmount
 
     const items = split.items
       .map(({ item, quantity }) => `
-        <div style="display:flex;justify-content:space-between;margin:2px 0;">
-          <span>${quantity}x ${item.productName}</span>
-          <span>${formatCurrency(item.unitPrice * quantity)}</span>
+        <div style="margin-bottom:4px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:bold;">
+            <span>${quantity}x ${item.productName}</span>
+            <span>${formatCurrency(item.unitPrice * quantity)}</span>
+          </div>
+          <div style="font-size:9px;color:#555;margin-left:10px;">
+            P.U. $${item.unitPrice.toFixed(2)}
+          </div>
         </div>
       `)
       .join('') || `
-        <div style="display:flex;justify-content:space-between;margin:2px 0;">
+        <div style="display:flex;justify-content:space-between;margin:2px 0;font-size:11px;font-weight:bold;">
           <span>Consumo General</span>
           <span>${formatCurrency(baseAmount)}</span>
         </div>
@@ -147,48 +170,58 @@ export default function TableMonitor() {
       ? split.paymentMethods
           .map((method, idx) => `
             <div style="display:flex;justify-content:space-between;margin:2px 0;font-size:9px;">
-              <span>${idx + 1}. ${method.method.toUpperCase()} (${method.currency})</span>
+              <span>${idx + 1}. ${method.method.toUpperCase()}</span>
               <span>${formatCurrency(method.amount, method.currency)}</span>
             </div>
           `)
           .join('')
-      : '<div style="font-size:9px;text-align:center;">Sin pagos registrados</div>'
+      : '<div style="font-size:9px;text-align:center;">Pago en Caja</div>'
 
     return `
-      <div style="width:58mm;padding:4px;font-family:'Courier New', monospace;font-size:11px;line-height:1.2;color:#000;">
-        <div style="text-align:center;margin-bottom:8px;border-bottom:1px dashed #000;padding-bottom:8px;">
-          <div style="font-weight:bold;font-size:14px;margin-bottom:4px;">REISBLOC F&B</div>
-          <div style="font-size:10px;">reisbloc.com</div>
-          <div style="font-size:10px;margin-top:4px;">Cuenta ${tableNumber} · Persona ${split.personNumber}</div>
-          <div style="font-size:10px;">${title}</div>
-          <div style="font-size:10px;">${date}</div>
+      <div style="width:58mm;padding:6px;font-family:'Courier New', monospace;font-size:11px;line-height:1.25;color:#000;">
+        <!-- Header Logo & Store Name -->
+        <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
+          <div style="font-weight:900;font-size:16px;letter-spacing:1px;">LOCALITO</div>
+          <div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;">Guisos & Barra Fría</div>
+          <div style="font-size:9px;color:#333;margin-top:2px;">localito.reisbloc.com</div>
+          <div style="font-size:10px;font-weight:bold;margin-top:4px;border:1px solid #000;padding:2px 0;">
+            CUENTA DIVIDIDA · PERSONA ${split.personNumber}
+          </div>
         </div>
-        
-        <div style="margin-bottom:8px;border-bottom:1px dashed #000;padding-bottom:8px;">
+
+        <!-- Ticket Metadata -->
+        <div style="font-size:9px;border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:6px;">
+          <div><strong>Cuenta:</strong> #${tableNumber}</div>
+          <div style="margin-top:2px;">Fecha: ${dateStr}</div>
+          <div>Atendido por: ${currentUser?.username || currentUser?.name || 'Personal LOCALITO'}</div>
+        </div>
+
+        <!-- Itemized List -->
+        <div style="border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:6px;">
+          <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:9px;border-bottom:1px stroke #ccc;padding-bottom:2px;margin-bottom:4px;">
+            <span>CANT / DESCRIPCIÓN</span>
+            <span>IMPORTE</span>
+          </div>
           ${items}
         </div>
-        
-        <div style="margin-bottom:8px;border-bottom:1px dashed #000;padding-bottom:8px;">
-          <div style="display:flex;justify-content:space-between;margin:2px 0;">
-            <span>Subtotal:</span>
-            <span>${formatCurrency(baseAmount)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin:2px 0;">
-            <span>Propina (${split.tipCurrency || 'MXN'}):</span>
-            <span>${formatCurrency(tip, split.tipCurrency || 'MXN')}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin:4px 0;font-size:14px;font-weight:bold;">
-            <span>TOTAL:</span>
-            <span>${formatCurrency(total)}</span>
+
+        <!-- Totals (Sin Propina) -->
+        <div style="border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:900;">
+            <span>TOTAL PAGADO:</span>
+            <span>${formatCurrency(total)} MXN</span>
           </div>
         </div>
-        <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed #000;">
-          <div style="font-size:9px;margin-bottom:4px;font-weight:bold;">Pagos</div>
+
+        <div style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px dashed #000;">
+          <div style="font-size:9px;margin-bottom:4px;font-weight:bold;">MÉTODO DE PAGO</div>
           ${payments}
         </div>
-        <div style="text-align:center;font-size:10px;margin-top:12px;">
-          <div>¡Gracias por su visita!</div>
-          <div style="margin-top:4px;">reisbloc.com</div>
+
+        <!-- Fancy Footer -->
+        <div style="text-align:center;font-size:9px;margin-top:6px;">
+          <div style="font-weight:bold;font-size:10px;">¡GRACIAS POR SU PREFERENCIA!</div>
+          <div style="margin-top:4px;font-size:8px;color:#444;">Powered by Reisbloc (reisbloc.com)</div>
         </div>
       </div>
     `
@@ -274,7 +307,10 @@ export default function TableMonitor() {
 
   const groupedByTable = useMemo(() => {
     const map = new Map<number, Order[]>()
-    orders.forEach(order => {
+    // FILTRAR ESTRICTAMENTE SOLO ÓRDENES ACTIVAS (sent, preparing, ready, served)
+    const activeOrdersOnly = orders.filter(o => ['sent', 'preparing', 'ready', 'served'].includes(o.status))
+
+    activeOrdersOnly.forEach(order => {
       const table = order.tableNumber || 0 // Fallback to 0 if undefined
       const list = map.get(table) || []
       map.set(table, [...list, order])
@@ -312,6 +348,7 @@ export default function TableMonitor() {
     setBusyOrders(prev => ({ ...prev, [orderId]: true }))
     try {
       await supabaseService.updateOrder(orderId, { status: 'completed', closedBy: currentUser.id, closedAt: new Date() })
+      setOrders(prev => prev.filter(o => o.id !== orderId))
     } catch (err: any) {
       setError(err?.message || 'No se pudo cerrar la cuenta')
     } finally {
@@ -343,10 +380,11 @@ export default function TableMonitor() {
     setBusyOrders(prev => ({ ...prev, ...busyMap }))
 
     try {
-      // Marcar todas las órdenes involucradas como pagadas
+      // Marcar todas las órdenes involucradas como completadas
       for (const id of orderIds) {
-        await supabaseService.updateOrderStatus(id, 'paid')
+        await supabaseService.updateOrderStatus(id, 'completed')
       }
+      setOrders(prev => prev.filter(o => !orderIds.includes(o.id)))
       await printSplitTickets(splits, splitBillOrder.tableNumber)
       setSplitBillOrder(null)
       alert('✅ Cuenta dividida exitosamente')
@@ -474,6 +512,7 @@ export default function TableMonitor() {
       for (const orderId of orderIds) {
         await supabaseService.updateOrderStatus(orderId, 'completed')
       }
+      setOrders(prev => prev.filter(o => !orderIds.includes(o.id)))
       
       logger.info('payment', 'Payment process completed successfully ✅')
       setPaymentOrder(null)
