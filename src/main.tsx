@@ -18,21 +18,24 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './styles/globals.css'
 
-// Registrar Service Worker para PWA y soporte offline
+// Registrar Service Worker para PWA y fuerza de actualización inmediata
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then((registration) => {
       console.log('✅ Service Worker registrado exitosamente')
       
-      // Escuchar actualizaciones
+      // Forzar verificación de nueva versión en cada carga
+      registration.update().catch(() => {})
+
+      // Escuchar actualizaciones y forzar reemplazo de caché inmediatamente
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing
         if (newWorker) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('🔄 Nueva versión disponible')
-              // Notificar al usuario sobre la actualización
-              window.dispatchEvent(new Event('sw-update-available'))
+              console.log('🔄 Nueva versión detectada. Actualizando caché...')
+              newWorker.postMessage({ type: 'SKIP_WAITING' })
+              window.location.reload()
             }
           })
         }
