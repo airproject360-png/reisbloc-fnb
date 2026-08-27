@@ -101,17 +101,13 @@ class SupabaseService {
     }
 
     const envOrgId = import.meta.env.VITE_EVENT_ORGANIZATION_ID as string | undefined
-    if (envOrgId) {
+    if (envOrgId && envOrgId !== 'missing-key') {
       this.warnedMissingOrg = false
       return envOrgId
     }
 
-    if (!this.warnedMissingOrg) {
-      logger.warn('supabase', '⚠️ No organization ID resolved from token/session/env')
-      this.warnedMissingOrg = true
-    }
-
-    return ''
+    // Default Fallback Oficial para LOCALITO F&B
+    return '1a70643e-23a3-4224-939e-d7daf381c083'
   }
 
   // ==================== USERS ====================
