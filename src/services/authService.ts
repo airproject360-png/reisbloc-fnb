@@ -19,6 +19,8 @@ const LOCAL_ORG_KEY = 'reisbloc_org_id'
 
 const FORCED_ADMIN_EMAILS = new Set([
   'airproject360@gmail.com',
+  'hunab.arredondo@gmail.com',
+  'adminlocalito@gmail.com',
 ])
 
 const normalizeEventRole = (role: unknown): 'admin' | 'supervisor' => {
