@@ -110,7 +110,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 35,
     category: 'Quesadillas Maíz',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1618040996337-56904b7850b9?w=800&auto=format&fit=crop',
   },
   {
@@ -120,7 +120,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 48,
     category: 'Quesadillas Maíz',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
   },
   {
@@ -130,7 +130,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 62,
     category: 'Quesadillas Maíz',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&auto=format&fit=crop',
   },
 
@@ -142,7 +142,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 40,
     category: 'Quesadillas Harina',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1618040996337-56904b7850b9?w=800&auto=format&fit=crop',
   },
   {
@@ -152,7 +152,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 55,
     category: 'Quesadillas Harina',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
   },
   {
@@ -162,7 +162,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 70,
     category: 'Quesadillas Harina',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&auto=format&fit=crop',
   },
 
@@ -174,7 +174,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 95,
     category: 'Platos',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&auto=format&fit=crop',
   },
   {
@@ -184,7 +184,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 125,
     category: 'Platos',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
   },
   {
@@ -194,7 +194,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 45,
     category: 'Platos',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
   },
   {
@@ -204,7 +204,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 60,
     category: 'Platos',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
   },
 
@@ -216,7 +216,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 48,
     category: 'Especialidades',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
   },
   {
@@ -226,7 +226,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 52,
     category: 'Especialidades',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
   },
   {
@@ -236,7 +236,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 65,
     category: 'Especialidades',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&auto=format&fit=crop',
   },
 
@@ -248,7 +248,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 18,
     category: 'Extras',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop',
   },
   {
@@ -258,7 +258,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 45,
     category: 'Extras',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop',
   },
   {
@@ -268,7 +268,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 40,
     category: 'Extras',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&auto=format&fit=crop',
   },
 
@@ -280,7 +280,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 35,
     category: 'Bebidas',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=800&auto=format&fit=crop',
   },
   {
@@ -290,7 +290,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 32,
     category: 'Bebidas',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=800&auto=format&fit=crop',
   },
   {
@@ -300,7 +300,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 25,
     category: 'Bebidas',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=800&auto=format&fit=crop',
   },
   {
@@ -310,7 +310,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 30,
     category: 'Bebidas',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop',
   },
   {
@@ -320,7 +320,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 28,
     category: 'Bebidas',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop',
   },
   {
@@ -330,7 +330,7 @@ export const DEMO_PRODUCTS: DemoProduct[] = [
     price: 38,
     category: 'Bebidas',
     active: true,
-    hasInventory: true,
+    hasInventory: false,
     imageUrl: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?w=800&auto=format&fit=crop',
   },
 ]
