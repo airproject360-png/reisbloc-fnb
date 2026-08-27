@@ -787,19 +787,6 @@ export default function POS() {
                   </button>
                 ))}
               </div>
-                <div className="mt-3">
-                  <button
-                    onClick={handlePrintAccount}
-                    disabled={items.length === 0}
-                    className={`w-full rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                      items.length === 0
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                        : 'bg-gray-900 text-white hover:bg-black'
-                    }`}
-                  >
-                    Imprimir Cuenta
-                  </button>
-                </div>
               {APP_CONFIG.TABLES.HAS_COURTESY_TABLE && (
                 <button
                   onClick={() => setCurrentTable(APP_CONFIG.TABLES.COURTESY_TABLE_NUMBER)}

@@ -1,10 +1,6 @@
-import { useState } from 'react'
 import { useMemo } from 'react'
-import printService from '@/services/printService'
 import { OrderItem, Product } from '@/types'
-import { ShoppingCart, Send, Trash2, AlertTriangle, Sparkles } from 'lucide-react'
-import AIAssistantModal from '@/components/ui/AIAssistantModal'
-
+import { ShoppingCart, Send, Trash2, AlertTriangle } from 'lucide-react'
 
 interface CartSummaryProps {
   tableNumber: number
@@ -23,11 +19,18 @@ const currency = new Intl.NumberFormat('es-MX', {
   currency: 'MXN',
 })
 
-export function CartSummary({ tableNumber, items, readOnly = false, disableSend = false, onSend, onClear, sending, products = [], stockError }: CartSummaryProps) {
-  const [showAIModal, setShowAIModal] = useState(false)
-
+export function CartSummary({
+  tableNumber,
+  items,
+  readOnly = false,
+  disableSend = false,
+  onSend,
+  onClear,
+  sending,
+  products = [],
+  stockError,
+}: CartSummaryProps) {
   const totals = useMemo(() => {
-
     const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
     const tax = subtotal * 0.16
     const total = subtotal + tax
@@ -41,180 +44,92 @@ export function CartSummary({ tableNumber, items, readOnly = false, disableSend 
     })
   }, [items, products])
 
-  const isDisabled = disableSend || items.length === 0 || sending || hasStockIssue
-
-  const handlePrint = async () => {
-    if (items.length === 0) return
-    // Construir HTML simple para ticket de cuenta (58mm)
-    const date = new Date().toLocaleString('es-MX')
-    const lines = items
-      .map(item => `
-        <div style="display:flex;justify-content:space-between;margin:2px 0;">
-          <span>${item.quantity}x ${item.productName}</span>
-          <span>$${(item.unitPrice * item.quantity).toFixed(2)}</span>
-        </div>
-      `)
-      .join('')
-
-    const html = `
-      <div style="width:58mm;padding:8px;font-family:'Courier New', monospace;font-size:11px;line-height:1.2;color:#000;">
-        <div style="text-align:center;margin-bottom:8px;border-bottom:1px solid #000;">
-          <div style="font-weight:bold;font-size:12px;">REISBLOC F&B</div>
-          <div style="font-size:9px;">reisbloc.com</div>
-          <div style="font-size:9px;">Cuenta ${tableNumber}</div>
-        </div>
-        <div style="margin-bottom:6px;font-size:9px;">
-          <div>Fecha: ${date}</div>
-        </div>
-        <div style="margin-bottom:8px;border-bottom:1px solid #000;padding-bottom:8px;">
-          ${lines}
-        </div>
-        <div style="margin-bottom:8px;border-bottom:1px solid #000;padding-bottom:8px;">
-          <div style="display:flex;justify-content:space-between;margin:2px 0;">
-            <span>Subtotal:</span>
-            <span>$${totals.subtotal.toFixed(2)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin:2px 0;">
-            <span>IVA (16%):</span>
-            <span>$${totals.tax.toFixed(2)}</span>
-          </div>
-          <div style="font-weight:bold;display:flex;justify-content:space-between;font-size:12px;">
-            <span>TOTAL:</span>
-            <span>$${totals.total.toFixed(2)}</span>
-          </div>
-        </div>
-        <div style="text-align:center;font-size:9px;margin-top:8px;">
-          <div>Este no es comprobante fiscal.</div>
-          <div style="margin-top:4px;font-size:8px;">Gracias por su preferencia · reisbloc.com</div>
-        </div>
-      </div>
-    `
-
-    try {
-      await printService.printReceipt(html, { title: 'Cuenta', width: 58 })
-    } catch (e) {
-      // noop: errores ya se loguean en printService
-    }
-  }
+  const isDisabled = disableSend || items.length === 0 || sending || hasStockIssue || readOnly
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-6 sticky top-6 border border-slate-200/80 select-none">
+      <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <ShoppingCart className="text-indigo-600" size={28} />
-            Resumen
+          <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+            <ShoppingCart className="text-amber-500" size={26} />
+            Resumen Ticket
           </h2>
-          <p className="text-sm font-semibold text-indigo-600 mt-1">Cuenta {tableNumber}</p>
+          <p className="text-xs font-bold text-teal-600 mt-0.5">Cuenta #{tableNumber}</p>
         </div>
         <button
           onClick={onClear}
           disabled={items.length === 0 || readOnly}
-          className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-red-600 disabled:cursor-not-allowed disabled:text-gray-300 transition-colors p-2 rounded-lg hover:bg-red-50"
+          className="flex items-center gap-1.5 text-xs font-extrabold text-slate-400 hover:text-red-600 disabled:cursor-not-allowed disabled:text-slate-300 transition-colors p-2 rounded-xl hover:bg-red-50"
         >
-          <Trash2 size={18} />
+          <Trash2 size={16} />
           Limpiar
         </button>
       </div>
 
       {stockError && (
-        <div className="mb-6 rounded-xl bg-gradient-to-r from-red-50 to-rose-50 p-4 border-2 border-red-300 animate-fadeIn">
+        <div className="mb-5 rounded-2xl bg-red-50 p-3.5 border border-red-200 animate-fadeIn">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="text-red-600" size={20} />
-            <p className="text-sm font-bold text-red-700">{stockError}</p>
+            <AlertTriangle className="text-red-600 shrink-0" size={18} />
+            <p className="text-xs font-bold text-red-700">{stockError}</p>
           </div>
         </div>
       )}
 
       {hasStockIssue && !stockError && (
-        <div className="mb-6 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 p-4 border-2 border-amber-300 animate-fadeIn">
+        <div className="mb-5 rounded-2xl bg-amber-50 p-3.5 border border-amber-200 animate-fadeIn">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="text-amber-600" size={20} />
-            <p className="text-sm font-bold text-amber-700">Stock insuficiente para algunos productos</p>
+            <AlertTriangle className="text-amber-600 shrink-0" size={18} />
+            <p className="text-xs font-bold text-amber-700">Stock insuficiente en inventario</p>
           </div>
         </div>
       )}
 
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-5 space-y-3 mb-6">
-        <div className="flex justify-between text-gray-700">
+      {/* Totales */}
+      <div className="bg-slate-900 rounded-2xl p-4 space-y-2 mb-5 text-white shadow-md border border-slate-800">
+        <div className="flex justify-between text-xs text-slate-300">
           <span className="font-semibold">Subtotal</span>
-          <span className="font-bold text-lg">{currency.format(totals.subtotal)}</span>
+          <span className="font-extrabold">{currency.format(totals.subtotal)}</span>
         </div>
-        <div className="flex justify-between text-gray-700">
+        <div className="flex justify-between text-xs text-slate-300">
           <span className="font-semibold">IVA (16%)</span>
-          <span className="font-bold text-lg">{currency.format(totals.tax)}</span>
+          <span className="font-extrabold">{currency.format(totals.tax)}</span>
         </div>
-        <div className="h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
-        <div className="flex justify-between text-xl pt-2">
-          <span className="font-black text-gray-900">Total</span>
-          <span className="font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+        <div className="h-px bg-slate-800 my-1" />
+        <div className="flex justify-between text-lg pt-1">
+          <span className="font-black text-white">Total</span>
+          <span className="font-black text-amber-400">
             {currency.format(totals.total)}
           </span>
         </div>
       </div>
 
-      {/* Botón Asistente IA para la Comanda */}
-      {items.length > 0 && (
-        <button
-          onClick={() => setShowAIModal(true)}
-          className="w-full mb-3 py-2.5 px-4 bg-gradient-to-r from-purple-600/10 via-indigo-600/10 to-teal-600/10 hover:from-purple-600/20 hover:to-indigo-600/20 border border-indigo-200 rounded-xl font-bold text-indigo-700 text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
-        >
-          <Sparkles size={16} className="text-indigo-600 animate-pulse" />
-          <span>Sugerencias de Maridaje & Upselling IA</span>
-        </button>
-      )}
-
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={handlePrint}
-          disabled={items.length === 0}
-          className={`w-full rounded-xl px-6 py-4 text-base font-bold text-white shadow-lg transition-all transform flex items-center justify-center gap-3 ${
-            items.length === 0
-              ? 'cursor-not-allowed bg-gray-300 shadow-none'
-              : 'bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-black hover:scale-105 shadow-gray-500/50'
-          }`}
-        >
-          Imprimir Cuenta
-        </button>
-
-        <button
-          onClick={onSend}
-          disabled={isDisabled}
-          className={`w-full rounded-xl px-6 py-4 text-base font-bold text-white shadow-lg transition-all transform flex items-center justify-center gap-3 ${
-            isDisabled
-              ? 'cursor-not-allowed bg-gray-300 shadow-none'
-              : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 hover:scale-105 shadow-blue-500/50'
-          }`}
-        >
-          {sending ? (
-            <>
-              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
-              Enviando...
-            </>
-          ) : disableSend ? (
-            <>
-              <AlertTriangle size={20} />
-              Envío deshabilitado
-            </>
-          ) : hasStockIssue ? (
-            <>
-              <AlertTriangle size={20} />
-              Stock insuficiente
-            </>
-          ) : (
-            <>
-              <Send size={20} />
-              Enviar a cocina
-            </>
-          )}
-        </button>
-      </div>
-
-      <AIAssistantModal 
-        isOpen={showAIModal} 
-        onClose={() => setShowAIModal(false)}
-        currentCartItems={items}
-      />
+      {/* Botón Principal: Enviar a Cocina (Generar Comanda Impresa) */}
+      <button
+        onClick={onSend}
+        disabled={isDisabled}
+        className={`w-full rounded-2xl py-4 px-6 text-sm font-black text-white shadow-xl transition-all transform active:scale-95 flex items-center justify-center gap-3 ${
+          isDisabled
+            ? 'cursor-not-allowed bg-slate-200 text-slate-400 shadow-none border border-slate-300'
+            : 'bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-teal-900/30 hover:scale-[1.02]'
+        }`}
+      >
+        {sending ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+            Enviando a Cocina...
+          </>
+        ) : hasStockIssue ? (
+          <>
+            <AlertTriangle size={18} />
+            Stock Insuficiente
+          </>
+        ) : (
+          <>
+            <Send size={18} />
+            Enviar a Cocina (Imprimir Comanda)
+          </>
+        )}
+      </button>
     </div>
   )
 }

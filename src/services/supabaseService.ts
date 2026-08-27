@@ -854,8 +854,14 @@ class SupabaseService {
       }
       payload.table_number = tableNum
     }
-    if ('waiterId' in order) payload.waiter_id = (order as any).waiterId
-    if ('createdBy' in order) payload.created_by = (order as any).createdBy
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const rawWaiter = (order as any).waiterId || (order as any).createdBy
+    if (rawWaiter && uuidRegex.test(rawWaiter)) {
+      payload.waiter_id = rawWaiter
+    } else {
+      delete payload.waiter_id
+    }
+
     if ('status' in order) payload.status = this.normalizeOrderStatus((order as any).status)
 
     if ('createdAt' in order) {
@@ -888,6 +894,7 @@ class SupabaseService {
     delete payload.tableNumber
     delete payload.waiterId
     delete payload.createdBy
+    delete payload.created_by
     delete payload.createdAt
     delete payload.sentToKitchenAt
     delete payload.tipAmount
