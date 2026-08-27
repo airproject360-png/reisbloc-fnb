@@ -636,23 +636,7 @@ export default function POS() {
           </div>
         </div>
 
-        {/* Barra Flotante "Anti-despistados" (Móvil y Desktop) */}
-        {items.length > 0 && (
-          <div className={`fixed bottom-4 left-4 right-4 z-50 animate-bounce-in ${activeTab === 'order' ? 'hidden xl:block' : ''}`}>
-            <button
-              onClick={() => setActiveTab('order')}
-              className="w-full bg-gradient-to-r from-slate-900 to-teal-800 text-white p-4 rounded-xl shadow-2xl flex justify-between items-center border border-white/10"
-            >
-              <div className="flex items-center gap-3">
-                <span className="bg-white text-indigo-600 px-3 py-1 rounded-lg font-black text-sm">
-                  {items.reduce((acc, i) => acc + i.quantity, 0)} items
-                </span>
-                <span className="font-bold">Ver Orden Actual</span>
-              </div>
-              <span className="font-black text-xl">${items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0).toFixed(2)}</span>
-            </button>
-          </div>
-        )}
+
 
         {/* Mobile: show one view at a time */}
         <div className="xl:hidden space-y-6">
