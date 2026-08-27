@@ -34,7 +34,7 @@ export default function DarkKitchenRecipeModal({ product, onClose }: DarkKitchen
             </div>
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-teal-400 px-2 py-0.5 rounded-md bg-teal-950 border border-teal-800">
-                Ficha Técnica & Escandallo Dark Kitchen
+                Ficha Técnica & Receta del Platillo
               </span>
               <h2 className="text-xl font-black text-white mt-1">{product.name}</h2>
             </div>
