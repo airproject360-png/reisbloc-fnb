@@ -175,6 +175,7 @@ export default function POS() {
       }
 
       alert(`✅ Comanda enviada a cocina (${tableLocations.find(l => l.id === currentLoc)?.label})`)
+      clearDraftForTable(currentLoc)
       setShowCartDrawer(false)
     } catch (err: any) {
       alert(`❌ Error enviando comanda: ${err?.message || err}`)
