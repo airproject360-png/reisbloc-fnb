@@ -1,11 +1,11 @@
 /**
- * AI Assistant & Intelligence Service
- * Reisbloc POS - F&B Client-Customized Edition
+ * AI Assistant & Operational Intelligence Service
+ * LOCALITO Guisos & Barra Fría - Real Data POS Assistant
  */
 
 export interface AISuggestion {
   id: string;
-  type: 'upsell' | 'inventory_alert' | 'sales_insight' | 'recipe_cost' | 'audit_warning';
+  type: 'upsell' | 'inventory_alert' | 'sales_insight' | 'audit_warning';
   title: string;
   description: string;
   confidence: number; // 0.0 to 1.0
@@ -26,49 +26,52 @@ export interface ClosingAuditSummary {
 
 class AIAssistantService {
   /**
-   * Generates smart upselling & beverage pairing suggestions based on current table cart
+   * Sugerencias operativas para el pedido (complementos, postres, adicionales)
+   * Sin conceptos de maridaje.
    */
   generateUpsellSuggestions(currentItems: Array<{ productName: string; category?: string }>): AISuggestion[] {
     const suggestions: AISuggestion[] = [];
     const itemNames = currentItems.map(i => i.productName.toLowerCase());
 
-    const hasFood = itemNames.some(name => name.includes('taco') || name.includes('burger') || name.includes('ceviche') || name.includes('postre') || name.includes('pizza') || name.includes('corte'));
-    const hasDrink = itemNames.some(name => name.includes('cerveza') || name.includes('margarita') || name.includes('café') || name.includes('soda') || name.includes('vino') || name.includes('coctel'));
-    const hasDessert = itemNames.some(name => name.includes('postre') || name.includes('flan') || name.includes('cheesecake') || name.includes('pastel') || name.includes('helado'));
+    const hasQuesadillasOrDishes = itemNames.some(name =>
+      name.includes('quesadilla') || name.includes('platillo') || name.includes('guiso') || name.includes('sope') || name.includes('gordita')
+    );
+    const hasExtras = itemNames.some(name => name.includes('frijol') || name.includes('queso') || name.includes('extra'));
+    const hasBeverage = itemNames.some(name => name.includes('coca') || name.includes('agua') || name.includes('refresco') || name.includes('bebida'));
 
-    if (hasFood && !hasDrink) {
+    if (hasQuesadillasOrDishes && !hasExtras) {
+      suggestions.push({
+        id: 'upsell-extra-1',
+        type: 'upsell',
+        category: 'pos',
+        title: '🫘 Sugerencia de Adicional: Frijoles Puercos o Queso Extra',
+        description: 'La orden incluye guisos o quesadillas sin adicionales. Puedes sugerir una porción de Frijoles Puercos o Queso Extra.',
+        confidence: 0.92,
+        actionText: 'Ofrecer Frijoles Puercos'
+      });
+    }
+
+    if (hasQuesadillasOrDishes && !hasBeverage) {
       suggestions.push({
         id: 'upsell-drink-1',
         type: 'upsell',
         category: 'pos',
-        title: '🍹 Maridaje Inteligente Recomienda Bebida',
-        description: 'El cliente ha ordenado platillos principales sin bebida registrada. Recomienda la bebida especial o coctel de la casa.',
-        confidence: 0.94,
-        actionText: 'Ofrecer Bebida Especial'
+        title: '🥤 Sugerencia: Ofrecer Refresco o Agua Fresca',
+        description: 'La comanda aún no tiene registrado refresco o agua. Recuerda ofrecer la bebida de la casa.',
+        confidence: 0.88,
+        actionText: 'Ofrecer Bebida'
       });
     }
 
-    if (hasFood && hasDrink && !hasDessert) {
+    if (itemNames.length >= 3) {
       suggestions.push({
         id: 'upsell-dessert-1',
         type: 'upsell',
         category: 'pos',
-        title: '🍰 Cierre Sugerido (Postres & Digestivos)',
-        description: 'Mesa lista para la etapa de cierre. Recomienda el postre de autor o café digestivo para incrementar el ticket un 18%.',
-        confidence: 0.89,
-        actionText: 'Ofrecer Carta de Postres'
-      });
-    }
-
-    if (itemNames.length >= 4) {
-      suggestions.push({
-        id: 'upsell-combo-1',
-        type: 'upsell',
-        category: 'pos',
-        title: '⭐ Promoción de Combo / Botella',
-        description: 'Comanda con múltiples comensales detectada. Sugiere paquete familiar o botella con descuento de volumen.',
+        title: '🍰 Cierre de Comanda: Postre del Día',
+        description: 'Mesa con múltiples consumos. Puedes sugerir el postre casero o café para completar el servicio.',
         confidence: 0.85,
-        actionText: 'Ver Promociones de Grupo'
+        actionText: 'Ofrecer Postre'
       });
     }
 
@@ -76,7 +79,7 @@ class AIAssistantService {
   }
 
   /**
-   * Generates AI Shift Closing Audit Summary
+   * Auditoría y Resumen Operativo Real del Turno
    */
   generateClosingAuditSummary(data: ClosingAuditSummary): AISuggestion[] {
     const suggestions: AISuggestion[] = [];
@@ -87,43 +90,32 @@ class AIAssistantService {
         id: 'closing-discrepancy',
         type: 'audit_warning',
         category: 'closing',
-        title: isShort ? '⚠️ Descuadre Faltante en Caja' : '⚠️ Sobrante no Registrado en Caja',
-        description: `Se detectó una diferencia de $${Math.abs(data.discrepancy).toFixed(2)} MXN entre el efectivo esperado ($${data.expectedCash.toFixed(2)}) y contado ($${data.actualCash.toFixed(2)}).`,
+        title: isShort ? '⚠️ Diferencia Faltante en Caja' : '⚠️ Diferencia Sobrante en Caja',
+        description: `Diferencia detectada de $${Math.abs(data.discrepancy).toFixed(2)} MXN entre el efectivo esperado ($${data.expectedCash.toFixed(2)}) y el físico ($${data.actualCash.toFixed(2)}).`,
         confidence: 0.98,
-        actionText: 'Auditar Transacciones en Efectivo'
+        actionText: 'Revisar Ventas en Efectivo'
       });
     }
 
-    if (data.voidsCount > 3) {
+    if (data.voidsCount > 2) {
       suggestions.push({
         id: 'closing-voids-alert',
         type: 'audit_warning',
         category: 'closing',
-        title: '🛡️ Alerta de Cancelaciones en Turno',
-        description: `Se registraron ${data.voidsCount} anulaciones de platillos en el turno. La IA sugiere revisar los motivos para descartar mermas no reportadas.`,
+        title: '🛡️ Registro de Cancelaciones',
+        description: `Se han registrado ${data.voidsCount} anulaciones en el turno. Sugerimos verificar la causa en cocina/caja.`,
         confidence: 0.91,
-        actionText: 'Ver Detalle de Anulaciones'
+        actionText: 'Ver Anulaciones'
       });
     }
 
-    if (data.discountsTotal > 500) {
-      suggestions.push({
-        id: 'closing-discounts-alert',
-        type: 'sales_insight',
-        category: 'closing',
-        title: '📉 Alto Volumen de Descuentos Aplicados',
-        description: `Total de cortesías y descuentos acumulados: $${data.discountsTotal.toFixed(2)} MXN en ${data.ordersCount} órdenes.`,
-        confidence: 0.88
-      });
-    }
-
-    // Resumen Ejecutivo de la IA
+    // Resumen Operativo Real
     suggestions.push({
       id: 'closing-ai-summary',
       type: 'sales_insight',
       category: 'closing',
-      title: '📊 Resumen de Salud Operativa del Turno',
-      description: `Ventas totales: $${data.totalSales.toFixed(2)} MXN en ${data.ordersCount} comandes. Ticket promedio: $${(data.ordersCount > 0 ? data.totalSales / data.ordersCount : 0).toFixed(2)} MXN. Estado de auditoría: ${Math.abs(data.discrepancy) === 0 ? 'Conforme / Sin descuadres' : 'Requiere revisión de supervisión'}.`,
+      title: '📊 Resumen de Salud Operativa del Día',
+      description: `Ventas registradas: $${data.totalSales.toFixed(2)} MXN en ${data.ordersCount} comandas. Ticket promedio: $${(data.ordersCount > 0 ? data.totalSales / data.ordersCount : 0).toFixed(2)} MXN. Estado de arqueo: ${Math.abs(data.discrepancy) === 0 ? 'Sin cuadres pendientes' : 'Con observaciones en caja'}.`,
       confidence: 0.96
     });
 
@@ -131,49 +123,56 @@ class AIAssistantService {
   }
 
   /**
-   * Generates AI sales insights for Admin/Manager dashboard
-   */
-  generateSalesInsights(totalSales: number, ordersCount: number, topItems: string[]): AISuggestion[] {
-    const avgTicket = ordersCount > 0 ? (totalSales / ordersCount).toFixed(2) : '0';
-
-    return [
-      {
-        id: 'sales-insight-1',
-        type: 'sales_insight',
-        category: 'audit',
-        title: '📊 Análisis de Ticket Promedio',
-        description: `El ticket promedio actual es de $${avgTicket} MXN en ${ordersCount} comandas.`,
-        confidence: 0.95
-      },
-      {
-        id: 'sales-insight-2',
-        type: 'sales_insight',
-        category: 'pos',
-        title: '🔥 Platillo / Bebida Estrella',
-        description: topItems.length > 0 
-          ? `Artículos con mayor rotación en el periodo: ${topItems.slice(0, 3).join(', ')}.`
-          : 'Mantén un monitoreo constante del volumen de barra en horas pico.',
-        confidence: 0.90
-      }
-    ];
-  }
-
-  /**
-   * Generates AI Inventory & Waste Alerts
+   * Alertas Reales de Inventario & Stock Bajo
    */
   generateInventoryAuditInsights(lowStockItems: Array<{ name: string; current: number; min: number }>): AISuggestion[] {
+    if (lowStockItems.length === 0) {
+      return [{
+        id: 'inv-ok',
+        type: 'inventory_alert',
+        category: 'inventory',
+        title: '✅ Inventario Estable',
+        description: 'Todos los insumos y platillos cuentan con niveles de stock óptimos para el turno.',
+        confidence: 0.95
+      }];
+    }
+
     return lowStockItems.map((item, idx) => ({
       id: `inv-alert-${idx}`,
       type: 'inventory_alert',
       category: 'inventory',
-      title: `📦 Stock Crítico: ${item.name}`,
-      description: `Existencia actual (${item.current}) está por debajo del mínimo configurado (${item.min}). Sugerimos generar orden de compra preventiva.`,
+      title: `📦 Stock Bajo: ${item.name}`,
+      description: `Existencia actual (${item.current}) está por debajo del límite mínimo (${item.min}). Generar reabastecimiento.`,
       confidence: 0.96,
-      actionText: 'Generar Reabastecimiento'
+      actionText: 'Revisar Inventario'
     }));
+  }
+
+  /**
+   * Motor de Respuestas Interactivas a Consultas del Personal
+   */
+  answerStaffQuery(query: string, context: { totalSales: number; ordersCount: number; products: any[]; lowStockItems: any[] }): string {
+    const q = query.toLowerCase();
+
+    if (q.includes('cuanto') && (q.includes('venta') || q.includes('vendido') || q.includes('caja') || q.includes('llevamos'))) {
+      return `📊 Hasta el momento se han registrado $${context.totalSales.toFixed(2)} MXN en total, repartidos en ${context.ordersCount} comandas (Ticket promedio: $${context.ordersCount > 0 ? (context.totalSales / context.ordersCount).toFixed(2) : '0.00'} MXN).`;
+    }
+
+    if (q.includes('recomend') || q.includes('sugier') || q.includes('ofrecer') || q.includes('ofresco')) {
+      return `💡 Te recomiendo sugerir nuestros platillos de guisado estrella (Quesadillas de Chicharrón Prensado o Deshebrada), acompañadas de Frijoles Puercos y un Refresco bien frío.`;
+    }
+
+    if (q.includes('inventario') || q.includes('stock') || q.includes('falta') || q.includes('insumo')) {
+      if (context.lowStockItems.length === 0) {
+        return `📦 Todo el inventario está en niveles adecuados. Ningún insumo requiere reabastecimiento urgente en este momento.`;
+      }
+      const names = context.lowStockItems.slice(0, 3).map(i => i.name).join(', ');
+      return `⚠️ Atención: Los siguientes insumos tienen stock bajo: ${names}.`;
+    }
+
+    return `🤖 Como tu Asistente IA POS de LOCALITO, puedo ayudarte a consultar las ventas del día, revisar el inventario de insumos o darte sugerencias operativas para la caja.`;
   }
 }
 
 export const aiAssistantService = new AIAssistantService();
 export default aiAssistantService;
-
