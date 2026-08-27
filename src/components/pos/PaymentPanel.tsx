@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import logger from '@/utils/logger'
-import { X, DollarSign, Loader2, CheckCircle, CreditCard, Users } from 'lucide-react'
+import { X, DollarSign, Loader2, CheckCircle, CreditCard } from 'lucide-react'
 import mercadopagoService from '@/services/mercadopagoService'
-import { APP_CONFIG } from '@/config/constants'
 
 export interface PaymentResult {
   transactionId: string
@@ -31,29 +30,15 @@ export default function PaymentPanel({
   onPaymentComplete,
   onCancel,
 }: PaymentPanelProps) {
-  // Support both old (orderId) and new (orderIds) interfaces
   const ids = orderIds || (orderId ? [orderId] : [])
 
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mercadopago' | 'transfer'>('cash')
-  const [currency, setCurrency] = useState<'MXN' | 'USD'>('MXN')
-  const [tipPercentage, setTipPercentage] = useState(APP_CONFIG.DEFAULT_TIP_PERCENTAGE || 10)
-  const [tipAmount, setTipAmount] = useState((orderTotal * (APP_CONFIG.DEFAULT_TIP_PERCENTAGE || 10)) / 100)
-  const [tipCurrency, setTipCurrency] = useState<'MXN' | 'USD'>('MXN')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const total = orderTotal + tipAmount
-
-  useEffect(() => {
-    // When currency changes, also change tip currency to match
-    setTipCurrency(currency)
-  }, [currency])
-
-  const handleTipChange = (amount: number) => {
-    setTipAmount(amount)
-    setTipPercentage(amount > 0 ? Math.round((amount / orderTotal) * 100) : 0)
-  }
+  // Sin propinas registradas en el sistema
+  const total = orderTotal
 
   const completePayment = async (result: PaymentResult) => {
     setSuccess(true)
@@ -75,24 +60,19 @@ export default function PaymentPanel({
       setError(null)
 
       if (paymentMethod === 'cash') {
-        // Cash payment - direct
         const transactionId = `cash-${Date.now()}`
-        logger.info('payment', 'Cash payment', { amount: total, tip: tipAmount })
+        logger.info('payment', 'Cash payment', { amount: total })
 
-        // Simular un pequeño delay para mejor UX
-        await new Promise(resolve => setTimeout(resolve, 800))
+        await new Promise(resolve => setTimeout(resolve, 500))
         await completePayment({
           transactionId,
           paymentMethod,
-          currency,
-          tip: tipAmount,
-          tipCurrency,
+          currency: 'MXN',
+          tip: 0,
           total,
         })
-      } else if (paymentMethod === 'mercadopago' || paymentMethod === 'transfer') {
-        // MODO MANUAL: Registrar pago sin abrir ventana externa
+      } else if (paymentMethod === 'transfer' || paymentMethod === 'mercadopago') {
         try {
-          // Usamos processDirectPayment que ahora es un mock local
           const payment = await mercadopagoService.processDirectPayment({
             amount: total,
             description: `Cuenta ${tableNumber} - ${ids.length} orden${ids.length > 1 ? 'es' : ''}`,
@@ -106,13 +86,12 @@ export default function PaymentPanel({
           await completePayment({
             transactionId: payment.id,
             paymentMethod: paymentMethod,
-            currency,
-            tip: tipAmount,
-            tipCurrency,
+            currency: 'MXN',
+            tip: 0,
             total,
           })
         } catch (err: any) {
-          logger.error('payment', 'MercadoPago error', err as any)
+          logger.error('payment', 'Error en registro de pago', err as any)
           throw err
         }
       }
@@ -125,235 +104,115 @@ export default function PaymentPanel({
     }
   }
 
-  const tipPercentages = [10, 15, 20]
-
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="surface-warm rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-fadeIn max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-gradient-to-br from-black/70 via-slate-950/80 to-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4 select-none">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 animate-fadeIn">
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 to-teal-800 rounded-t-2xl p-6 relative overflow-hidden flex-shrink-0">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12" />
-
-          <div className="flex justify-between items-center relative z-10">
-            <div>
-              <h2 className="text-2xl font-bold text-white">Procesar Pago</h2>
-              <p className="text-cyan-50/80 text-sm mt-1">Cuenta {tableNumber}</p>
-            </div>
-            <button
-              onClick={onCancel}
-              aria-label="Cerrar panel de pago"
-              className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
-              disabled={loading || success}
-            >
-              <X size={24} />
-            </button>
+        <div className="bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 p-6 text-white relative">
+          <button
+            onClick={onCancel}
+            disabled={loading || success}
+            className="absolute top-5 right-5 p-2 rounded-full hover:bg-white/10 text-white/80 hover:text-white transition-colors"
+          >
+            <X size={20} />
+          </button>
+          <div className="text-xs uppercase font-extrabold tracking-wider text-amber-400 mb-1">
+            Cobro de Cuenta #{tableNumber}
           </div>
+          <h2 className="text-2xl font-black">Resumen de Pago</h2>
+          {ids.length > 1 && (
+            <p className="text-xs text-slate-300 mt-1">{ids.length} órdenes consolidadas</p>
+          )}
         </div>
 
-        <div className="p-6 overflow-y-auto">
-          {/* Currency Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-bold text-gray-900 mb-2">Moneda de Pago</label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrency('MXN')}
-                disabled={loading || success}
-                className={`flex-1 px-3 py-2 rounded-lg font-semibold transition-all ${
-                  currency === 'MXN'
-                    ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-lg'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
-              >
-                🇲🇽 MXN (${orderTotal.toFixed(2)})
-              </button>
-              <button
-                onClick={() => setCurrency('USD')}
-                disabled={loading || success}
-                className={`flex-1 px-3 py-2 rounded-lg font-semibold transition-all ${
-                  currency === 'USD'
-                    ? 'bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-lg'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
-              >
-                🇺🇸 USD (${(orderTotal / 17).toFixed(2)})
-              </button>
-            </div>
-          </div>
-
-          {/* Order Details */}
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-5 rounded-xl mb-6 border border-gray-200">
-            <div className="flex justify-between mb-3 text-gray-700">
-              <span className="font-medium">Subtotal:</span>
-              <span className="font-semibold">
-                {currency === 'USD' ? `USD $${(orderTotal / 17).toFixed(2)}` : `MXN $${orderTotal.toFixed(2)}`}
+        <div className="p-6">
+          {/* Order Total Display */}
+          <div className="bg-slate-900 p-5 rounded-2xl mb-6 text-white shadow-xl border border-slate-800">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-bold text-slate-300">Total a Cobrar:</span>
+              <span className="text-3xl font-black text-amber-400">
+                ${total.toFixed(2)} <span className="text-xs font-normal text-slate-400">MXN</span>
               </span>
             </div>
-            <div className="flex justify-between mb-4 pb-4 border-b border-gray-300">
-              <span className="font-medium text-gray-700">Propina:</span>
-              <span className="font-semibold text-gray-700">
-                {tipCurrency === 'USD' ? `USD $${(tipAmount / 17).toFixed(2)}` : `MXN $${tipAmount.toFixed(2)}`}
-              </span>
-            </div>
-            <div className="flex justify-between text-xl">
-              <span className="font-bold text-gray-900">Total:</span>
-              <span className="font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                {currency === 'USD' ? `USD $${(total / 17).toFixed(2)}` : `MXN $${total.toFixed(2)}`}
-              </span>
-            </div>
+            <p className="text-[11px] text-slate-400 mt-2.5 font-medium leading-relaxed border-t border-slate-800 pt-2">
+              💡 Las propinas se dejan en efectivo en mesa y no se ingresan al sistema.
+            </p>
           </div>
 
           {/* Payment Method Selection */}
           <div className="mb-6">
-            <label className="block text-sm font-bold text-gray-900 mb-3">Método de Pago</label>
+            <label className="block text-sm font-extrabold text-slate-900 mb-3">Método de Pago</label>
             <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => setPaymentMethod('cash')}
                 disabled={loading || success}
-                className={`p-4 rounded-xl flex flex-col items-center gap-2 transition-all transform hover:scale-105 ${
+                className={`p-4 rounded-2xl flex flex-col items-center gap-2 transition-all transform active:scale-95 ${
                   paymentMethod === 'cash'
-                    ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/50'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    ? 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-lg shadow-teal-900/30 border border-teal-500 scale-105'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
                 }`}
               >
-                <DollarSign size={24} strokeWidth={2.5} />
-                <span className="text-sm font-bold">Efectivo</span>
+                <DollarSign size={26} strokeWidth={2.5} />
+                <span className="text-sm font-extrabold">Efectivo</span>
               </button>
 
               <button
                 onClick={() => setPaymentMethod('transfer')}
                 disabled={loading || success}
-                className={`p-4 rounded-xl flex flex-col items-center gap-2 transition-all transform hover:scale-105 ${
+                className={`p-4 rounded-2xl flex flex-col items-center gap-2 transition-all transform active:scale-95 ${
                   paymentMethod === 'transfer'
-                    ? 'bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-lg shadow-purple-500/50'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    ? 'bg-gradient-to-br from-purple-600 to-indigo-700 text-white shadow-lg shadow-purple-900/30 border border-purple-500 scale-105'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
                 }`}
               >
-                <CreditCard size={24} strokeWidth={2.5} />
-                <span className="text-sm font-bold">Transferencia SPEI</span>
+                <CreditCard size={26} strokeWidth={2.5} />
+                <span className="text-sm font-extrabold">Transferencia SPEI</span>
               </button>
             </div>
 
             {paymentMethod === 'transfer' && (
-              <div className="mt-3 p-3 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 text-xs leading-relaxed">
-                <strong>📲 SPEI / Transferencia Directa:</strong> Confirmar pago previa verificación de comprobante.
+              <div className="mt-3 p-3 rounded-2xl bg-purple-50 border border-purple-200 text-purple-900 text-xs leading-relaxed font-medium">
+                <strong>📲 SPEI / Transferencia Directa:</strong> Verificar la recepción del comprobante bancario antes de confirmar.
               </div>
             )}
           </div>
 
-
-          {/* Tip Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-bold text-gray-900 mb-3">Propina (opcional)</label>
-            <div className="grid grid-cols-4 gap-2 mb-3">
-              {tipPercentages.map(percentage => (
-                <button
-                  key={percentage}
-                  onClick={() => {
-                    const amount = (orderTotal * percentage) / 100
-                    handleTipChange(amount)
-                    setTipPercentage(percentage)
-                  }}
-                  disabled={loading || success}
-                  className={`py-2 rounded-lg font-semibold text-sm transition-all ${
-                    tipPercentage === percentage
-                        ? 'bg-teal-700 text-white shadow-lg'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  {percentage}%
-                </button>
-              ))}
-              <button
-                onClick={() => setTipPercentage(0)}
-                disabled={loading || success}
-                className={`py-2 rounded-lg font-semibold text-sm transition-all ${
-                  tipPercentage === 0
-                    ? 'bg-teal-700 text-white shadow-lg'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
-              >
-                Otro
-              </button>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                value={tipAmount || ''}
-                onChange={e => handleTipChange(parseFloat(e.target.value) || 0)}
-                disabled={loading || success}
-                placeholder="Monto personalizado"
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
-              />
-            </div>
-          </div>
-
           {/* Error Message */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
-
-          {/* Multiple Orders Info */}
-          {ids.length > 1 && (
-            <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-              <p className="text-sm text-slate-800 font-semibold">ℹ️ Múltiples órdenes consolidadas</p>
-              <p className="text-xs text-slate-600 mt-1">Puedes dividir la cuenta después de pagar si es necesario</p>
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-2xl">
+              <p className="text-xs text-red-700 font-bold">{error}</p>
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-2 flex-col">
-            <div className="flex gap-3">
-              <button
-                onClick={onCancel}
-                disabled={loading || success}
-                className="flex-1 px-6 py-4 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancelar
-              </button>
+          <div className="flex gap-3 mt-4">
+            <button
+              onClick={onCancel}
+              disabled={loading || success}
+              className="flex-1 px-5 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold transition-all text-sm active:scale-95"
+            >
+              Cancelar
+            </button>
 
-              <button
-                onClick={handlePayment}
-                disabled={loading || success}
-                className="flex-1 px-6 py-4 bg-gradient-to-r from-slate-900 to-teal-700 hover:brightness-110 text-white rounded-xl font-bold shadow-lg shadow-slate-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={20} className="animate-spin" />
-                    Procesando...
-                  </>
-                ) : success ? (
-                  <>
-                    <CheckCircle size={20} />
-                    ¡Completado!
-                  </>
-                ) : (
-                  <>Pagar ${total.toFixed(2)}</>
-                )}
-              </button>
-            </div>
-
-            {/* Dividir Cuenta Button - only for multiple orders */}
-            {ids.length > 1 && !loading && (
-              <button
-                onClick={() => onPaymentComplete({
-                  transactionId: `split-request-${Date.now()}`,
-                  paymentMethod: 'cash',
-                  currency: 'MXN',
-                  tip: 0,
-                  tipCurrency: 'MXN',
-                  total: 0,
-                  splitRequested: true,
-                })}
-                disabled={loading || success}
-                className="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <Users size={18} />
-                Dividir Cuenta (antes de completar)
-              </button>
-            )}
+            <button
+              onClick={handlePayment}
+              disabled={loading || success}
+              className="flex-1 px-5 py-3.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-2xl font-black shadow-lg shadow-teal-900/30 transition-all text-sm flex items-center justify-center gap-2 active:scale-95"
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Procesando...
+                </>
+              ) : success ? (
+                <>
+                  <CheckCircle size={18} />
+                  ¡Pago Registrado!
+                </>
+              ) : (
+                'Confirmar Pago'
+              )}
+            </button>
           </div>
         </div>
       </div>

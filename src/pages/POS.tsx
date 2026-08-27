@@ -306,12 +306,47 @@ export default function POS() {
         setProducts(updatedProducts)
       }
 
+      // Impresión automática de Comanda de Cocina (58mm)
+      try {
+        const dateStr = new Date().toLocaleString('es-MX')
+        const kitchenHtml = `
+          <div style="width:58mm;padding:4px;font-family:'Courier New', monospace;font-size:11px;line-height:1.25;color:#000;">
+            <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
+              <div style="font-weight:900;font-size:14px;letter-spacing:1px;">LOCALITO</div>
+              <div style="font-size:11px;font-weight:bold;margin-top:2px;">*** COMANDA DE COCINA ***</div>
+              <div style="font-size:10px;margin-top:2px;">CUENTA / MESA: <strong>${tableNumber}</strong></div>
+              <div style="font-size:9px;color:#333;">Fecha: ${dateStr}</div>
+            </div>
+
+            <div style="border-bottom:1px dashed #000;padding-bottom:6px;margin-bottom:6px;">
+              ${items.map(item => `
+                <div style="margin-bottom:4px;">
+                  <div style="font-weight:bold;font-size:12px;">
+                    ${item.quantity}x ${item.productName}
+                  </div>
+                  ${item.notes ? `<div style="font-size:10px;font-style:italic;margin-left:10px;color:#444;">↳ Nota: ${item.notes}</div>` : ''}
+                </div>
+              `).join('')}
+            </div>
+
+            <div style="text-align:center;font-size:9px;font-weight:bold;margin-top:6px;">
+              <div>--- COMANDA PARA PREPARACIÓN ---</div>
+              <div style="margin-top:4px;font-size:8px;font-weight:normal;color:#444;">Powered by Reisbloc (reisbloc.com)</div>
+            </div>
+          </div>
+        `
+        await printService.printKitchenTicket(kitchenHtml, { width: 58, title: `Comanda Cuenta ${tableNumber}` })
+      } catch (printErr) {
+        logger.warn('pos', 'No se pudo imprimir comanda térmica', printErr as any)
+      }
+
       // Limpiar carrito y mostrar confirmación
       clearDraftForTable(tableNumber)
       const summary = []
       if (foodItems.length > 0) summary.push(`${foodItems.length} comida`)
       if (drinkItems.length > 0) summary.push(`${drinkItems.length} bebidas`)
-      alert(`✅ Orden enviada - Cuenta ${tableNumber}\n${summary.join(' + ')}`)
+      alert(`✅ Orden enviada e impresa - Cuenta ${tableNumber}\n${summary.join(' + ')}`)
+
       
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error al enviar orden'
@@ -407,62 +442,75 @@ export default function POS() {
         }
       }
 
-      // Imprimir ticket final con monto, propina y método de pago
+      // Imprimir ticket final fancy de venta (58mm) sin propina
       try {
-        const subtotal = paymentPanel.orderTotal
-        const tax = 0
         const total = result.total
-        const date = new Date().toLocaleString('es-MX')
-
-        const lines = itemsToCharge
-          .map(item => `
-            <div style="display:flex;justify-content:space-between;margin:2px 0;">
-              <span>${item.quantity}x ${item.productName}</span>
-              <span>$${(item.unitPrice * item.quantity).toFixed(2)}</span>
-            </div>
-          `)
-          .join('')
+        const dateStr = new Date().toLocaleString('es-MX')
+        const ticketFolio = orderIds[0] ? orderIds[0].slice(-8).toUpperCase() : `LOC-${Date.now().toString().slice(-6)}`
 
         const html = `
-          <div style="width:58mm;padding:8px;font-family:'Courier New', monospace;font-size:11px;line-height:1.2;color:#000;">
-            <div style="text-align:center;margin-bottom:8px;border-bottom:1px solid #000;">
-              <div style="font-weight:bold;font-size:12px;">REISBLOC F&B</div>
-              <div style="font-size:9px;">reisbloc.com</div>
-              <div style="font-size:9px;">Cuenta ${tableNumber}</div>
-              <div style="font-size:9px;">Ticket: ${orderIds[0] ? orderIds[0].slice(0, 8) : `CUENTA-${tableNumber}`}</div>
-            </div>
-            <div style="margin-bottom:6px;font-size:9px;">
-              <div>Fecha: ${date}</div>
-            </div>
-            <div style="margin-bottom:8px;border-bottom:1px solid #000;padding-bottom:8px;">
-              ${lines}
-            </div>
-            <div style="margin-bottom:8px;border-bottom:1px solid #000;padding-bottom:8px;">
-              <div style="display:flex;justify-content:space-between;margin:2px 0;">
-                <span>Subtotal:</span>
-                <span>$${subtotal.toFixed(2)}</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;margin:2px 0;">
-                <span>Impuesto:</span>
-                <span>$${tax.toFixed(2)}</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;margin:2px 0;">
-                <span>Propina:</span>
-                <span>$${(result.tip || 0).toFixed(2)}</span>
-              </div>
-              <div style="font-weight:bold;display:flex;justify-content:space-between;font-size:12px;">
-                <span>TOTAL:</span>
-                <span>$${total.toFixed(2)}</span>
+          <div style="width:58mm;padding:6px;font-family:'Courier New', monospace;font-size:11px;line-height:1.25;color:#000;">
+            <!-- Header Logo & Store Name -->
+            <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
+              <div style="font-weight:900;font-size:16px;letter-spacing:1px;">LOCALITO</div>
+              <div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;">Guisos & Barra Fría</div>
+              <div style="font-size:9px;color:#333;margin-top:2px;">localito.reisbloc.com</div>
+              <div style="font-size:10px;font-weight:bold;margin-top:4px;border:1px solid #000;padding:2px 0;">
+                TICKET DE COMPRA
               </div>
             </div>
-            <div style="text-align:center;font-size:9px;margin-top:8px;">
-              <div>Pagado: ${mappedMethod.toUpperCase()}</div>
-              <div style="margin-top:4px;font-size:8px;">Gracias por su preferencia · reisbloc.com</div>
+
+            <!-- Ticket Metadata -->
+            <div style="font-size:9px;border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:6px;">
+              <div style="display:flex;justify-content:space-between;">
+                <span><strong>Cuenta:</strong> #${tableNumber}</span>
+                <span><strong>Folio:</strong> ${ticketFolio}</span>
+              </div>
+              <div style="margin-top:2px;">Fecha: ${dateStr}</div>
+              <div>Atendido por: ${currentUser.name || 'Personal LOCALITO'}</div>
+            </div>
+
+            <!-- Itemized List -->
+            <div style="border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:6px;">
+              <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:9px;border-bottom:1px stroke #ccc;padding-bottom:2px;margin-bottom:4px;">
+                <span>CANT / DESCRIPCIÓN</span>
+                <span>IMPORTE</span>
+              </div>
+              ${itemsToCharge.map(item => `
+                <div style="margin-bottom:4px;">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:bold;">
+                    <span>${item.quantity}x ${item.productName}</span>
+                    <span>$${(item.unitPrice * item.quantity).toFixed(2)}</span>
+                  </div>
+                  <div style="font-size:9px;color:#555;margin-left:10px;">
+                    P.U. $${item.unitPrice.toFixed(2)}
+                  </div>
+                  ${item.notes ? `<div style="font-size:9px;font-style:italic;margin-left:10px;">↳ ${item.notes}</div>` : ''}
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Totals (Sin Propina) -->
+            <div style="border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
+              <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:900;">
+                <span>TOTAL A PAGAR:</span>
+                <span>$${total.toFixed(2)} MXN</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;margin-top:4px;">
+                <span>FORMA DE PAGO:</span>
+                <span><strong>${mappedMethod.toUpperCase()}</strong></span>
+              </div>
+            </div>
+
+            <!-- Fancy Footer -->
+            <div style="text-align:center;font-size:9px;margin-top:6px;">
+              <div style="font-weight:bold;font-size:10px;">¡GRACIAS POR SU PREFERENCIA!</div>
+              <div style="margin-top:4px;font-size:8px;color:#444;">Powered by Reisbloc (reisbloc.com)</div>
             </div>
           </div>
         `
 
-        await printService.printReceipt(html, { title: 'Ticket de Pago', width: 58 })
+        await printService.printReceipt(html, { title: `Ticket de Venta #${ticketFolio}`, width: 58 })
       } catch (printErr) {
         logger.warn('pos', 'No se pudo imprimir ticket final', printErr as any)
       }
