@@ -102,412 +102,239 @@ export const DEMO_INGREDIENTS: DemoIngredient[] = [
 
 // 3. PRODUCTOS DEL MENÚ CON RECETAS DE GUISOS & BARRA FRÍA LOCALITO
 export const DEMO_PRODUCTS: DemoProduct[] = [
-  // --- GUISOS DEL DÍA (LOCALITO) ---
+  // --- QUESADILLAS MAÍZ ---
   {
-    id: 'prod-gui-01',
-    name: 'Cazuela de Guisado del Día con Arroz y Frijoles',
-    description: 'Especialidad LOCALITO: Elige tu guisado artesanal favorito (Chicharrón en salsa verde, Cochinita Pibil o Tinga de Pollo) acompañado de arroz mexicano, frijoles refritos y tortillas hechas a mano.',
-    price: 125,
-    category: 'Guisos',
+    id: 'prod-qm-01',
+    name: 'Quesadilla Maíz Sencilla',
+    description: 'Quesadilla hecha a mano en tortilla de maíz nixtamalizado rellena de queso Oaxaca / Asadero fundido.',
+    price: 35,
+    category: 'Quesadillas Maíz',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1618040996337-56904b7850b9?w=800&auto=format&fit=crop',
+  },
+  {
+    id: 'prod-qm-02',
+    name: 'Quesadilla Maíz con Guisado',
+    description: 'Tortilla de maíz nixtamalizado con queso fundido y tu guisado artesanal a elegir de la barra caliente.',
+    price: 48,
+    category: 'Quesadillas Maíz',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
+  },
+  {
+    id: 'prod-qm-03',
+    name: 'Quesadilla Maíz Extra Guisado',
+    description: 'Quesadilla de maíz bien servida con doble porción de guisado artesanal a elegir.',
+    price: 62,
+    category: 'Quesadillas Maíz',
     active: true,
     hasInventory: true,
     imageUrl: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-03', ingredientName: 'Carne de Cerdo / Guisado', quantityRequired: 0.20, unitType: 'kg' },
-      { ingredientId: 'ing-11', ingredientName: 'Frijol Negro Refrito', quantityRequired: 0.12, unitType: 'kg' },
-      { ingredientId: 'ing-08', ingredientName: 'Tortilla de Maíz', quantityRequired: 0.10, unitType: 'kg' }
-    ]
+  },
+
+  // --- QUESADILLAS HARINA ---
+  {
+    id: 'prod-qh-01',
+    name: 'Quesadilla Harina Sencilla',
+    description: 'Gran tortilla de harina estilo norteño doradita a la plancha con queso asadero fundido.',
+    price: 40,
+    category: 'Quesadillas Harina',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1618040996337-56904b7850b9?w=800&auto=format&fit=crop',
   },
   {
-    id: 'prod-gui-02',
-    name: 'Tacos de Guisado Fiesteros (Orden de 3)',
-    description: 'Tres tacos bien servidos en doble tortilla de maíz nixtamalizado con tus guisados a elegir de la barra caliente, coronados con frijolitos y salsa de la casa.',
-    price: 110,
-    category: 'Guisos',
+    id: 'prod-qh-02',
+    name: 'Quesadilla Harina con Guisado',
+    description: 'Tortilla de harina grande con queso fundido y guisado a elegir de la barra caliente.',
+    price: 55,
+    category: 'Quesadillas Harina',
     active: true,
     hasInventory: true,
     imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-08', ingredientName: 'Tortilla de Maíz', quantityRequired: 0.15, unitType: 'kg' },
-      { ingredientId: 'ing-01', ingredientName: 'Pechuga / Guisado', quantityRequired: 0.18, unitType: 'kg' }
-    ]
   },
-
-  // --- BARRA FRÍA (LOCALITO) ---
   {
-    id: 'prod-bf-01',
-    name: 'Ceviche Fresco de Barra Fría con Totopos',
-    description: 'Directo de la Barra Fría LOCALITO: Filete de pescado fresco marinado en limón con jitomate bola, cebolla morada, cilantro, aguacate Hass y totopos horneados.',
-    price: 145,
-    category: 'Barra Fría',
+    id: 'prod-qh-03',
+    name: 'Quesadilla Harina Extra Guisado',
+    description: 'Tortilla de harina con queso y doble porción de guisado bien servido.',
+    price: 70,
+    category: 'Quesadillas Harina',
     active: true,
     hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1535399831218-d5bd36d1a6b3?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-13', ingredientName: 'Aguacate Hass Maduro', quantityRequired: 0.08, unitType: 'kg' },
-      { ingredientId: 'ing-10', ingredientName: 'Totopos Crujientes', quantityRequired: 0.15, unitType: 'kg' }
-    ]
+    imageUrl: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&auto=format&fit=crop',
+  },
+
+  // --- PLATOS & PLATILLOS ---
+  {
+    id: 'prod-p-01',
+    name: 'Plato (1 guisado, 1 guarnición, 4 tortillas)',
+    description: 'Plato completo: 1 guisado abundante a elegir, 1 guarnición (frijoles, arroz o espagueti) y 4 tortillas recién hechas.',
+    price: 95,
+    category: 'Platos',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&auto=format&fit=crop',
   },
   {
-    id: 'prod-bf-02',
-    name: 'Ensalada Barra Fría con Pollo a las Hierbas',
-    description: 'Mezcla de lechugas frescas, espinacas, jitomate cherry, aguacate, queso manchego en cubos y 150g de pechuga a la plancha con aderezo casero.',
-    price: 130,
-    category: 'Barra Fría',
+    id: 'prod-p-02',
+    name: 'Platillo (2 guisados, 1 guarnición, 4 tortillas)',
+    description: 'Platillo especial: 2 guisados a elegir de la barra, 1 guarnición (frijoles, arroz o espagueti) y 4 tortillas de maíz o harina.',
+    price: 125,
+    category: 'Platos',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
+  },
+  {
+    id: 'prod-p-03',
+    name: 'Sope Normal con Guisado',
+    description: 'Base de maíz frito untado con frijoles, guisado a elegir, crema, queso fresco y lechuga.',
+    price: 45,
+    category: 'Platos',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
+  },
+  {
+    id: 'prod-p-04',
+    name: 'Sope Extra Guisado',
+    description: 'Sope artesanal grueso con frijoles refritos y doble porción de guisado de la casa.',
+    price: 60,
+    category: 'Platos',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
+  },
+
+  // --- ANTOJITOS & ESPECIALIDADES ---
+  {
+    id: 'prod-esp-01',
+    name: 'Gordita con Guisado',
+    description: 'Gordita de masa nixtamalizada frita u horneada, abierta y rellena con guisado artesanal.',
+    price: 48,
+    category: 'Especialidades',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
+  },
+  {
+    id: 'prod-esp-02',
+    name: 'Volcán con Guisado',
+    description: 'Tortilla de maíz tostada crujiente con abundante queso fundido y guisado encima.',
+    price: 52,
+    category: 'Especialidades',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
+  },
+  {
+    id: 'prod-esp-03',
+    name: 'Orden de Frijoles Puercos (Especialidad)',
+    description: 'Especialidad de la casa: Frijoles refritos con chorizo, queso asadero, manteca y especias tradicionales, acompañados de totopos.',
+    price: 65,
+    category: 'Especialidades',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&auto=format&fit=crop',
+  },
+
+  // --- EXTRAS ---
+  {
+    id: 'prod-ext-01',
+    name: 'Mini Pan Dulce',
+    description: 'Pieza de mini pan dulce fresco recién horneado.',
+    price: 18,
+    category: 'Extras',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop',
+  },
+  {
+    id: 'prod-ext-02',
+    name: 'Bolillo con Guisado',
+    description: 'Bolillo crujiente de agua rellenado con guisado bien servido de la barra caliente.',
+    price: 45,
+    category: 'Extras',
+    active: true,
+    hasInventory: true,
+    imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop',
+  },
+  {
+    id: 'prod-ext-03',
+    name: 'Coctel de Fruta de Temporada',
+    description: 'Vaso de fruta fresca picada de temporada (sandía, melón, papaya, piña) con granisado opcional.',
+    price: 40,
+    category: 'Extras',
     active: true,
     hasInventory: true,
     imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-01', ingredientName: 'Pechuga de Pollo', quantityRequired: 0.15, unitType: 'kg' },
-      { ingredientId: 'ing-18', ingredientName: 'Apio & Espinaca', quantityRequired: 0.12, unitType: 'kg' },
-      { ingredientId: 'ing-13', ingredientName: 'Aguacate Hass', quantityRequired: 0.06, unitType: 'kg' }
-    ]
   },
 
-
-  {
-    id: 'prod-des-01',
-    name: 'Chilaquiles Verdes o Rojos con Pollo/Huevo',
-    description: 'Receta Dark Kitchen: 250g totopos crujientes de maíz, 180ml de salsa verde tatemada o roja martajada, 120g pechuga deshebrada, crema agria, queso oaxaca, cebolla y empaque térmico to-go.',
-    price: 135,
-    category: 'Desayunos',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1640719028782-9334b082670d?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-10', ingredientName: 'Totopos Crujientes de Maíz', quantityRequired: 0.25, unitType: 'kg', notes: 'Totopos fritos en aceite limpio' },
-      { ingredientId: 'ing-33', ingredientName: 'Salsa Verde Tatemada', quantityRequired: 0.18, unitType: 'liter', notes: 'Salsa verde o roja según elección' },
-      { ingredientId: 'ing-01', ingredientName: 'Pechuga de Pollo Deshebrada', quantityRequired: 0.12, unitType: 'kg', notes: 'Pollo sazonado' },
-      { ingredientId: 'ing-05', ingredientName: 'Queso Oaxaca Rallado', quantityRequired: 0.04, unitType: 'kg' },
-      { ingredientId: 'ing-35', ingredientName: 'Crema Agria de Rancho', quantityRequired: 0.03, unitType: 'kg' },
-      { ingredientId: 'ing-26', ingredientName: 'Contenedor Térmico 9x9', quantityRequired: 1, unitType: 'units' },
-      { ingredientId: 'ing-36', ingredientName: 'Bote Salsa 2oz', quantityRequired: 1, unitType: 'units' },
-      { ingredientId: 'ing-37', ingredientName: 'Bolsa Kraft To-Go', quantityRequired: 1, unitType: 'units' }
-    ]
-  },
-  {
-    id: 'prod-des-02',
-    name: 'Huevos Rancheros sobre Tortilla de Maíz Frita',
-    description: 'Dos huevos fritos sobre tortillas pasadas por aceite caliente, bañados en salsa ranchera casera con 150g frijoles negros refritos.',
-    price: 110,
-    category: 'Desayunos',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-04', ingredientName: 'Huevo Fresco de Granja', quantityRequired: 2, unitType: 'units' },
-      { ingredientId: 'ing-08', ingredientName: 'Tortilla de Maíz', quantityRequired: 0.08, unitType: 'kg' },
-      { ingredientId: 'ing-11', ingredientName: 'Frijol Negro Refrito', quantityRequired: 0.15, unitType: 'kg' },
-      { ingredientId: 'ing-34', ingredientName: 'Salsa Roja Martajada', quantityRequired: 0.10, unitType: 'liter' },
-      { ingredientId: 'ing-26', ingredientName: 'Contenedor Térmico 9x9', quantityRequired: 1, unitType: 'units' }
-    ]
-  },
-  {
-    id: 'prod-des-03',
-    name: 'Molletes con Chorizo y Pico de Gallo',
-    description: 'Dos tapas de pan bolillo crujiente cubiertas con frijoles negros refritos, quesillo derretido, 60g chorizo artesanal y pico de gallo fiestero.',
-    price: 95,
-    category: 'Desayunos',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1588315029754-2dd089d39a1a?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-09', ingredientName: 'Pan Bolillo Recién Horneado', quantityRequired: 1, unitType: 'units' },
-      { ingredientId: 'ing-11', ingredientName: 'Frijol Negro Refrito', quantityRequired: 0.10, unitType: 'kg' },
-      { ingredientId: 'ing-05', ingredientName: 'Queso Oaxaca Rallado', quantityRequired: 0.06, unitType: 'kg' },
-      { ingredientId: 'ing-07', ingredientName: 'Chorizo Artesanal', quantityRequired: 0.06, unitType: 'kg' },
-      { ingredientId: 'ing-26', ingredientName: 'Contenedor Térmico 9x9', quantityRequired: 1, unitType: 'units' }
-    ]
-  },
-  {
-    id: 'prod-des-04',
-    name: 'Omelette Vegetariano Saludable',
-    description: 'Tres huevos batidos con nopal tierno, espinacas, champiñones y 60g de aguacate Hass maduro.',
-    price: 120,
-    category: 'Desayunos',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1510693206972-df098062cb71?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-04', ingredientName: 'Huevo Fresco de Granja', quantityRequired: 3, unitType: 'units' },
-      { ingredientId: 'ing-16', ingredientName: 'Nopal Fresco Orgánico', quantityRequired: 0.08, unitType: 'kg' },
-      { ingredientId: 'ing-13', ingredientName: 'Aguacate Hass Maduro', quantityRequired: 0.06, unitType: 'kg' },
-      { ingredientId: 'ing-26', ingredientName: 'Contenedor Térmico 9x9', quantityRequired: 1, unitType: 'units' }
-    ]
-  },
-
-  // --- BAGUETTES GOURMET ---
-  {
-    id: 'prod-bag-01',
-    name: 'Baguette de Arrachera al Chimichurri & Queso',
-    description: '1 Pieza baguette artesanal de masa madre relleno de 160g arrachera jugosa a la plancha, quesillo oaxaca derretido, cebolla asada y chimichurri casero.',
-    price: 155,
-    category: 'Comidas',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1509722747041-616f39b57569?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-29', ingredientName: 'Pan Baguette Artesanal', quantityRequired: 1, unitType: 'units' },
-      { ingredientId: 'ing-30', ingredientName: 'Arrachera Marinada de Res', quantityRequired: 0.16, unitType: 'kg' },
-      { ingredientId: 'ing-05', ingredientName: 'Queso Oaxaca Rallado', quantityRequired: 0.05, unitType: 'kg' },
-      { ingredientId: 'ing-32', ingredientName: 'Salsa Chimichurri Casero', quantityRequired: 0.03, unitType: 'kg' },
-      { ingredientId: 'ing-26', ingredientName: 'Contenedor Térmico 9x9', quantityRequired: 1, unitType: 'units' }
-    ]
-  },
-  {
-    id: 'prod-bag-02',
-    name: 'Baguette Jamón Serrano con Queso Manchego & Pesto',
-    description: 'Baguette artesanal recién horneado con 100g finas lajas de jamón serrano español, queso manchego gratinado y pesto casero de albahaca.',
-    price: 145,
-    category: 'Comidas',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-29', ingredientName: 'Pan Baguette Artesanal', quantityRequired: 1, unitType: 'units' },
-      { ingredientId: 'ing-31', ingredientName: 'Jamón Serrano Español', quantityRequired: 0.10, unitType: 'kg' },
-      { ingredientId: 'ing-06', ingredientName: 'Queso Manchego Gratinar', quantityRequired: 0.05, unitType: 'kg' },
-      { ingredientId: 'ing-32', ingredientName: 'Pesto Casero de Albahaca', quantityRequired: 0.03, unitType: 'kg' },
-      { ingredientId: 'ing-26', ingredientName: 'Contenedor Térmico 9x9', quantityRequired: 1, unitType: 'units' }
-    ]
-  },
-
-  // --- COMIDAS (LUNCH) ---
-  {
-    id: 'prod-com-01',
-    name: 'Torta de Milanesa de Res Especial',
-    description: 'Pan bolillo dorado con 150g milanesa empanizada de res, quesillo oaxaca, aguacate hass, jitomate y frijoles negros.',
-    price: 130,
-    category: 'Comidas',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-09', ingredientName: 'Pan Bolillo Recién Horneado', quantityRequired: 1, unitType: 'units' },
-      { ingredientId: 'ing-02', ingredientName: 'Milanesa de Res Empanizada', quantityRequired: 0.15, unitType: 'kg' },
-      { ingredientId: 'ing-05', ingredientName: 'Queso Oaxaca Rallado', quantityRequired: 0.05, unitType: 'kg' },
-      { ingredientId: 'ing-13', ingredientName: 'Aguacate Hass Maduro', quantityRequired: 0.04, unitType: 'kg' },
-      { ingredientId: 'ing-26', ingredientName: 'Contenedor Térmico 9x9', quantityRequired: 1, unitType: 'units' }
-    ]
-  },
-  {
-    id: 'prod-com-02',
-    name: 'Tacos de Guisado para Llevar (Orden de 4)',
-    description: 'Orden de 4 tacos sobre tortilla de maíz doble nixtamalizada con 180g guisado (Chicharrón, Tinga o Pollo) y empaque biodegradable.',
-    price: 115,
-    category: 'Comidas',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-08', ingredientName: 'Tortilla de Maíz', quantityRequired: 0.20, unitType: 'kg' },
-      { ingredientId: 'ing-01', ingredientName: 'Pechuga de Pollo Deshebrada', quantityRequired: 0.18, unitType: 'kg' },
-      { ingredientId: 'ing-26', ingredientName: 'Contenedor Térmico 9x9', quantityRequired: 1, unitType: 'units' }
-    ]
-  },
-  {
-    id: 'prod-com-03',
-    name: 'Flautas Doradas de Pollo (4 pzs)',
-    description: 'Cuatro flautas crujientes rellenas de pechuga deshebrada, cubiertas con crema agria, queso fresco, lechuga y salsa verde.',
-    price: 125,
-    category: 'Comidas',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-08', ingredientName: 'Tortilla de Maíz', quantityRequired: 0.15, unitType: 'kg' },
-      { ingredientId: 'ing-01', ingredientName: 'Pechuga de Pollo Deshebrada', quantityRequired: 0.12, unitType: 'kg' },
-      { ingredientId: 'ing-05', ingredientName: 'Queso Oaxaca Rallado', quantityRequired: 0.03, unitType: 'kg' },
-      { ingredientId: 'ing-35', ingredientName: 'Crema Agria Fresca', quantityRequired: 0.03, unitType: 'kg' },
-      { ingredientId: 'ing-26', ingredientName: 'Contenedor Térmico 9x9', quantityRequired: 1, unitType: 'units' }
-    ]
-  },
-  {
-    id: 'prod-com-04',
-    name: 'Ceviche Acapulqueño de Pesca del Día',
-    description: 'Pescado blanco marinado en limón agrio con jitomate, cebolla morada, cilantro, aguacate hass y tostadas crujientes.',
-    price: 165,
-    category: 'Comidas',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1535400255456-984241443b29?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-14', ingredientName: 'Jitomate Bola Fresco', quantityRequired: 0.10, unitType: 'kg' },
-      { ingredientId: 'ing-15', ingredientName: 'Cebolla Blanca Picada', quantityRequired: 0.05, unitType: 'kg' },
-      { ingredientId: 'ing-13', ingredientName: 'Aguacate Hass Maduro', quantityRequired: 0.06, unitType: 'kg' },
-      { ingredientId: 'ing-26', ingredientName: 'Contenedor Térmico 9x9', quantityRequired: 1, unitType: 'units' }
-    ]
-  },
-
-  // --- CENAS & TACOS ---
-  {
-    id: 'prod-cen-01',
-    name: 'Enchiladas Suizas de Pollo (3 pzs)',
-    description: 'Tres tortillas rellenas de pollo deshebrado bañadas en salsa verde cremosa, gratinadas con abundante queso manchego.',
-    price: 145,
-    category: 'Cenas',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1615870216519-2f9fa575fa5c?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-08', ingredientName: 'Tortilla de Maíz', quantityRequired: 0.12, unitType: 'kg' },
-      { ingredientId: 'ing-01', ingredientName: 'Pechuga de Pollo Deshebrada', quantityRequired: 0.12, unitType: 'kg' },
-      { ingredientId: 'ing-06', ingredientName: 'Queso Manchego Gratinar', quantityRequired: 0.06, unitType: 'kg' },
-      { ingredientId: 'ing-33', ingredientName: 'Salsa Verde Tatemada', quantityRequired: 0.15, unitType: 'liter' },
-      { ingredientId: 'ing-26', ingredientName: 'Contenedor Térmico 9x9', quantityRequired: 1, unitType: 'units' }
-    ]
-  },
-  {
-    id: 'prod-cen-02',
-    name: 'Tacos al Pastor con Queso Derretido',
-    description: '180g carne de cerdo marinada al pastor con piña asada, cebolla, cilantro y quesillo gratinado sobre tortilla doble.',
-    price: 135,
-    category: 'Cenas',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-03', ingredientName: 'Carne de Cerdo al Pastor', quantityRequired: 0.18, unitType: 'kg' },
-      { ingredientId: 'ing-08', ingredientName: 'Tortilla de Maíz', quantityRequired: 0.15, unitType: 'kg' },
-      { ingredientId: 'ing-05', ingredientName: 'Queso Oaxaca Rallado', quantityRequired: 0.04, unitType: 'kg' },
-      { ingredientId: 'ing-26', ingredientName: 'Contenedor Térmico 9x9', quantityRequired: 1, unitType: 'units' }
-    ]
-  },
-
-  // --- BEBIDAS NATURALES & SALUDABLES ---
+  // --- BEBIDAS ---
   {
     id: 'prod-beb-01',
-    name: 'Agua Fresca de Horchata Artesanal (600ml)',
-    description: 'Elaborada artesanalmente con arroz seleccionado, canela de raja entera, leche y toque de vainilla.',
-    price: 45,
+    name: 'Refrescos 600ml',
+    description: 'Refresco embotellado frío 600ml a elegir (Coca-Cola, Sprite, Fanta, Mundet).',
+    price: 35,
     category: 'Bebidas',
     active: true,
     hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1556881286-fc6915169721?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-23', ingredientName: 'Jarabe de Horchata', quantityRequired: 0.20, unitType: 'liter' },
-      { ingredientId: 'ing-27', ingredientName: 'Vaso 600ml con Tapa Domo', quantityRequired: 1, unitType: 'units' }
-    ]
+    imageUrl: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=800&auto=format&fit=crop',
   },
   {
     id: 'prod-beb-02',
-    name: 'Agua Fresca de Jamaica con Chía (600ml)',
-    description: 'Infusión natural de flor de jamaica sin azúcar refinada, enriquecida con semillas de chía orgánicas.',
-    price: 45,
+    name: 'Agua de Sabor de la Casa',
+    description: 'Agua fresca natural preparada diariamente (Horchata, Jamaica o Tamarindo).',
+    price: 32,
     category: 'Bebidas',
     active: true,
     hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-22', ingredientName: 'Concentrado de Jamaica con Chía', quantityRequired: 0.20, unitType: 'liter' },
-      { ingredientId: 'ing-27', ingredientName: 'Vaso 600ml con Tapa Domo', quantityRequired: 1, unitType: 'units' }
-    ]
+    imageUrl: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=800&auto=format&fit=crop',
   },
   {
     id: 'prod-beb-03',
-    name: 'Jugo Verde Detox Natural (500ml)',
-    description: 'Extracción fresca al momento de nopal orgánico, piña miel, apio, espinaca y jugo de limón agrio.',
-    price: 55,
+    name: 'Agua Natural 600ml',
+    description: 'Botella de agua purificada 600ml.',
+    price: 25,
     category: 'Bebidas',
     active: true,
     hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1610970881699-44a5587cabec?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-16', ingredientName: 'Nopal Fresco Orgánico', quantityRequired: 0.05, unitType: 'kg' },
-      { ingredientId: 'ing-17', ingredientName: 'Piña Miel Fresca', quantityRequired: 0.10, unitType: 'kg' },
-      { ingredientId: 'ing-18', ingredientName: 'Apio & Espinaca', quantityRequired: 0.05, unitType: 'kg' },
-      { ingredientId: 'ing-27', ingredientName: 'Vaso 600ml con Tapa Domo', quantityRequired: 1, unitType: 'units' }
-    ]
+    imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=800&auto=format&fit=crop',
   },
   {
     id: 'prod-beb-04',
-    name: 'Café de Olla Tradicional con Canela',
-    description: 'Café en grano arábico mexicano preparado artesanalmente en olla de barro con piloncillo y canela.',
-    price: 40,
+    name: 'Café de Olla',
+    description: 'Café de olla tradicional infusionado con piloncillo y varas de canela.',
+    price: 30,
     category: 'Bebidas',
     active: true,
     hasInventory: true,
     imageUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-24', ingredientName: 'Café Arábico en Grano', quantityRequired: 0.02, unitType: 'kg' }
-    ]
   },
   {
     id: 'prod-beb-05',
-    name: 'Matcha Latte Saludable (Leche de Almendra)',
-    description: 'Té verde matcha orgánico en polvo batido al momento con leche de almendra baja en calorías.',
-    price: 60,
+    name: 'Nescafé',
+    description: 'Taza de café instantáneo caliente servido con leche o agua.',
+    price: 28,
     category: 'Bebidas',
     active: true,
     hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-25', ingredientName: 'Té Matcha Orgánico', quantityRequired: 0.005, unitType: 'kg' },
-      { ingredientId: 'ing-21', ingredientName: 'Leche de Almendras', quantityRequired: 0.25, unitType: 'liter' }
-    ]
-  },
-
-  // --- COMBOS PARA LLEVAR (TO-GO COMBOS) ---
-  {
-    id: 'prod-cmb-01',
-    name: 'Combo Desayuno Ejecutivo (Para llevar)',
-    description: 'Incluye Chilaquiles Verdes/Rojos con Pollo + Café de Olla + Vaso de Jugo Verde Detox + Empaque ecológico.',
-    price: 165,
-    category: 'Combos',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1493770348161-369560ae357d?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-10', ingredientName: 'Totopos Crujientes de Maíz', quantityRequired: 0.15, unitType: 'kg' },
-      { ingredientId: 'ing-01', ingredientName: 'Pechuga de Pollo Deshebrada', quantityRequired: 0.10, unitType: 'kg' },
-      { ingredientId: 'ing-24', ingredientName: 'Café Arábico en Grano', quantityRequired: 0.02, unitType: 'kg' },
-      { ingredientId: 'ing-26', ingredientName: 'Contenedor Térmico 9x9', quantityRequired: 1, unitType: 'units' },
-      { ingredientId: 'ing-27', ingredientName: 'Vaso 600ml con Tapa Domo', quantityRequired: 1, unitType: 'units' }
-    ]
+    imageUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop',
   },
   {
-    id: 'prod-cmb-02',
-    name: 'Combo Chilango Ejecutivo To-Go',
-    description: '¡El favorito de la casa! Torta Especial de Milanesa con Quesillo + Agua Fresca de Horchata o Jamaica (600ml) + Flan Nápolitano Cremoso + Empaque To-Go.',
-    price: 175,
-    category: 'Combos',
+    id: 'prod-beb-06',
+    name: 'Jugo (Fruta de Temporada)',
+    description: 'Jugo 100% natural exprimido al momento (naranja, toronja o verde).',
+    price: 38,
+    category: 'Bebidas',
     active: true,
     hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-09', ingredientName: 'Pan Bolillo Recién Horneado', quantityRequired: 1, unitType: 'units' },
-      { ingredientId: 'ing-02', ingredientName: 'Milanesa de Res Empanizada', quantityRequired: 0.15, unitType: 'kg' },
-      { ingredientId: 'ing-23', ingredientName: 'Jarabe de Horchata', quantityRequired: 0.20, unitType: 'liter' },
-      { ingredientId: 'ing-26', ingredientName: 'Contenedor Térmico 9x9', quantityRequired: 1, unitType: 'units' },
-      { ingredientId: 'ing-27', ingredientName: 'Vaso 600ml con Tapa Domo', quantityRequired: 1, unitType: 'units' }
-    ]
+    imageUrl: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?w=800&auto=format&fit=crop',
   },
-
-  // --- POSTRES ---
-  {
-    id: 'prod-pos-01',
-    name: 'Flan Nápolitano Cremoso',
-    description: 'Flan casero suave de vainilla horneado con caramelo líquido de la casa.',
-    price: 50,
-    category: 'Postres',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1528975604071-b4dc52a2d18c?w=800&auto=format&fit=crop'
-  },
-  {
-    id: 'prod-pos-02',
-    name: 'Cheesecake con Mermelada de Frutos Rojos',
-    description: 'Rebanada de pastel de queso cremoso cubierto con mermelada artesanal de frutos rojos.',
-    price: 65,
-    category: 'Postres',
-    active: true,
-    hasInventory: true,
-    imageUrl: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=800&auto=format&fit=crop',
-    recipeIngredients: [
-      { ingredientId: 'ing-19', ingredientName: 'Frutos Rojos (Fresas, Moras)', quantityRequired: 0.05, unitType: 'kg' }
-    ]
-  }
 ]
+
 
 class DemoSeedService {
   async resetAndSeedFnBDemoData(): Promise<{ success: boolean; message: string }> {

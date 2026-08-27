@@ -24,7 +24,8 @@ export default function PublicMenu() {
   const [orderSuccessMsg, setOrderSuccessMsg] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const categories = ['Todos', 'Guisos', 'Barra Fría', 'Desayunos', 'Comidas', 'Bebidas', 'Combos', 'Postres']
+  const categories = ['Todos', 'Quesadillas Maíz', 'Quesadillas Harina', 'Platos', 'Especialidades', 'Extras', 'Bebidas']
+
 
 
   const filteredProducts = useMemo(() => {
