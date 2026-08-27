@@ -17,6 +17,30 @@ function Login() {
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [isSendingMagicLink, setIsSendingMagicLink] = useState(false)
 
+  const isSupabaseConfigured = Boolean(
+    import.meta.env.VITE_SUPABASE_URL && 
+    import.meta.env.VITE_SUPABASE_ANON_KEY &&
+    !import.meta.env.VITE_SUPABASE_URL.includes('YOUR_PROJECT_REF')
+  )
+
+  useEffect(() => {
+    if (searchParams.get('error') === 'auth_failed') {
+      setUiError('No se pudo completar la autenticación con Google. Intenta de nuevo.')
+    }
+  }, [searchParams])
+
+  const handleGoogleLogin = async () => {
+    if (!isSupabaseConfigured) {
+      setUiError('Google OAuth requiere configurar VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en tu archivo .env.local')
+      return
+    }
+    const result = await loginWithGoogle()
+    if (!result.success) {
+      setUiError(result.error || 'No se pudo iniciar sesión con Google')
+    }
+  }
+
+
   const handleMagicLinkLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!inviteEmail.trim()) {
