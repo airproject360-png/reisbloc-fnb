@@ -140,7 +140,7 @@ export default function POS() {
         status: 'sent',
         createdBy: currentUser.id,
         createdAt: new Date(),
-        notes: `Comanda - ${tableLocations.find(l => l.id === currentLoc)?.label || `Mesa ${currentLoc}`}`,
+        notes: `🍽️ Comida - ${tableLocations.find(l => l.id === currentLoc)?.label || `Mesa ${currentLoc}`}`,
       })
 
       // Imprimir comanda de cocina (58mm)

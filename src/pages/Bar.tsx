@@ -98,8 +98,6 @@ export default function Bar() {
 
   const filteredOrders = orders
     .filter(o => {
-      // Solo mostrar órdenes de bebidas (que tienen nota '🍹 Bebidas')
-      if (!o.notes?.includes('🍹') && !o.notes?.includes('Bebidas')) return false
       if (filter === 'all') return true
       return o.status === filter
     })

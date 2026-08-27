@@ -103,8 +103,6 @@ export default function Kitchen() {
 
   const filteredOrders = orders
     .filter(o => {
-      // Solo mostrar órdenes de comida (que tienen nota '🍽️ Comida')
-      if (!o.notes?.includes('🍽️') && !o.notes?.includes('Comida')) return false
       if (filter === 'all') return true
       return o.status === filter
     })
