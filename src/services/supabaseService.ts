@@ -194,28 +194,36 @@ class SupabaseService {
 
   async createUser(user: Omit<User, 'id'>): Promise<string> {
     try {
-      // Map TypeScript User fields to Supabase schema
-      const { username, createdAt, ...rest } = user as any
-      const supabaseUser = { ...rest, name: username, username: username, organization_id: this.getCurrentOrgId() }
-      
-      if (!supabaseUser.organization_id) throw new Error('Organization ID required to create user')
+      const { username, email, role, active } = user as any
+      const orgId = this.getCurrentOrgId()
+      if (!orgId) throw new Error('Organization ID required to create user')
 
-      // Usar RPC segura para evitar problemas de RLS circular
-      const { data, error } = await supabase.rpc('create_user_secure', {
-        p_name: supabaseUser.name,
-        p_username: supabaseUser.username,
-        p_pin: supabaseUser.pin,
-        p_role: supabaseUser.role,
-        p_organization_id: supabaseUser.organization_id
-      })
+      // Inserción directa en la tabla users acotada al tenant
+      const { data, error } = await supabase
+        .from('users')
+        .insert({
+          organization_id: orgId,
+          name: username,
+          username: username,
+          email: email || `${username}@localito.reisbloc.com`,
+          role: role || 'capitan',
+          active: active !== undefined ? active : true,
+        })
+        .select('id')
+        .single()
 
-      if (error) throw error
-      return data // RPC devuelve el UUID directamente
+      if (error) {
+        logger.error('supabase', 'Error al insertar usuario en la tabla users', error as any)
+        throw error
+      }
+
+      return data.id
     } catch (error) {
-      logger.error('supabase', 'Error creating user', error as any)
+      logger.error('supabase', 'Error en createUser', error as any)
       throw error
     }
   }
+
 
   async updateUser(userId: string, updates: Partial<User>): Promise<void> {
     try {
