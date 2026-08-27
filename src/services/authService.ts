@@ -154,15 +154,19 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
     const username = data?.username || data?.name || authUser.user_metadata?.full_name || email.split('@')[0] || 'Admin LOCALITO'
     const role = FORCED_ADMIN_EMAILS.has(email) ? 'admin' : (String(data?.role || 'admin') as User['role'])
 
-    await supabase.from('users').upsert({
-      id: authId,
-      organization_id: targetOrgId,
-      name: username,
-      username: username,
-      email: email,
-      role: role,
-      active: true
-    }).catch(err => logger.warn('auth', 'Upsert usuario auth en users omitido o fallido:', err))
+    try {
+      await supabase.from('users').upsert({
+        id: authId,
+        organization_id: targetOrgId,
+        name: username,
+        username: username,
+        email: email,
+        role: role,
+        active: true
+      })
+    } catch (err) {
+      logger.warn('auth', 'Upsert usuario auth en users omitido o fallido:', err)
+    }
 
     persistOrganizationId(targetOrgId)
 
