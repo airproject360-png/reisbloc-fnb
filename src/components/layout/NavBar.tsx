@@ -80,12 +80,12 @@ export default function NavBar() {
 
   // Filtrar items según rol y remover 'clientes' y 'compras'
   const navItems = [
-    { path: '/pos', label: 'POS (Caja)', icon: ShoppingCart, roles: ['admin', 'supervisor', 'capitan', 'mesero'], row: 1 },
+    { path: '/pos', label: 'Menú & Caja', icon: Utensils, roles: ['admin', 'supervisor', 'capitan', 'mesero'], row: 1 },
     { path: '/cuentas', label: 'Cuentas / Mesas', icon: LayoutDashboard, roles: ['admin', 'supervisor', 'capitan', 'mesero'], row: 1 },
     { path: '/kitchen', label: 'Cocina', icon: ChefHat, roles: ['admin', 'supervisor', 'cocina', 'capitan', 'mesero'], row: 1 },
     { path: '/closing', label: 'Cierre de Caja', icon: DollarSign, roles: ['admin'], row: 1 },
     { path: '/inventory', label: 'Inventario & Recetas', icon: Package, roles: ['admin', 'supervisor'], row: 2 },
-    { path: '/menu', label: 'Menú Online QR', icon: Utensils, roles: ['admin', 'supervisor', 'capitan', 'mesero', 'cocina'], row: 2 },
+    { path: '/menu', label: 'Menú Publico QR', icon: Sparkles, roles: ['admin', 'supervisor', 'capitan', 'mesero', 'cocina'], row: 2 },
     { path: '/admin', label: 'Administración', icon: ShieldCheck, roles: ['admin'], row: 2 },
   ].filter(item => {
     if (item.path === '/closing') return APP_CONFIG.EVENT_FEATURES.CLOSING

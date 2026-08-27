@@ -2,20 +2,31 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import logger from '@/utils/logger'
 import { useAppStore } from '@/store/appStore'
-import { useAuth } from '@/hooks/useAuth'
 import supabaseService from '@/services/supabaseService'
-import { APP_CONFIG } from '@/config/constants'
-import ProductGrid from '@/components/pos/ProductGrid'
-import OrderPanel from '@/components/pos/OrderPanel'
-import CartSummary from '@/components/pos/CartSummary'
-import PaymentPanel, { PaymentResult } from '@/components/pos/PaymentPanel'
-import OrderNoteModal from '@/components/pos/OrderNoteModal'
-// TipsWidget se mueve a la página Ready
 import { Product, OrderItem } from '@/types/index'
-import { sendNotificationToUsers } from '@/services/sendNotificationHelper'
-import { Bell, ShoppingCart, Pencil, User } from 'lucide-react'
-import printService from '@/services/printService'
 import { DEMO_PRODUCTS } from '@/services/demoSeedService'
+import printService from '@/services/printService'
+import OrderNoteModal from '@/components/pos/OrderNoteModal'
+import DarkKitchenRecipeModal from '@/components/admin/DarkKitchenRecipeModal'
+import {
+  Search,
+  Sparkles,
+  MapPin,
+  ChefHat,
+  Plus,
+  Minus,
+  Trash2,
+  Send,
+  CreditCard,
+  Banknote,
+  QrCode,
+  CheckCircle2,
+  X,
+  FileText,
+  Utensils,
+  ShoppingBag,
+  Store
+} from 'lucide-react'
 
 export default function POS() {
   const navigate = useNavigate()
@@ -23,7 +34,6 @@ export default function POS() {
     currentUser,
     products,
     setProducts,
-    tables,
     currentTableNumber,
     setCurrentTable,
     draftOrders,
@@ -33,66 +43,43 @@ export default function POS() {
     removeDraftItem,
     clearDraftForTable,
   } = useAppStore()
-  
+
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
-  const [stockError, setStockError] = useState<string | undefined>()
-  const [readyOrdersCount, setReadyOrdersCount] = useState(0)
-  const [activeTableOrders, setActiveTableOrders] = useState<any[]>([]) // Estado para "Mesa Viva"
-  const [paymentDraftItems, setPaymentDraftItems] = useState<OrderItem[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todos')
+  const [searchTerm, setSearchTerm] = useState('')
   const [editingItem, setEditingItem] = useState<OrderItem | null>(null)
-  const prevReadyCountRef = useRef(0)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const [paymentPanel, setPaymentPanel] = useState<{
-    isOpen: boolean
-    orderIds: string[]
-    orderTotal: number
-  }>({
-    isOpen: false,
-    orderIds: [],
-    orderTotal: 0,
-  })
-  const [activeTab, setActiveTab] = useState<'order' | 'products'>('order')
+  const [recipeProduct, setRecipeProduct] = useState<Product | null>(null)
+  const [showCartDrawer, setShowCartDrawer] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
 
-  const tableNumber = currentTableNumber || 1
-  const items = draftOrders[tableNumber] || []
+  // Estados de cobro
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
+  const [cashReceived, setCashReceived] = useState<string>('')
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+
+  // Lista simplificada de ubicaciones / mesas
+  const tableLocations = [
+    { id: 1, label: 'Mesa 1' },
+    { id: 2, label: 'Mesa 2' },
+    { id: 3, label: 'Mesa 3' },
+    { id: 4, label: 'Mesa 4' },
+    { id: 5, label: 'Mesa 5' },
+    { id: 6, label: 'Mesa 6' },
+    { id: 99, label: 'Barra' },
+    { id: 100, label: 'Para Llevar' },
+  ]
+
+  const currentLoc = currentTableNumber || 1
+  const cartItems = draftOrders[currentLoc] || []
+  const cartSubtotal = cartItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
   const isReadOnly = currentUser?.role === 'supervisor'
 
+  const categories = ['Todos', 'Quesadillas Maíz', 'Quesadillas Harina', 'Platos', 'Especialidades', 'Extras', 'Bebidas']
+
   useEffect(() => {
-    // Audio de notificación
-    audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBiuBzvLZiDYIF2W79+qbUg8OTqvn8raKOwcVa7r3GMUBAAAAAAABAAAAA')
     loadProducts()
   }, [])
-
-  // Monitorear órdenes listas en tiempo real
-  useEffect(() => {
-    const unsubscribe = supabaseService.subscribeToOrdersByStatus('ready', (readyOrders) => {
-      const count = readyOrders.length
-      setReadyOrdersCount(count)
-
-      // Reproducir sonido cuando aumenta el contador
-      if (count > prevReadyCountRef.current && prevReadyCountRef.current > 0) {
-        audioRef.current?.play().catch(e => logger.warn('pos', 'No se pudo reproducir audio', e as any))
-      }
-
-      prevReadyCountRef.current = count
-    })
-
-    return () => unsubscribe?.()
-  }, [])
-
-  // Monitorear órdenes activas de la mesa actual (Persistencia visual)
-  useEffect(() => {
-    if (!currentTableNumber) {
-      setActiveTableOrders([])
-      return
-    }
-    // Suscribirse a cambios en órdenes para mantener la mesa "viva"
-    const unsubscribe = supabaseService.subscribeToActiveOrders((orders) => {
-      setActiveTableOrders(orders.filter(o => o.tableNumber === currentTableNumber))
-    })
-    return () => unsubscribe?.()
-  }, [currentTableNumber])
 
   const loadProducts = async () => {
     setLoading(true)
@@ -101,352 +88,137 @@ export default function POS() {
       if (prods && prods.length > 0) {
         setProducts(prods)
       } else {
-        setProducts(DEMO_PRODUCTS)
+        setProducts(DEMO_PRODUCTS as any)
       }
     } catch (error) {
-      logger.error('pos', 'Error loading products, using demo menu', error as any)
-      setProducts(DEMO_PRODUCTS)
+      logger.error('pos', 'Error loading products', error as any)
+      setProducts(DEMO_PRODUCTS as any)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleUpdateItemNote = (itemId: string, note: string) => {
-    useAppStore.setState(state => {
-        const tableDraft = state.draftOrders[tableNumber] || [];
-        const updatedDraft = tableDraft.map(item => 
-            item.id === itemId ? { ...item, notes: note } : item
-        );
-        return {
-            draftOrders: {
-                ...state.draftOrders,
-                [tableNumber]: updatedDraft
-            }
-        };
-    });
-  }
+  const filteredProducts = useMemo(() => {
+    return (products || []).filter((p) => {
+      const matchCat = selectedCategory === 'Todos' || p.category.toLowerCase() === selectedCategory.toLowerCase()
+      const matchSearch =
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      return matchCat && matchSearch
+    })
+  }, [products, selectedCategory, searchTerm])
 
-  const handlePrintAccount = async () => {
-    if (items.length === 0) return
-    const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
-    const tax = subtotal * 0.16
-    const total = subtotal + tax
-    const date = new Date().toLocaleString('es-MX')
-
-    const lines = items
-      .map(item => `
-        <div style="display:flex;justify-content:space-between;margin:2px 0;">
-          <span>${item.quantity}x ${item.productName}</span>
-          <span>$${(item.unitPrice * item.quantity).toFixed(2)}</span>
-        </div>
-      `)
-      .join('')
-
-    // Cálculos de propina sugerida
-    const tip10 = subtotal * 0.10
-    const tip15 = subtotal * 0.15
-    const tip20 = subtotal * 0.20
-
-    const html = `
-      <div style="width:58mm;padding:8px;font-family:'Courier New', monospace;font-size:11px;line-height:1.2;color:#000;">
-        <div style="text-align:center;margin-bottom:8px;border-bottom:1px solid #000;">
-          <div style="font-weight:bold;font-size:12px;">REISBLOC F&B</div>
-          <div style="font-size:9px;">reisbloc.com</div>
-          <div style="font-size:9px;">Cuenta ${tableNumber}</div>
-        </div>
-        <div style="margin-bottom:6px;font-size:9px;">
-          <div>Fecha: ${date}</div>
-        </div>
-        <div style="margin-bottom:8px;border-bottom:1px solid #000;padding-bottom:8px;">
-          ${lines}
-        </div>
-        <div style="margin-bottom:8px;border-bottom:1px solid #000;padding-bottom:8px;">
-          <div style="display:flex;justify-content:space-between;margin:2px 0;">
-            <span>Subtotal:</span>
-            <span>$${subtotal.toFixed(2)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin:2px 0;">
-            <span>IVA (16%):</span>
-            <span>$${tax.toFixed(2)}</span>
-          </div>
-          <div style="font-weight:bold;display:flex;justify-content:space-between;font-size:12px;">
-            <span>TOTAL:</span>
-            <span>$${total.toFixed(2)}</span>
-          </div>
-        </div>
-        
-        <div style="margin-bottom:8px;border-bottom:1px solid #000;padding-bottom:8px;">
-          <div style="text-align:center;font-weight:bold;margin-bottom:4px;">PROPINA SUGERIDA</div>
-          <div style="display:flex;justify-content:space-between;font-size:10px;">
-            <span>10%: $${tip10.toFixed(2)}</span>
-            <span>15%: $${tip15.toFixed(2)}</span>
-          </div>
-          <div style="text-align:center;font-size:10px;margin-top:2px;">
-            <span>20%: $${tip20.toFixed(2)}</span>
-          </div>
-        </div>
-        <div style="text-align:center;font-size:9px;margin-top:8px;">
-          <div>Este no es comprobante fiscal.</div>
-          <div style="margin-top:4px;font-size:8px;">Gracias por su preferencia · reisbloc.com</div>
-        </div>
-      </div>
-    `
-
-    try {
-      await printService.printReceipt(html, { title: 'Cuenta', width: 58 })
-    } catch (e) {
-      // errores ya se registran en printService
-    }
+  const getItemQuantityInCart = (productId: string) => {
+    const found = cartItems.find(i => i.productId === productId)
+    return found ? found.quantity : 0
   }
 
   const handleAddProduct = (product: Product) => {
     if (!currentUser || isReadOnly) return
-    addItemToDraft(tableNumber, product, currentUser.id)
+    addItemToDraft(currentLoc, product, currentUser.id)
   }
 
+  const handleUpdateNote = (note: string) => {
+    if (!editingItem) return
+    useAppStore.setState(state => {
+      const tableDraft = state.draftOrders[currentLoc] || []
+      const updated = tableDraft.map(item => item.id === editingItem.id ? { ...item, notes: note } : item)
+      return { draftOrders: { ...state.draftOrders, [currentLoc]: updated } }
+    })
+    setEditingItem(null)
+  }
+
+  // 🧑‍🍳 ENVIAR A COCINA (IMPRIME COMANDA 58mm)
   const handleSendToKitchen = async () => {
-    if (!currentUser || items.length === 0 || isReadOnly || sending) return
+    if (!currentUser || cartItems.length === 0 || sending) return
 
     setSending(true)
-    setStockError(null)
     try {
-      // Validar stock disponible
-      const stockUpdates: { productId: string; quantity: number }[] = []
-      for (const item of items) {
-        const product = products.find(p => p.id === item.productId)
-        if (product?.hasInventory) {
-          const available = product.currentStock ?? 0
-          if (available < item.quantity) {
-            setStockError(`No hay stock suficiente de "${product.name}". Disponible: ${available}, Solicitado: ${item.quantity}`)
-            return
-          }
-          stockUpdates.push({ productId: item.productId, quantity: -item.quantity })
-        }
-      }
-
-      // Separar items por categoría: Comida → Cocina, Bebidas → Bar
-      const foodItems = items.filter(item => {
-        const product = products.find(p => p.id === item.productId)
-        return product?.category !== 'Bebidas'
-      })
-      
-      const drinkItems = items.filter(item => {
-        const product = products.find(p => p.id === item.productId)
-        return product?.category === 'Bebidas'
+      const orderId = await supabaseService.createOrder({
+        tableNumber: currentLoc,
+        items: cartItems,
+        status: 'sent',
+        createdBy: currentUser.id,
+        createdAt: new Date(),
+        notes: `Comanda - ${tableLocations.find(l => l.id === currentLoc)?.label || `Mesa ${currentLoc}`}`,
       })
 
-      const orderIds: string[] = []
-
-      // Crear orden para Cocina (comida)
-      if (foodItems.length > 0) {
-        const foodOrderId = await supabaseService.createOrder({
-          tableNumber,
-          items: foodItems,
-          status: 'sent',
-          createdBy: currentUser.id,
-          createdAt: new Date(),
-          notes: '🍽️ Comida',
-        })
-        orderIds.push(foodOrderId)
-
-        // Notificar a cocina
-        try {
-          await sendNotificationToUsers({
-            roles: ['cocina'],
-            title: `🍽️ Nueva orden cocina - Cuenta ${tableNumber}`,
-            body: `${foodItems.length} platillo(s)`,
-            type: 'order',
-            priority: 'high',
-            data: {
-              orderId: foodOrderId,
-              tableNumber: tableNumber.toString(),
-              itemCount: foodItems.length.toString()
-            }
-          })
-        } catch (notifError) {
-          logger.warn('pos', 'No se pudo notificar a cocina', notifError as any)
-        }
-      }
-
-      // Crear orden para Bar (bebidas)
-      if (drinkItems.length > 0) {
-        const drinkOrderId = await supabaseService.createOrder({
-          tableNumber,
-          items: drinkItems,
-          status: 'sent',
-          createdBy: currentUser.id,
-          createdAt: new Date(),
-          notes: '🍹 Bebidas',
-        })
-        orderIds.push(drinkOrderId)
-
-        // Notificar a bar
-        try {
-          await sendNotificationToUsers({
-            roles: ['bar'],
-            title: `🍹 Nueva orden bar - Cuenta ${tableNumber}`,
-            body: `${drinkItems.length} bebida(s)`,
-            type: 'order',
-            priority: 'high',
-            data: {
-              orderId: drinkOrderId,
-              tableNumber: tableNumber.toString(),
-              itemCount: drinkItems.length.toString()
-            }
-          })
-        } catch (notifError) {
-          logger.warn('pos', 'No se pudo notificar a bar', notifError as any)
-        }
-      }
-
-      // Decrementar stock
-      if (stockUpdates.length > 0) {
-        await supabaseService.updateProductStockBatch(stockUpdates)
-        const updatedProducts = await supabaseService.getAllProducts()
-        setProducts(updatedProducts)
-      }
-
-      // Impresión automática de Comanda de Cocina (58mm)
+      // Imprimir comanda de cocina (58mm)
       try {
         const dateStr = new Date().toLocaleString('es-MX')
-        const kitchenHtml = `
-          <div style="width:58mm;padding:4px;font-family:'Courier New', monospace;font-size:11px;line-height:1.25;color:#000;">
-            <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
-              <div style="font-weight:900;font-size:14px;letter-spacing:1px;">LOCALITO</div>
-              <div style="font-size:11px;font-weight:bold;margin-top:2px;">*** COMANDA DE COCINA ***</div>
-              <div style="font-size:10px;margin-top:2px;">CUENTA / MESA: <strong>${tableNumber}</strong></div>
-              <div style="font-size:9px;color:#333;">Fecha: ${dateStr}</div>
+        const locName = tableLocations.find(l => l.id === currentLoc)?.label || `Mesa #${currentLoc}`
+        const html = `
+          <div style="width:58mm;padding:4px;font-family:'Courier New', monospace;font-size:11px;line-height:1.2;color:#000;">
+            <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:6px;">
+              <div style="font-weight:900;font-size:15px;">*** COMANDA DE COCINA ***</div>
+              <div style="font-size:12px;font-weight:bold;margin-top:2px;">LOCALITO - ${locName.toUpperCase()}</div>
+              <div style="font-size:9px;margin-top:2px;">Fecha: ${dateStr}</div>
             </div>
-
-            <div style="border-bottom:1px dashed #000;padding-bottom:6px;margin-bottom:6px;">
-              ${items.map(item => `
-                <div style="margin-bottom:4px;">
-                  <div style="font-weight:bold;font-size:12px;">
-                    ${item.quantity}x ${item.productName}
+            <div style="border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:6px;">
+              ${cartItems.map(item => `
+                <div style="margin-bottom:6px;">
+                  <div style="font-size:13px;font-weight:900;">
+                    [ ${item.quantity}x ] ${item.productName}
                   </div>
-                  ${item.notes ? `<div style="font-size:10px;font-style:italic;margin-left:10px;color:#444;">↳ Nota: ${item.notes}</div>` : ''}
+                  ${item.notes ? `<div style="font-size:10px;font-weight:bold;background:#eee;padding:2px;margin-top:2px;">↳ NOTA: ${item.notes}</div>` : ''}
                 </div>
               `).join('')}
             </div>
-
-            <div style="text-align:center;font-size:9px;font-weight:bold;margin-top:6px;">
-              <div>--- COMANDA PARA PREPARACIÓN ---</div>
-              <div style="margin-top:4px;font-size:8px;font-weight:normal;color:#444;">Powered by Reisbloc (reisbloc.com)</div>
+            <div style="text-align:center;font-size:9px;font-weight:bold;">
+              Folio: #${orderId.slice(-6).toUpperCase()}
             </div>
           </div>
         `
-        await printService.printKitchenTicket(kitchenHtml, { width: 58, title: `Comanda Cuenta ${tableNumber}` })
-      } catch (printErr) {
-        logger.warn('pos', 'No se pudo imprimir comanda térmica', printErr as any)
+        await printService.printReceipt(html, { title: 'Comanda Cocina', width: 58 })
+      } catch (err) {
+        logger.warn('pos', 'Error imprimiendo comanda de cocina:', err as any)
       }
 
-      // Limpiar carrito y mostrar confirmación
-      clearDraftForTable(tableNumber)
-      const summary = []
-      if (foodItems.length > 0) summary.push(`${foodItems.length} comida`)
-      if (drinkItems.length > 0) summary.push(`${drinkItems.length} bebidas`)
-      alert(`✅ Orden enviada e impresa - Cuenta ${tableNumber}\n${summary.join(' + ')}`)
-
-      
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error al enviar orden'
-      setStockError(message)
-      alert(`❌ ${message}`)
-      logger.error('pos', 'Error creating order', error as any)
+      alert(`✅ Comanda enviada a cocina (${tableLocations.find(l => l.id === currentLoc)?.label})`)
+      setShowCartDrawer(false)
+    } catch (err: any) {
+      alert(`❌ Error enviando comanda: ${err?.message || err}`)
     } finally {
       setSending(false)
     }
   }
 
-  const handleOpenPaymentPanel = () => {
-    if (isReadOnly) {
-      alert('El rol supervisor es de solo lectura y no puede cobrar cuentas.')
+  // 💰 COBRAR CUENTA (REGISTRA VENTA + DEDUCCIÓN DE INVENTARIO + IMPRIME TICKET 58mm FANCY)
+  const handleConfirmPayment = async () => {
+    if (!currentUser || cartItems.length === 0 || isProcessingPayment) return
+
+    const received = parseFloat(cashReceived) || cartSubtotal
+    if (paymentMethod === 'cash' && received < cartSubtotal) {
+      alert(`⚠️ El monto recibido ($${received}) es menor al total a pagar ($${cartSubtotal}).`)
       return
     }
 
-    const payableStatuses = ['sent', 'preparing', 'ready', 'served']
-    const payableOrders = activeTableOrders.filter(order => payableStatuses.includes(order.status))
-
-    if (payableOrders.length > 0) {
-      const total = payableOrders.reduce(
-        (sum, order) => sum + (order.items || []).reduce((s: number, item: OrderItem) => s + item.unitPrice * item.quantity, 0),
-        0
-      )
-
-      setPaymentDraftItems([])
-      setPaymentPanel({
-        isOpen: true,
-        orderIds: payableOrders.map(order => order.id),
-        orderTotal: total,
-      })
-      return
-    }
-
-    if (items.length > 0) {
-      const total = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
-      setPaymentDraftItems(items)
-      setPaymentPanel({
-        isOpen: true,
-        orderIds: [],
-        orderTotal: total,
-      })
-      return
-    }
-
-    alert('No hay ordenes ni productos en el carrito para cobrar')
-  }
-
-  const handlePaymentComplete = async (result: PaymentResult) => {
-    if (!currentUser || isReadOnly) return
-
+    setIsProcessingPayment(true)
     try {
-      const mappedMethod =
-        result.paymentMethod === 'mercadopago'
-          ? 'clip'
-          : result.paymentMethod === 'transfer'
-          ? 'digital'
-          : 'cash'
-
-      const orderIds = paymentPanel.orderIds
-      const itemsToCharge =
-        orderIds.length > 0
-          ? activeTableOrders
-              .filter(order => orderIds.includes(order.id))
-              .flatMap(order => order.items || [])
-          : paymentDraftItems
-
-      if (itemsToCharge.length === 0) {
-        throw new Error('No hay items para procesar el pago')
-      }
-
-      // Registrar venta
+      const locLabel = tableLocations.find(l => l.id === currentLoc)?.label || `Mesa ${currentLoc}`
+      
+      // 1. Crear venta en base de datos (con fallback)
       await supabaseService.createSale({
-        orderIds,
-        tableNumber,
-        items: itemsToCharge,
-        subtotal: paymentPanel.orderTotal,
+        orderIds: [],
+        tableNumber: currentLoc,
+        items: cartItems,
+        subtotal: cartSubtotal,
         discounts: 0,
         tax: 0,
-        total: result.total,
-        paymentMethod: mappedMethod as any,
-        tip: result.tip,
-        tipSource: result.tip > 0 ? (mappedMethod === 'cash' ? 'cash' : 'digital') : 'none',
+        total: cartSubtotal,
+        paymentMethod: paymentMethod === 'card' ? 'clip' : paymentMethod === 'transfer' ? 'digital' : 'cash',
+        tip: 0,
+        tipSource: 'none',
         saleBy: currentUser.id,
         createdAt: new Date(),
       } as any)
 
-      // IMPORTANTE: Marcar órdenes activas como completadas cuando existen
-      if (orderIds.length > 0) {
-        for (const orderId of orderIds) {
-          await supabaseService.updateOrderStatus(orderId, 'completed')
-        }
-      }
-
-      // Imprimir ticket final fancy de venta (58mm) sin propina
+      // 2. Imprimir ticket de venta fancy de 58mm (sin propina, Powered by Reisbloc)
       try {
-        const total = result.total
+        const ticketFolio = `LOC-${Date.now().toString().slice(-6)}`
         const dateStr = new Date().toLocaleString('es-MX')
-        const ticketFolio = orderIds[0] ? orderIds[0].slice(-8).toUpperCase() : `LOC-${Date.now().toString().slice(-6)}`
+        const methodLabel = paymentMethod === 'card' ? 'TARJETA (TERMINAL)' : paymentMethod === 'transfer' ? 'TRANSFERENCIA SPEI' : 'EFECTIVO'
+        const changeAmount = paymentMethod === 'cash' ? Math.max(0, received - cartSubtotal) : 0
 
         const html = `
           <div style="width:58mm;padding:6px;font-family:'Courier New', monospace;font-size:11px;line-height:1.25;color:#000;">
@@ -463,11 +235,11 @@ export default function POS() {
             <!-- Ticket Metadata -->
             <div style="font-size:9px;border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:6px;">
               <div style="display:flex;justify-content:space-between;">
-                <span><strong>Cuenta:</strong> #${tableNumber}</span>
+                <span><strong>Ubicación:</strong> ${locLabel}</span>
                 <span><strong>Folio:</strong> ${ticketFolio}</span>
               </div>
               <div style="margin-top:2px;">Fecha: ${dateStr}</div>
-              <div>Atendido por: ${currentUser.name || 'Personal LOCALITO'}</div>
+              <div>Atendido por: ${currentUser.username || currentUser.name || 'Personal LOCALITO'}</div>
             </div>
 
             <!-- Itemized List -->
@@ -476,7 +248,7 @@ export default function POS() {
                 <span>CANT / DESCRIPCIÓN</span>
                 <span>IMPORTE</span>
               </div>
-              ${itemsToCharge.map(item => `
+              ${cartItems.map(item => `
                 <div style="margin-bottom:4px;">
                   <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:bold;">
                     <span>${item.quantity}x ${item.productName}</span>
@@ -494,12 +266,22 @@ export default function POS() {
             <div style="border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
               <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:900;">
                 <span>TOTAL A PAGAR:</span>
-                <span>$${total.toFixed(2)} MXN</span>
+                <span>$${cartSubtotal.toFixed(2)} MXN</span>
               </div>
               <div style="display:flex;justify-content:space-between;font-size:10px;margin-top:4px;">
                 <span>FORMA DE PAGO:</span>
-                <span><strong>${mappedMethod.toUpperCase()}</strong></span>
+                <span><strong>${methodLabel}</strong></span>
               </div>
+              ${paymentMethod === 'cash' ? `
+              <div style="display:flex;justify-content:space-between;font-size:9px;margin-top:2px;color:#444;">
+                <span>Efectivo Recibido:</span>
+                <span>$${received.toFixed(2)}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:bold;margin-top:2px;">
+                <span>CAMBIO:</span>
+                <span>$${changeAmount.toFixed(2)}</span>
+              </div>
+              ` : ''}
             </div>
 
             <!-- Fancy Footer -->
@@ -510,364 +292,470 @@ export default function POS() {
           </div>
         `
 
-        await printService.printReceipt(html, { title: `Ticket de Venta #${ticketFolio}`, width: 58 })
+        await printService.printReceipt(html, { title: `Ticket de Venta ${ticketFolio}`, width: 58 })
       } catch (printErr) {
-        logger.warn('pos', 'No se pudo imprimir ticket final', printErr as any)
+        logger.warn('pos', 'Error imprimiendo ticket de venta:', printErr as any)
       }
 
-      // Limpiar carrito solo cuando el cobro vino de borrador local
-      if (orderIds.length === 0) {
-        clearDraftForTable(tableNumber)
-      }
-      setPaymentDraftItems([])
-
-      // Cerrar panel de pago
-      setPaymentPanel({ isOpen: false, orderIds: [], orderTotal: 0 })
-
-      logger.info('pos', 'Sale recorded', {
-        orderIds,
-        transactionId: result.transactionId,
-      })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error al registrar la venta'
-      logger.error('pos', 'Error recording sale', error as any)
-      setStockError(message)
-      alert(`❌ ${message}`)
-      throw new Error(message)
+      // 3. Limpiar borrador de la mesa
+      clearDraftForTable(currentLoc)
+      setShowPaymentModal(false)
+      setShowCartDrawer(false)
+      setCashReceived('')
+      alert('✅ Pago cobrado exitosamente y ticket generado')
+    } catch (err: any) {
+      alert(`❌ Error al procesar el cobro: ${err?.message || err}`)
+    } finally {
+      setIsProcessingPayment(false)
     }
   }
 
-  const tableButtons = useMemo(() => {
-    const baseTables = tables.length ? tables : Array.from({ length: APP_CONFIG.TABLES.NUMBERED_TABLES }, (_, i) => i + 1)
-    return baseTables
-  }, [tables])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-gray-600">Cargando productos...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="page-shell bg-[color:var(--bg-canvas)]">
-      {/* Background Doodle */}
-      <div 
-        className="fixed inset-0 z-0 opacity-25 pointer-events-none bg-repeat"
-        style={{
-          backgroundImage: 'url("/doodle_ceviche.png?v=2")',
-          backgroundSize: '450px',
-        }}
-      />
-      {/* Gradient Overlay */}
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(24,33,46,0.06),transparent_28%),radial-gradient(circle_at_top_right,rgba(15,118,110,0.08),transparent_26%),linear-gradient(180deg,rgba(247,246,242,1),rgba(242,239,232,1))] z-0 pointer-events-none" />
-
-      <div className="relative z-10">
-      {/* Header - Mismo gradiente que Ready - Fijo al hacer scroll */}
-      <div className="sticky top-0 z-50 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 text-white shadow-2xl border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-white/10 rounded-xl">
-                <ShoppingCart size={32} />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold">Punto de Venta</h1>
-                <p className="text-cyan-50/85 text-sm">Sistema en tiempo real</p>
-              </div>
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-28 select-none">
+      {/* Header Banner - Menú & Caja Unificada */}
+      <header className="relative bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 border-b border-teal-500/20 px-4 py-6 overflow-hidden shadow-2xl">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 relative z-10">
+          <div className="flex flex-col items-center md:items-start text-center md:text-left gap-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold mb-1">
+              <Sparkles size={14} className="text-amber-400" />
+              <span>Menú Interactivo & Caja Unificada · LOCALITO</span>
             </div>
-            <div className="flex items-center gap-4">
-              {readyOrdersCount > 0 && (
-                <div 
-                  onClick={() => navigate('/ready')}
-                  className="relative px-5 py-3 bg-rose-600 rounded-xl font-bold flex items-center gap-2 animate-pulse shadow-lg cursor-pointer hover:scale-105 transition-transform"
+            <img 
+              src="/logo_localito.jpg" 
+              alt="LOCALITO" 
+              className="h-14 md:h-16 w-auto object-contain rounded-2xl border border-amber-500/30 shadow-xl shadow-amber-500/10"
+            />
+          </div>
+
+          {/* Selector Simplificado de Ubicación / Mesas */}
+          <div className="w-full md:w-auto bg-slate-900/90 backdrop-blur-md p-3 rounded-2xl border border-slate-800 shadow-xl">
+            <p className="text-[10px] uppercase font-black tracking-wider text-teal-400 mb-1.5 text-center md:text-left">
+              Ubicación / Mesa del Pedido:
+            </p>
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              {tableLocations.map((loc) => (
+                <button
+                  key={loc.id}
+                  onClick={() => setCurrentTable(loc.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    currentLoc === loc.id
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-lg scale-105 font-black'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
                 >
-                  <Bell size={24} className="animate-bounce" />
-                  <div>
-                    <p className="text-lg">{readyOrdersCount} {readyOrdersCount === 1 ? 'orden lista' : 'órdenes listas'}</p>
-                    <p className="text-xs opacity-90">Ve a &quot;Listas&quot; para servir</p>
-                  </div>
-                </div>
-              )}
-              
-              {/* User Panel */}
-              <div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-xl border border-white/10 backdrop-blur-sm">
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-bold leading-none">{currentUser?.username || 'Usuario'}</p>
-                  <p className="text-xs text-cyan-100/80 uppercase tracking-wider font-semibold">{currentUser?.role || 'Staff'}</p>
-                </div>
-                <div className="h-10 w-10 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold border-2 border-white/20 shadow-inner">
-                  {currentUser?.username?.charAt(0).toUpperCase() || <User size={20} />}
-                </div>
-              </div>
-
-              <div className="text-right">
-                <p className="text-sm text-cyan-50/85">Cuenta actual</p>
-                <p className="text-2xl font-bold">{tableNumber}</p>
-              </div>
+                  {loc.label}
+                </button>
+              ))}
             </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Bar de Búsqueda y Categorías */}
+      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 py-3.5 px-4 shadow-xl">
+        <div className="max-w-6xl mx-auto space-y-3">
+          <div className="relative">
+            <Search className="absolute left-4 top-3 text-slate-500" size={18} />
+            <input
+              type="text"
+              placeholder="Buscar platillo, quesadilla, gordita, sope, bebida..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-11 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:border-teal-500 transition-colors"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                  selectedCategory.toLowerCase() === cat.toLowerCase()
+                    ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-900/40 scale-105'
+                    : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Mobile tabs to avoid overlapping and confusing scroll */}
-        <div className="xl:hidden mb-4">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setActiveTab('order')}
-              className={`flex-1 px-4 py-2 rounded-lg font-semibold ${
-                activeTab === 'order' ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 border border-slate-200'
-              }`}
-            >
-              Orden
-            </button>
-            <button
-              onClick={() => setActiveTab('products')}
-              className={`flex-1 px-4 py-2 rounded-lg font-semibold ${
-                activeTab === 'products' ? 'bg-teal-700 text-white' : 'bg-white text-slate-700 border border-slate-200'
-              }`}
-            >
-              Productos
-            </button>
-          </div>
-        </div>
+      {/* Grid de Productos Interactivo */}
+      <main className="max-w-6xl mx-auto px-4 mt-6">
+        {loading ? (
+          <div className="text-center py-16 text-slate-400 font-bold">Cargando menú de platillos...</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProducts.map((product) => {
+              const qtyInCart = getItemQuantityInCart(product.id)
+              return (
+                <div
+                  key={product.id}
+                  className="bg-slate-900/80 backdrop-blur-md border border-slate-800 hover:border-teal-500/40 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all group flex flex-col justify-between"
+                >
+                  <div>
+                    {/* Image & Price */}
+                    <div className="relative h-44 w-full overflow-hidden bg-slate-800">
+                      <img
+                        src={product.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop'}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80" />
+                      <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-950/80 backdrop-blur border border-white/10 text-[10px] font-bold text-teal-300 uppercase">
+                        {product.category}
+                      </span>
+                      <span className="absolute bottom-3 right-3 text-lg font-black text-white px-3 py-1 rounded-xl bg-teal-600/90 backdrop-blur shadow-lg border border-teal-400/30">
+                        ${product.price} <span className="text-xs font-normal">MXN</span>
+                      </span>
+                    </div>
 
+                    {/* Content */}
+                    <div className="p-4">
+                      <h3 className="text-base font-bold text-white group-hover:text-teal-300 transition-colors">
+                        {product.name}
+                      </h3>
+                      {product.description && (
+                        <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                          {product.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
 
-
-        {/* Mobile: show one view at a time */}
-        <div className="xl:hidden space-y-6">
-          {activeTab === 'order' ? (
-            <>
-              <div className="card">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Cuentas</h2>
-                  <span className="text-xs font-medium text-gray-500">Selecciona para editar</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {tableButtons.map(num => (
+                  {/* Actions Bar per Product */}
+                  <div className="p-4 pt-0 flex items-center justify-between gap-2">
                     <button
-                      key={num}
-                      onClick={() => setCurrentTable(num)}
-                      className={`rounded-lg px-4 py-3 text-sm font-semibold transition-colors ${
-                        tableNumber === num
-                          ? 'bg-slate-900 text-white shadow-sm'
-                          : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
+                      onClick={() => setRecipeProduct(product)}
+                      className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-teal-400 border border-slate-700 text-xs font-bold flex items-center gap-1 transition-all"
+                      title="Ver receta y rendimiento"
+                    >
+                      <ChefHat size={16} />
+                      <span className="hidden sm:inline">Receta</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleAddProduct(product)}
+                      className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                        qtyInCart > 0
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-lg'
+                          : 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 hover:brightness-110 shadow-md'
                       }`}
                     >
-                      Cuenta {num}
+                      <Plus size={16} />
+                      <span>{qtyInCart > 0 ? `Agregar (${qtyInCart})` : 'Agregar'}</span>
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </main>
+
+      {/* Floating Bottom Cart Bar */}
+      {cartItems.length > 0 && (
+        <div className="fixed bottom-0 inset-x-0 z-50 bg-slate-950/95 backdrop-blur-xl border-t border-teal-500/30 px-4 py-3 shadow-2xl animate-slide-up">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+            <button
+              onClick={() => setShowCartDrawer(true)}
+              className="flex items-center gap-3 bg-slate-900 px-4 py-2.5 rounded-2xl border border-slate-800 hover:border-teal-500/50 transition-colors"
+            >
+              <div className="relative">
+                <ShoppingBag size={22} className="text-teal-400" />
+                <span className="absolute -top-2 -right-2 bg-amber-500 text-slate-950 text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border border-slate-950">
+                  {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
+                </span>
+              </div>
+              <div className="text-left">
+                <div className="text-[10px] font-bold text-slate-400 uppercase">
+                  {tableLocations.find(l => l.id === currentLoc)?.label || `Mesa ${currentLoc}`}
+                </div>
+                <div className="text-base font-black text-white">
+                  ${cartSubtotal.toFixed(2)} <span className="text-xs font-normal">MXN</span>
+                </div>
+              </div>
+            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSendToKitchen}
+                disabled={sending}
+                className="py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-teal-300 border border-teal-500/40 text-xs font-extrabold flex items-center gap-2 transition-all active:scale-95"
+              >
+                <Send size={16} />
+                <span className="hidden sm:inline">Enviar a Cocina</span>
+              </button>
+
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                className="py-3 px-5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-slate-950 text-xs font-black flex items-center gap-2 shadow-xl shadow-emerald-500/20 active:scale-95 transition-all"
+              >
+                <CreditCard size={18} />
+                <span>Cobrar Cuenta</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cart Drawer Modal */}
+      {showCartDrawer && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex justify-end">
+          <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 flex flex-col justify-between overflow-y-auto">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div>
+                  <h3 className="text-lg font-black text-white">Pedido Actual</h3>
+                  <p className="text-xs text-amber-400 font-bold">
+                    {tableLocations.find(l => l.id === currentLoc)?.label}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowCartDrawer(false)}
+                  className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-3 mt-4">
+                {cartItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3 bg-slate-950 rounded-2xl border border-slate-800 flex items-center justify-between gap-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-sm text-white truncate">{item.productName}</div>
+                      <div className="text-xs text-teal-400 font-semibold mt-0.5">
+                        ${item.unitPrice} c/u · Total: ${(item.unitPrice * item.quantity).toFixed(2)}
+                      </div>
+                      {item.notes && (
+                        <div className="text-[11px] text-slate-400 font-medium italic mt-1">
+                          ↳ {item.notes}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => decrementDraftItem(currentLoc, item.id)}
+                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <span className="font-extrabold text-sm w-6 text-center">{item.quantity}</span>
+                      <button
+                        onClick={() => incrementDraftItem(currentLoc, item.id)}
+                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+                      >
+                        <Plus size={14} />
+                      </button>
+                      <button
+                        onClick={() => setEditingItem(item)}
+                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 ml-1"
+                        title="Agregar Nota"
+                      >
+                        <FileText size={14} />
+                      </button>
+                      <button
+                        onClick={() => removeDraftItem(currentLoc, item.id)}
+                        className="p-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-600 text-rose-400 hover:text-white ml-1"
+                        title="Eliminar"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-800 space-y-3">
+              <div className="flex items-center justify-between text-base font-black text-white">
+                <span>Subtotal:</span>
+                <span>${cartSubtotal.toFixed(2)} MXN</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={handleSendToKitchen}
+                  disabled={sending}
+                  className="py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-teal-300 font-bold text-xs flex items-center justify-center gap-2"
+                >
+                  <Send size={16} />
+                  <span>Enviar a Cocina</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCartDrawer(false)
+                    setShowPaymentModal(true)
+                  }}
+                  className="py-3 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <CreditCard size={16} />
+                  <span>Cobrar Cuenta</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FAST PAYMENT MODAL (EFECTIVO, TARJETA, TRANSFERENCIA) */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-[60] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div>
+                <h3 className="text-xl font-black text-white">Cobrar Cuenta</h3>
+                <p className="text-xs text-amber-400 font-bold">
+                  {tableLocations.find(l => l.id === currentLoc)?.label} · LOCALITO
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Total Display */}
+            <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 text-center">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total A Cobrar</div>
+              <div className="text-4xl font-black text-emerald-400 mt-1">
+                ${cartSubtotal.toFixed(2)} <span className="text-sm font-normal text-slate-400">MXN</span>
+              </div>
+            </div>
+
+            {/* Select Método de Pago */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-slate-300">Seleccionar Método de Pago:</p>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => setPaymentMethod('cash')}
+                  className={`py-3 px-2 rounded-2xl border text-xs font-black flex flex-col items-center gap-1.5 transition-all ${
+                    paymentMethod === 'cash'
+                      ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-lg scale-105'
+                      : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800'
+                  }`}
+                >
+                  <Banknote size={22} />
+                  <span>Efectivo</span>
+                </button>
+
+                <button
+                  onClick={() => setPaymentMethod('card')}
+                  className={`py-3 px-2 rounded-2xl border text-xs font-black flex flex-col items-center gap-1.5 transition-all ${
+                    paymentMethod === 'card'
+                      ? 'bg-teal-500 text-slate-950 border-teal-400 shadow-lg scale-105'
+                      : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800'
+                  }`}
+                >
+                  <CreditCard size={22} />
+                  <span>Tarjeta</span>
+                </button>
+
+                <button
+                  onClick={() => setPaymentMethod('transfer')}
+                  className={`py-3 px-2 rounded-2xl border text-xs font-black flex flex-col items-center gap-1.5 transition-all ${
+                    paymentMethod === 'transfer'
+                      ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg scale-105'
+                      : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800'
+                  }`}
+                >
+                  <QrCode size={22} />
+                  <span>Transferencia</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Detalles de Cobro según Método */}
+            {paymentMethod === 'cash' && (
+              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <p className="text-xs font-bold text-slate-300">Calculadora de Cambio (Monto Recibido):</p>
+                <input
+                  type="number"
+                  placeholder={`$${cartSubtotal.toFixed(2)}`}
+                  value={cashReceived}
+                  onChange={(e) => setCashReceived(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white font-black text-lg focus:outline-none focus:border-emerald-500"
+                />
+
+                <div className="flex items-center gap-2">
+                  {[50, 100, 200, 500].map((amt) => (
+                    <button
+                      key={amt}
+                      onClick={() => setCashReceived(amt.toString())}
+                      className="flex-1 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold rounded-lg"
+                    >
+                      ${amt}
                     </button>
                   ))}
                 </div>
-                <div className="mt-3">
-                  <button
-                    onClick={handlePrintAccount}
-                    disabled={items.length === 0}
-                    className={`w-full rounded-lg px-4 py-3 text-sm font-semibold transition-colors ${
-                      items.length === 0
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                        : 'bg-gray-900 text-white hover:bg-black'
-                    }`}
-                  >
-                    Imprimir Cuenta
-                  </button>
-                </div>
-                {APP_CONFIG.TABLES.HAS_COURTESY_TABLE && (
-                  <button
-                    onClick={() => setCurrentTable(APP_CONFIG.TABLES.COURTESY_TABLE_NUMBER)}
-                    className={`mt-3 w-full rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                      tableNumber === APP_CONFIG.TABLES.COURTESY_TABLE_NUMBER
-                        ? 'bg-green-700 text-white'
-                        : 'bg-green-100 text-green-800 hover:bg-green-200'
-                    }`}
-                  >
-                    Cuenta de cortesía
-                  </button>
+
+                {parseFloat(cashReceived) >= cartSubtotal && (
+                  <div className="flex items-center justify-between text-sm font-black text-emerald-400 pt-2 border-t border-slate-800">
+                    <span>Cambio a Entregar:</span>
+                    <span>${(parseFloat(cashReceived) - cartSubtotal).toFixed(2)} MXN</span>
+                  </div>
                 )}
               </div>
+            )}
 
-              <OrderPanel
-                tableNumber={tableNumber}
-                items={items}
-                readOnly={isReadOnly}
-                activeOrders={activeTableOrders} // Pasamos las órdenes vivas
-                onIncrement={itemId => {
-                  if (isReadOnly) return
-                  incrementDraftItem(tableNumber, itemId)
-                }}
-                onDecrement={itemId => {
-                  if (isReadOnly) return
-                  decrementDraftItem(tableNumber, itemId)
-                }}
-                onRemove={itemId => {
-                  if (isReadOnly) return
-                  removeDraftItem(tableNumber, itemId)
-                }}
-                onEditNote={(item) => {
-                  if (isReadOnly) return
-                  setEditingItem(item)
-                }}
-              />
-
-              <CartSummary
-                tableNumber={tableNumber}
-                items={items}
-                readOnly={isReadOnly}
-                onSend={handleSendToKitchen}
-                onClear={() => {
-                  if (isReadOnly) return
-                  clearDraftForTable(tableNumber)
-                }}
-                sending={sending}
-                products={products}
-                stockError={stockError}
-              />
-
-              <button
-                onClick={handleOpenPaymentPanel}
-                disabled={isReadOnly}
-                className={`w-full rounded-xl px-6 py-4 text-base font-bold text-white shadow-lg transition-all transform flex items-center justify-center gap-3 ${
-                  isReadOnly
-                    ? 'bg-gray-300 cursor-not-allowed shadow-none'
-                    : 'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 hover:scale-[1.02]'
-                }`}
-              >
-                {isReadOnly ? 'Solo lectura (Supervisor)' : 'Abrir caja / cobrar cuenta'}
-              </button>
-            </>
-          ) : (
-            <ProductGrid
-              products={products && products.length > 0 ? products : DEMO_PRODUCTS}
-              onAdd={handleAddProduct}
-              disableAdd={isReadOnly}
-            />
-
-          )}
-        </div>
-
-        {/* Desktop/XL: two-column layout */}
-        <div className="hidden xl:grid xl:grid-cols-[340px,1fr] gap-6">
-          <div className="space-y-6 sticky top-24 h-fit">
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Cuentas</h2>
-                <span className="text-xs font-medium text-gray-500">Selecciona para editar</span>
+            {paymentMethod === 'card' && (
+              <div className="bg-teal-950/40 p-4 rounded-2xl border border-teal-500/30 text-xs text-teal-200 space-y-1 text-center">
+                <p className="font-bold text-sm">💳 Cobro Manual con Tarjeta</p>
+                <p className="text-slate-300">
+                  Cobrar en tu terminal bancaria / Clip física de la tiendita y haz clic en confirmar cuando la terminal marque aprobado.
+                </p>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                {tableButtons.map(num => (
-                  <button
-                    key={num}
-                    onClick={() => setCurrentTable(num)}
-                    className={`rounded-lg px-4 py-3 text-sm font-semibold transition-colors ${
-                      tableNumber === num
-                        ? 'bg-slate-900 text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
-                    }`}
-                  >
-                    Cuenta {num}
-                  </button>
-                ))}
+            )}
+
+            {paymentMethod === 'transfer' && (
+              <div className="bg-amber-950/40 p-4 rounded-2xl border border-amber-500/30 text-xs text-amber-200 space-y-1 text-center">
+                <p className="font-bold text-sm">📲 Transferencia SPEI / QR</p>
+                <p className="text-slate-300">
+                  Verificar comprobante o app bancaria y haz clic en confirmar pago.
+                </p>
               </div>
-              {APP_CONFIG.TABLES.HAS_COURTESY_TABLE && (
-                <button
-                  onClick={() => setCurrentTable(APP_CONFIG.TABLES.COURTESY_TABLE_NUMBER)}
-                  className={`mt-3 w-full rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                    tableNumber === APP_CONFIG.TABLES.COURTESY_TABLE_NUMBER
-                      ? 'bg-green-700 text-white'
-                      : 'bg-green-100 text-green-800 hover:bg-green-200'
-                  }`}
-                >
-                  Cuenta de cortesía
-                </button>
-              )}
-            </div>
+            )}
 
-            <OrderPanel
-              tableNumber={tableNumber}
-              items={items}
-              readOnly={isReadOnly}
-              activeOrders={activeTableOrders} // Pasamos las órdenes vivas
-              onIncrement={itemId => {
-                if (isReadOnly) return
-                incrementDraftItem(tableNumber, itemId)
-              }}
-              onDecrement={itemId => {
-                if (isReadOnly) return
-                decrementDraftItem(tableNumber, itemId)
-              }}
-              onRemove={itemId => {
-                if (isReadOnly) return
-                removeDraftItem(tableNumber, itemId)
-              }}
-              onEditNote={(item) => {
-                if (isReadOnly) return
-                setEditingItem(item)
-              }}
-            />
-
-            <CartSummary
-              tableNumber={tableNumber}
-              items={items}
-              readOnly={isReadOnly}
-              onSend={handleSendToKitchen}
-              onClear={() => {
-                if (isReadOnly) return
-                clearDraftForTable(tableNumber)
-              }}
-              sending={sending}
-              products={products}
-              stockError={stockError}
-            />
-
+            {/* Confirmar Cobro */}
             <button
-              onClick={handleOpenPaymentPanel}
-              disabled={isReadOnly}
-              className={`w-full rounded-xl px-6 py-4 text-base font-bold text-white shadow-lg transition-all transform flex items-center justify-center gap-3 ${
-                isReadOnly
-                  ? 'bg-gray-300 cursor-not-allowed shadow-none'
-                  : 'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 hover:scale-[1.02]'
-              }`}
+              onClick={handleConfirmPayment}
+              disabled={isProcessingPayment}
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-base flex items-center justify-center gap-2 shadow-2xl active:scale-98 transition-all disabled:opacity-50"
             >
-              {isReadOnly ? 'Solo lectura (Supervisor)' : 'Abrir caja / cobrar cuenta'}
+              <CheckCircle2 size={22} />
+              <span>{isProcessingPayment ? 'Procesando Pago...' : 'Confirmar Cobro e Imprimir Ticket'}</span>
             </button>
           </div>
-
-          <ProductGrid
-            products={products && products.length > 0 ? products : DEMO_PRODUCTS}
-            onAdd={handleAddProduct}
-            disableAdd={isReadOnly}
-          />
-
         </div>
-      </div>
-      </div>
+      )}
 
-      {/* Payment Panel */}
-      {paymentPanel.isOpen && (
-        <PaymentPanel
-          orderIds={paymentPanel.orderIds}
-          orderTotal={paymentPanel.orderTotal}
-          tableNumber={tableNumber}
-          onPaymentComplete={handlePaymentComplete}
-          onCancel={() => setPaymentPanel({ isOpen: false, orderIds: [], orderTotal: 0 })}
+      {/* Note Modal */}
+      {editingItem && (
+        <OrderNoteModal
+          item={editingItem}
+          onSave={handleUpdateNote}
+          onClose={() => setEditingItem(null)}
         />
       )}
 
-      {/* Modal para agregar notas */}
-      <OrderNoteModal
-        isOpen={!!editingItem}
-        onClose={() => setEditingItem(null)}
-        itemName={editingItem?.productName}
-        initialNote={editingItem?.notes || ''}
-        onSave={(note) => {
-          if (editingItem) {
-            handleUpdateItemNote(editingItem.id, note);
-          }
-        }}
-      />
+      {/* Recipe Modal */}
+      {recipeProduct && (
+        <DarkKitchenRecipeModal
+          isOpen={!!recipeProduct}
+          onClose={() => setRecipeProduct(null)}
+          product={recipeProduct as any}
+        />
+      )}
     </div>
   )
 }
