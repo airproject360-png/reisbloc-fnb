@@ -102,7 +102,7 @@ export default function PublicMenu() {
           {filteredProducts.map((product) => (
             <div
               key={product.id}
-              className="bg-slate-900/80 backdrop-blur-md border border-slate-800/80 hover:border-teal-500/40 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all group flex flex-col justify-between"
+              className="low-perf-card bg-slate-900/80 backdrop-blur-md border border-slate-800/80 hover:border-teal-500/40 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all group flex flex-col justify-between"
             >
               <div>
                 {/* Image Wrapper */}
@@ -115,6 +115,7 @@ export default function PublicMenu() {
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
+                    decoding="async"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80" />
                   <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-950/80 backdrop-blur border border-white/10 text-[10px] font-bold text-teal-300 uppercase tracking-wider">

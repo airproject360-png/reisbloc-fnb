@@ -59,6 +59,25 @@ body {
   @apply bg-gradient-to-b from-slate-400 to-slate-600 rounded-full;
 }
 
+/* ⚡ OPTIMIZACIÓN MODO TABLET (CERO LAG GPU / 60 FPS) */
+.low-perf-mode *,
+.low-perf-mode *::before,
+.low-perf-mode *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.low-perf-mode [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(15, 23, 42, 0.98) !important;
+}
+
+.low-perf-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 320px;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   @apply from-slate-500 to-slate-700;
 }

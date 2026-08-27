@@ -23,15 +23,18 @@ import {
   Wine,
   Users,
   Sparkles,
-  Utensils
+  Utensils,
+  Zap
 } from 'lucide-react'
 import AIAssistantModal from '@/components/ui/AIAssistantModal'
+import { usePerformanceMode } from '@/hooks/usePerformanceMode'
 
 export default function NavBar() {
   const location = useLocation()
   const { currentUser } = useAppStore()
   const { logout } = useAuth()
   const { isReadOnly, currentRole } = usePermissions()
+  const { isLowPerf, toggleLowPerf } = usePerformanceMode()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [supportsFullscreen, setSupportsFullscreen] = useState(true)
   const [showAIModal, setShowAIModal] = useState(false)
@@ -211,6 +214,20 @@ export default function NavBar() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* Botón Modo Tablet Viejita / 60 FPS */}
+          <button
+            onClick={toggleLowPerf}
+            className={`min-h-[42px] px-3 rounded-xl border text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 ${
+              isLowPerf
+                ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg'
+                : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800'
+            }`}
+            title={isLowPerf ? 'Modo Tablet Viejita Activo (60 FPS)' : 'Activar Modo Tablet Viejita (Sin Lag)'}
+          >
+            <Zap size={16} className={isLowPerf ? 'text-slate-950 fill-slate-950' : 'text-amber-400'} />
+            <span className="hidden sm:inline">{isLowPerf ? 'Modo Tablet ⚡' : 'Modo Tablet'}</span>
+          </button>
+
           {/* Asistente IA POS */}
           <button
             onClick={() => setShowAIModal(true)}
