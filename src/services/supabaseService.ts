@@ -633,6 +633,9 @@ class SupabaseService {
 
   async getProductImageUrl(imagePath?: string): Promise<string | undefined> {
     if (!imagePath) return undefined
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:')) {
+      return imagePath
+    }
 
     const cached = this.productImageCache.get(imagePath)
     if (cached && cached.expiresAt > Date.now()) {

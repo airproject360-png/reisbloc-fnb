@@ -150,42 +150,32 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
       return null
     }
 
-    if (!data) {
-      logger.info('auth', 'OAuth usuario auto-autorizado como Admin LOCALITO', { authId, email, targetOrgId })
-      const authorizedUser: User = {
-        id: authId,
-        username: authUser.user_metadata?.full_name || email.split('@')[0] || 'Admin LOCALITO',
-        pin: '1234',
-        role: 'admin',
-        email: email,
-        avatarUrl: authUser.user_metadata?.avatar_url,
-        active: true,
-        createdAt: new Date(),
-        businessName: 'LOCALITO - Guisos & Barra Fría',
-        organizationId: targetOrgId
-      }
-      persistOrganizationId(targetOrgId)
-      return authorizedUser
-    }
+    // Asegurar que el usuario de Auth exista en la tabla users para evitar errores de clave foránea en ventas/órdenes
+    const username = data?.username || data?.name || authUser.user_metadata?.full_name || email.split('@')[0] || 'Admin LOCALITO'
+    const role = FORCED_ADMIN_EMAILS.has(email) ? 'admin' : (String(data?.role || 'admin') as User['role'])
 
-    const role = FORCED_ADMIN_EMAILS.has(email)
-      ? 'admin'
-      : (String(data.role || 'admin') as User['role'])
+    await supabase.from('users').upsert({
+      id: authId,
+      organization_id: targetOrgId,
+      name: username,
+      username: username,
+      email: email,
+      role: role,
+      active: true
+    }).catch(err => logger.warn('auth', 'Upsert usuario auth en users omitido o fallido:', err))
 
-    const username = data.username || data.name || email
-    const orgId = data.organization_id || targetOrgId
-    persistOrganizationId(orgId)
+    persistOrganizationId(targetOrgId)
 
     return {
       id: authId,
       username,
-      pin: '',
+      pin: '1234',
       role,
       email,
       active: true,
-      createdAt: data.created_at ? new Date(data.created_at) : new Date(),
-      devices: [],
-      organizationId: orgId,
+      createdAt: data?.created_at ? new Date(data.created_at) : new Date(),
+      businessName: 'LOCALITO - Guisos & Barra Fría',
+      organizationId: targetOrgId
     }
   } catch (error) {
 
