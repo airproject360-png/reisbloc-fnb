@@ -23,7 +23,7 @@ const categoryColors: Record<string, string> = {
 }
 
 export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGridProps) {
-  const [filter, setFilter] = useState<'all' | 'food' | 'drinks'>('all')
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todos')
   const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({})
 
   const getCategoryIcon = (category: string) => {
@@ -41,57 +41,64 @@ export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGrid
     return categoryColors[category] || 'from-gray-500 to-gray-600'
   }
 
-  const filteredProducts = useMemo(() => {
-    if (filter === 'drinks') return products.filter(p => p.category === 'Bebidas')
-    if (filter === 'food') return products.filter(p => p.category !== 'Bebidas' && p.category !== 'Postres')
-    return products
-  }, [products, filter])
+  // Lista dinámica de categorías basadas en el menú de LOCALITO
+  const categories = useMemo(() => {
+    const defaultCats = ['Todos', 'Quesadillas Maíz', 'Quesadillas Harina', 'Platos', 'Especialidades', 'Extras', 'Bebidas']
+    const prodCats = Array.from(new Set(products.map(p => p.category))).filter(c => c && !defaultCats.includes(c))
+    return [...defaultCats, ...prodCats]
+  }, [products])
 
-  const totalDrinks = useMemo(() => products.filter(p => p.category === 'Bebidas').length, [products])
-  const totalFood = useMemo(() => products.filter(p => p.category !== 'Bebidas' && p.category !== 'Postres').length, [products])
+  const filteredProducts = useMemo(() => {
+    if (selectedCategory === 'Todos') return products
+    return products.filter(p => p.category.toLowerCase() === selectedCategory.toLowerCase())
+  }, [products, selectedCategory])
+
+  const getCategoryCount = (cat: string) => {
+    if (cat === 'Todos') return products.length
+    return products.filter(p => p.category.toLowerCase() === cat.toLowerCase()).length
+  }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-6 select-none">
+      <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Package className="text-indigo-600" size={28} />
-            Productos
+          <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+            <Package className="text-amber-500" size={28} />
+            Catálogo POS
           </h2>
-          <p className="text-sm text-gray-500 mt-1">Selecciona para agregar al pedido</p>
+          <p className="text-xs text-slate-500 mt-0.5">Toca el producto para agregar al ticket</p>
         </div>
-        <span className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
-          {filteredProducts.length} ítems
+        <span className="bg-slate-900 text-amber-400 border border-amber-500/30 px-4 py-2 rounded-2xl text-xs font-black shadow-md">
+          {filteredProducts.length} platillo(s)
         </span>
       </div>
 
-      {/* Filtros por categoría */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-            filter === 'all' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-          }`}
-        >
-          Todos ({products.length})
-        </button>
-        <button
-          onClick={() => setFilter('food')}
-          className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 ${
-            filter === 'food' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-          }`}
-        >
-          <Utensils size={16} /> Alimentos ({totalFood})
-        </button>
-        <button
-          onClick={() => setFilter('drinks')}
-          className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 ${
-            filter === 'drinks' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-          }`}
-        >
-          <Wine size={16} /> Bebidas ({totalDrinks})
-        </button>
+      {/* Pestañas de Categoría Táctiles POS (Como en el Menú) */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 mb-4">
+        {categories.map((cat) => {
+          const count = getCategoryCount(cat)
+          const isActive = selectedCategory.toLowerCase() === cat.toLowerCase()
+          return (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2.5 rounded-2xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-2 min-h-[44px] active:scale-95 ${
+                isActive
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-lg shadow-amber-500/30 border border-amber-400 scale-105'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+              }`}
+            >
+              <span>{cat}</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                isActive ? 'bg-slate-950 text-amber-400' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
       </div>
+
 
       {filteredProducts.length === 0 ? (
         <div className="text-center py-12">

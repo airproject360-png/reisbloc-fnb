@@ -683,7 +683,6 @@ export default function POS() {
               <CartSummary
                 tableNumber={tableNumber}
                 items={items}
-                disableSend
                 readOnly={isReadOnly}
                 onSend={handleSendToKitchen}
                 onClear={() => {
@@ -793,7 +792,6 @@ export default function POS() {
             <CartSummary
               tableNumber={tableNumber}
               items={items}
-              disableSend
               readOnly={isReadOnly}
               onSend={handleSendToKitchen}
               onClear={() => {
