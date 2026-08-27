@@ -102,29 +102,28 @@ export default function NavBar() {
   )
 
   return (
-    <nav className="bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 text-white shadow-2xl sticky top-0 z-50 border-b border-white/10">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4">
-        <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
-          {/* Logo / Brand - LOCALITO Guisos & Barra Fría */}
-          <Link to="/pos" className="flex items-center gap-2.5 shrink-0 group">
+    <nav className="bg-slate-950 text-white shadow-2xl sticky top-0 z-50 border-b border-slate-800 select-none">
+      <div className="w-full px-3 sm:px-6">
+        <div className="flex items-center justify-between h-20 sm:h-24 gap-3">
+          {/* Logo / Brand - LOCALITO Touch POS */}
+          <Link to="/pos" className="flex items-center gap-3 shrink-0 group active:scale-95 transition-transform">
             <img 
               src={APP_CONFIG.LOGO_URL} 
               alt={APP_CONFIG.CLIENT_NAME}
-              className="h-9 sm:h-11 w-auto object-contain rounded-lg border border-amber-500/30 shadow-md shadow-amber-500/10 group-hover:scale-105 transition-transform"
+              className="h-12 sm:h-14 w-auto object-contain rounded-xl border border-amber-500/40 shadow-lg shadow-amber-500/20"
             />
-            <div className="hidden xs:block">
-              <h1 className="font-black text-sm sm:text-base tracking-tight text-white leading-tight">
+            <div className="hidden md:block">
+              <h1 className="font-black text-base sm:text-xl tracking-tight text-white leading-tight">
                 {APP_CONFIG.CLIENT_NAME}
               </h1>
-              <p className="text-[9px] font-extrabold text-amber-400 uppercase tracking-widest leading-none">
+              <p className="text-[10px] sm:text-xs font-black text-amber-400 uppercase tracking-widest leading-none">
                 {APP_CONFIG.CLIENT_TAGLINE}
               </p>
             </div>
           </Link>
 
-
-          {/* Navigation Links - UX Fluida */}
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 px-1 flex-1 justify-center sm:justify-start">
+          {/* Navigation Touch Tabs - Botones Grandes para Pantalla Táctil */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2 px-1 flex-1 justify-center sm:justify-start">
             {visibleItems.map(item => {
               const Icon = item.icon
               const pathOnly = item.path.split('?')[0]
@@ -137,29 +136,29 @@ export default function NavBar() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-semibold transition-all whitespace-nowrap ${
+                  className={`flex items-center gap-2.5 px-4 sm:px-5 py-3 rounded-2xl font-black transition-all whitespace-nowrap min-h-[52px] sm:min-h-[58px] active:scale-95 ${
                     isActive
-                      ? 'bg-white text-slate-900 shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-105'
-                      : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-xl shadow-amber-500/30 scale-105 border border-amber-300/50'
+                      : 'bg-slate-900/90 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800'
                   }`}
                 >
-                  <Icon size={18} className="sm:w-5 sm:h-5" />
-                  <span className="hidden lg:inline text-sm">{item.label}</span>
+                  <Icon size={24} className="shrink-0" />
+                  <span className="text-sm sm:text-base font-extrabold tracking-wide">{item.label}</span>
                 </Link>
               )
             })}
           </div>
 
-          {/* User Info & Notifications */}
-          <div className="flex items-center gap-1 sm:gap-3 shrink-0">
-            {/* Fullscreen Toggle - El toque pro */}
+          {/* Controles Táctiles Rápidos (Fullscreen, IA, Notificaciones, Salir) */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Pantalla Completa POS */}
             {supportsFullscreen && (
               <button
                 onClick={toggleFullScreen}
-                className="flex p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                className="min-w-[50px] min-h-[50px] sm:min-w-[56px] sm:min-h-[56px] flex items-center justify-center bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-2xl active:scale-95 transition-all shadow-md"
+                title={isFullscreen ? 'Salir de Pantalla Completa' : 'Modo Touch Pantalla Completa'}
               >
-                {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+                {isFullscreen ? <Minimize size={24} /> : <Maximize size={24} />}
               </button>
             )}
 
@@ -172,38 +171,38 @@ export default function NavBar() {
               />
             </div>
 
-            {/* AI Assistant Button */}
+            {/* Asistente IA POS */}
             <button
               onClick={() => setShowAIModal(true)}
-              className="p-2 sm:px-3 sm:py-1.5 bg-gradient-to-r from-purple-600/30 to-indigo-600/30 hover:from-purple-600/50 hover:to-indigo-600/50 text-purple-200 border border-purple-500/40 rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-purple-900/20"
-              title="Asistente IA"
+              className="min-h-[50px] sm:min-h-[56px] px-3.5 sm:px-4 bg-gradient-to-r from-purple-900/50 to-indigo-900/50 hover:from-purple-900/70 hover:to-indigo-900/70 text-purple-200 border border-purple-500/40 rounded-2xl active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-purple-950/40"
+              title="Asistente IA POS"
             >
-              <Sparkles size={18} className="text-purple-300 animate-pulse" />
-              <span className="hidden lg:inline text-xs font-bold">IA F&B</span>
+              <Sparkles size={22} className="text-purple-400 animate-pulse shrink-0" />
+              <span className="hidden xl:inline text-xs sm:text-sm font-black">IA POS</span>
             </button>
 
-            {/* User Badge - Compacto en móvil */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-slate-700 to-slate-500 flex items-center justify-center">
-                <User size={14} className="text-gray-300" />
+            {/* Usuario Activo */}
+            <div className="hidden lg:flex items-center gap-2.5 px-3.5 py-2.5 bg-slate-900/80 rounded-2xl border border-slate-800 min-h-[50px] sm:min-h-[56px]">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center shadow-md">
+                <User size={16} className="text-white" />
               </div>
               <div className="text-xs">
-                <div className="font-bold truncate max-w-[80px] text-gray-100">{currentUser?.username}</div>
-                <div className="text-[10px] text-gray-400 capitalize flex items-center gap-1">
+                <div className="font-extrabold truncate max-w-[90px] text-white">{currentUser?.username}</div>
+                <div className="text-[10px] text-teal-400 font-bold capitalize flex items-center gap-1">
                   {isReadOnly && <Eye size={10} />}
                   {currentRole}
                 </div>
               </div>
             </div>
 
-            {/* Logout Button - Icono solo en móvil */}
+            {/* Botón Salir / Logout Táctil */}
             <button
               onClick={handleLogout}
-              className="p-2 sm:px-4 sm:py-2 bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white rounded-xl transition-all border border-rose-500/20 hover:border-rose-600 shadow-lg hover:shadow-rose-600/20"
+              className="min-w-[50px] min-h-[50px] sm:min-w-[56px] sm:min-h-[56px] px-3.5 sm:px-4 bg-rose-950/40 hover:bg-rose-600 text-rose-400 hover:text-white rounded-2xl active:scale-95 transition-all border border-rose-500/30 hover:border-rose-600 shadow-lg flex items-center justify-center gap-2"
               title="Cerrar Sesión"
             >
-              <LogOut size={18} />
-              <span className="hidden md:inline ml-2 font-bold">Salir</span>
+              <LogOut size={22} />
+              <span className="hidden md:inline text-sm font-black">Salir</span>
             </button>
           </div>
         </div>
@@ -213,3 +212,5 @@ export default function NavBar() {
     </nav>
   )
 }
+
+
