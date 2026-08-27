@@ -3,7 +3,7 @@ import { useAppStore } from '@/store/appStore'
 import { usePermissions } from '@/hooks/usePermissions'
 import supabaseService from '@/services/supabaseService'
 import { User, UserRole } from '@/types/index'
-import bcrypt from 'bcryptjs'
+
 import { 
   Plus, 
   Edit2, 
@@ -316,35 +316,20 @@ export default function UsersManagement() {
 function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [formData, setFormData] = useState({
     username: '',
-    pin: '',
+    email: '',
     role: 'capitan' as UserRole,
   })
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (formData.pin.length !== 4) {
-      alert('El PIN debe tener 4 dígitos')
-      return
-    }
-
-    if (!/^\d+$/.test(formData.pin)) {
-      alert('El PIN solo debe contener números')
-      return
-    }
-
-
 
     setLoading(true)
     try {
-      // Hash el PIN con bcryptjs (10 rounds, same as backend)
-      const hashedPin = await bcrypt.hash(formData.pin, 10)
-      
       // Crear usuario directamente en Supabase
       await supabaseService.createUser({
         username: formData.username,
-        pin: hashedPin,
+        email: formData.email.trim().toLowerCase(),
         role: formData.role,
         active: true,
       } as any)
@@ -355,7 +340,7 @@ function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSucces
     } catch (error: any) {
       console.error('Error creating user:', error)
       if (error.code === 'PGRST204' || error.message?.includes('duplicate')) {
-        alert('❌ El nombre de usuario ya existe')
+        alert('❌ El nombre de usuario o correo ya existe')
       } else {
         alert('❌ Error al crear usuario: ' + (error.message || 'Error desconocido'))
       }
@@ -386,18 +371,18 @@ function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSucces
 
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">
-              PIN (4 dígitos)
+              Correo Electrónico
             </label>
             <input
-              type="password"
-              value={formData.pin}
-              onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+              type="email"
+              placeholder="usuario@localito.reisbloc.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="input-field"
-              maxLength={4}
-              pattern="[0-9]{4}"
               required
             />
           </div>
+
 
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">

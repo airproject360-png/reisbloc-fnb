@@ -4,8 +4,9 @@ export type UserRole = 'admin' | 'capitan' | 'mesero' | 'cocina' | 'bar' | 'supe
 export interface User {
   id: string;
   username: string;
-  pin: string;
+  pin?: string;
   role: UserRole;
+
   email?: string;
   avatarPath?: string;
   avatarUrl?: string;

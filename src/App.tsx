@@ -124,17 +124,15 @@ function App() {
         return
       }
 
-      // Si el usuario se autenticó por PIN Master localmente, NO limpiar sesión cuando Supabase no tenga sesión
-      if (!currentUser?.pin) {
-        setCurrentUser(null)
-        setAuthenticated(false)
-      }
+      setCurrentUser(null)
+      setAuthenticated(false)
     })
 
     return () => {
       authListener.subscription.unsubscribe()
     }
   }, [isAuthenticated, currentUser?.organizationId, setAuthenticated, setCurrentUser])
+
 
 
   const handleAcceptNotifications = async () => {

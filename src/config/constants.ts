@@ -67,10 +67,10 @@ export const APP_CONFIG = {
   MESSAGES: {
     DEVICE_NOT_REGISTERED: 'Este dispositivo no está registrado. Por favor, solicita autorización del administrador.',
     DEVICE_NOT_APPROVED: 'Tu dispositivo aún no ha sido aprobado. Espera a que el administrador lo valide.',
-    PIN_INVALID: 'PIN incorrecto',
     SESSION_EXPIRED: 'Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.',
     PRODUCT_CANNOT_DELETE: 'No puedes eliminar este producto (pasaron más de 5 minutos)',
   },
+
 };
 
 // Configuración de logging

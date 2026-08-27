@@ -36,9 +36,9 @@ export interface DemoProduct extends Omit<Product, 'id'> {
 export const DEMO_ADMIN_USER: User = {
   id: '504f4d91-02ea-4693-bb9a-993614a55f03',
   username: 'admin',
-  pin: '1234',
   role: 'admin',
   email: 'admin@localito.reisbloc.com',
+
   active: true,
   createdAt: new Date(),
   businessName: 'LOCALITO - Guisos & Barra Fría',

@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useAppStore } from '@/store/appStore'
-import { Utensils, AlertCircle, KeyRound, ArrowRight, ShieldCheck, Database, CheckCircle2 } from 'lucide-react'
-import { DEMO_ADMIN_USER } from '@/services/demoSeedService'
+import { supabase } from '@/config/supabase'
+import { AlertCircle, ArrowRight, Database, CheckCircle2 } from 'lucide-react'
 import { APP_CONFIG } from '@/config/constants'
+
 
 function Login() {
   const navigate = useNavigate()
@@ -12,53 +13,43 @@ function Login() {
   const { setCurrentUser, setAuthenticated } = useAppStore()
   const [searchParams] = useSearchParams()
   const [uiError, setUiError] = useState<string | null>(null)
-  const [pin, setPin] = useState('')
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [magicLinkSent, setMagicLinkSent] = useState(false)
+  const [isSendingMagicLink, setIsSendingMagicLink] = useState(false)
 
-  const isSupabaseConfigured = Boolean(
-    import.meta.env.VITE_SUPABASE_URL && 
-    import.meta.env.VITE_SUPABASE_ANON_KEY &&
-    !import.meta.env.VITE_SUPABASE_URL.includes('YOUR_PROJECT_REF')
-  )
-
-  useEffect(() => {
-    if (searchParams.get('error') === 'auth_failed') {
-      setUiError('No se pudo completar la autenticación con Google. Intenta de nuevo.')
-    }
-  }, [searchParams])
-
-  const handleGoogleLogin = async () => {
-    if (!isSupabaseConfigured) {
-      setUiError('Google OAuth requiere configurar VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en tu archivo .env.local')
-      return
-    }
-    const result = await loginWithGoogle()
-    if (!result.success) {
-      setUiError(result.error || 'No se pudo iniciar sesión con Google')
-    }
-  }
-
-  const handlePinLogin = (e: React.FormEvent) => {
+  const handleMagicLinkLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!pin) {
-      setUiError('Por favor ingresa un PIN')
+    if (!inviteEmail.trim()) {
+      setUiError('Ingresa un correo electrónico válido')
       return
     }
 
-    // Acceso PIN Master (1234, 9999 o cualquier PIN)
-    const masterRole = pin === '9999' ? 'admin' : 'admin'
-    const adminUser = {
-      ...DEMO_ADMIN_USER,
-      username: `Admin Master (${pin})`,
-      pin: pin,
-      role: masterRole as any,
-      businessName: APP_CONFIG.CLIENT_NAME,
-      organizationId: (import.meta.env.VITE_EVENT_ORGANIZATION_ID as string) || '1a70643e-23a3-4224-939e-d7daf381c083'
+    if (!isSupabaseConfigured) {
+      setUiError('La autenticación en la nube requiere configurar VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY')
+      return
     }
 
+    setIsSendingMagicLink(true)
+    setUiError(null)
+    try {
+      const redirectTo = `${window.location.origin}/auth/callback`
+      const { error } = await supabase.auth.signInWithOtp({
+        email: inviteEmail.trim().toLowerCase(),
+        options: {
+          emailRedirectTo: redirectTo,
+        },
+      })
 
-    setCurrentUser(adminUser)
-    setAuthenticated(true)
-    navigate('/pos', { replace: true })
+      if (error) {
+        throw error
+      }
+
+      setMagicLinkSent(true)
+    } catch (err: any) {
+      setUiError(err?.message || 'Error al enviar enlace de verificación')
+    } finally {
+      setIsSendingMagicLink(false)
+    }
   }
 
   return (
@@ -79,7 +70,6 @@ function Login() {
             Sistema POS, Guisos & Barra Fría
           </p>
         </div>
-
 
         {/* Estado de Configuración DB / Supabase */}
         <div className={`p-3 rounded-2xl border text-xs flex items-center justify-between ${
@@ -105,67 +95,73 @@ function Login() {
           </div>
         )}
 
-        {/* Formulario PIN Rápido / Master PIN */}
-        <form onSubmit={handlePinLogin} className="space-y-3.5 pt-1">
-          <div className="flex items-center justify-between">
-            <label className="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <ShieldCheck size={14} className="text-teal-400" />
-              Acceso PIN Master / Personal
-            </label>
-            <span className="text-[11px] text-teal-400 font-extrabold bg-teal-950/60 px-2 py-0.5 rounded-md border border-teal-500/30">
-              PIN Master: 1234
-            </span>
-          </div>
-          
-          <div className="relative">
-            <KeyRound className="absolute left-3.5 top-3 text-slate-500" size={18} />
-            <input
-              type="password"
-              placeholder="Ingresa tu PIN Master (ej. 1234)"
-              value={pin}
-              onChange={e => {
-                setPin(e.target.value)
-                setUiError(null)
-              }}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-800/90 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all font-mono"
-            />
-          </div>
-          
-          <button
-            type="submit"
-            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-black text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-teal-900/30"
-          >
-            <span>Iniciar Sesión con PIN Master</span>
-            <ArrowRight size={18} />
-          </button>
-        </form>
-
-        <div className="relative flex py-1 items-center">
-          <div className="flex-grow border-t border-slate-800"></div>
-          <span className="flex-shrink mx-4 text-xs text-slate-500 font-semibold">o con OAuth</span>
-          <div className="flex-grow border-t border-slate-800"></div>
-        </div>
-
-        {/* Botón Google OAuth */}
-        <div>
+        {/* Botón Google OAuth Principal */}
+        <div className="space-y-3">
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className={`w-full py-3 px-4 rounded-xl border text-white font-bold text-sm flex items-center justify-center gap-3 transition-all ${
+            className={`w-full py-3.5 px-4 rounded-xl border text-white font-bold text-sm flex items-center justify-center gap-3 transition-all ${
               isSupabaseConfigured
-                ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 shadow-md'
+                ? 'bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 border-teal-500/30 shadow-lg shadow-teal-900/30'
                 : 'bg-slate-800/40 border-slate-800 text-slate-400 cursor-pointer'
             }`}
           >
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/20 text-xs font-black bg-white/10">G</span>
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/20 text-xs font-black bg-white/20">G</span>
             {loading ? 'Conectando con Google...' : 'Iniciar Sesión con Google'}
           </button>
-          {!isSupabaseConfigured && (
-            <p className="text-[11px] text-slate-500 mt-2 text-center">
-              * Para Google OAuth, configura las llaves de Supabase en `.env.local`.
-            </p>
-          )}
         </div>
+
+        <div className="relative flex py-1 items-center">
+          <div className="flex-grow border-t border-slate-800"></div>
+          <span className="flex-shrink mx-4 text-xs text-slate-500 font-semibold">o con Invitación por Correo</span>
+          <div className="flex-grow border-t border-slate-800"></div>
+        </div>
+
+        {/* Formulario Invitación por Correo / Token de Verificación */}
+        {magicLinkSent ? (
+          <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-200 text-xs space-y-2 text-center">
+            <CheckCircle2 size={24} className="mx-auto text-emerald-400" />
+            <p className="font-bold text-sm text-white">¡Enlace de verificación enviado!</p>
+            <p className="text-slate-300">
+              Revisa tu correo <strong className="text-emerald-300">{inviteEmail}</strong> y haz clic en el enlace seguro de acceso.
+            </p>
+            <button
+              onClick={() => setMagicLinkSent(false)}
+              className="mt-2 text-[11px] text-teal-400 underline font-bold"
+            >
+              Usar otro correo
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleMagicLinkLogin} className="space-y-3">
+            <label className="block text-xs font-bold text-slate-300">
+              Verificar Acceso por Enlace Seguro (Token)
+            </label>
+            
+            <div className="relative">
+              <input
+                type="email"
+                placeholder="Ingresa tu correo de invitado"
+                value={inviteEmail}
+                onChange={e => {
+                  setInviteEmail(e.target.value)
+                  setUiError(null)
+                }}
+                className="w-full px-4 py-2.5 bg-slate-800/90 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all font-sans"
+              />
+            </div>
+            
+            <button
+              type="submit"
+              disabled={isSendingMagicLink}
+              className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all"
+            >
+              <span>{isSendingMagicLink ? 'Enviando...' : 'Enviar Token / Enlace de Acceso'}</span>
+              <ArrowRight size={14} />
+            </button>
+          </form>
+        )}
+
       </div>
     </div>
   )
