@@ -52,8 +52,29 @@ export default function InventoryManagement() {
   const [activeTab, setActiveTab] = useState<'ingredients' | 'dishes'>('ingredients')
   const [selectedRecipeProduct, setSelectedRecipeProduct] = useState<DemoProduct | null>(null)
 
-  // Estado local para insumos
-  const [ingredientsList, setIngredientsList] = useState<DemoIngredient[]>(DEMO_INGREDIENTS)
+  // Estado local para insumos con persistencia
+  const [ingredientsList, setIngredientsList] = useState<DemoIngredient[]>(() => {
+    try {
+      const stored = localStorage.getItem('reisbloc_demo_ingredients')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+    return DEMO_INGREDIENTS
+  })
+  const [ingredientSearchTerm, setIngredientSearchTerm] = useState('')
+  const [editingIngredient, setEditingIngredient] = useState<DemoIngredient | null>(null)
+
+  // Helper para persistir insumos en localStorage
+  const saveIngredientsList = (newList: DemoIngredient[]) => {
+    setIngredientsList(newList)
+    try {
+      localStorage.setItem('reisbloc_demo_ingredients', JSON.stringify(newList))
+    } catch (e) {
+      console.error('Error guardando insumos:', e)
+    }
+  }
 
   // Estado para modal de crear/editar producto
   const [showProductModal, setShowProductModal] = useState(false)
@@ -86,7 +107,7 @@ export default function InventoryManagement() {
   const [editingCatName, setEditingCatName] = useState<string | null>(null)
   const [editCatInput, setEditCatInput] = useState('')
 
-  // Estado para crear nuevo insumo rápido
+  // Estado para crear / editar insumo
   const [showNewIngredientModal, setShowNewIngredientModal] = useState(false)
   const [newIngName, setNewIngName] = useState('')
   const [newIngCategory, setNewIngCategory] = useState('Proteínas')
@@ -154,7 +175,60 @@ export default function InventoryManagement() {
     }
   }
 
-  const handleCreateIngredient = async () => {
+  const handleOpenNewIngredient = () => {
+    setEditingIngredient(null)
+    setNewIngName('')
+    setNewIngCategory('Proteínas')
+    setNewIngUnit('kg')
+    setNewIngCost('')
+    setNewIngStock('10')
+    setNewIngReorder('2')
+    setShowNewIngredientModal(true)
+  }
+
+  const handleOpenEditIngredient = (ing: DemoIngredient) => {
+    setEditingIngredient(ing)
+    setNewIngName(ing.name)
+    setNewIngCategory(ing.category || 'Proteínas')
+    setNewIngUnit((ing.unitType as any) || 'kg')
+    setNewIngCost(ing.costPerUnit !== undefined ? String(ing.costPerUnit) : '')
+    setNewIngStock(String(ing.currentStock || 0))
+    setNewIngReorder(String(ing.reorderLevel || 1))
+    setShowNewIngredientModal(true)
+  }
+
+  const handleDeleteIngredient = async (ing: DemoIngredient) => {
+    if (!confirm(`¿Estás seguro de que deseas eliminar el insumo "${ing.name}" de la lista de materias primas?`)) {
+      return
+    }
+
+    const updated = ingredientsList.filter(i => i.id !== ing.id)
+    saveIngredientsList(updated)
+
+    // Registro de Auditoría
+    try {
+      await supabaseService.logAudit({
+        organization_id: supabaseService.getCurrentOrgId(),
+        user_id: currentUser?.id,
+        action: 'INGREDIENT_DELETED',
+        table_name: 'ingredients',
+        record_id: ing.id,
+        changes: {
+          name: ing.name,
+          category: ing.category,
+          deletedBy: currentUser?.username || currentUser?.name,
+          role: currentUser?.role,
+          timestamp: new Date().toISOString(),
+        }
+      })
+    } catch (e) {
+      logger.warn('audit', 'Error registrando auditoria de insumo eliminado:', e as any)
+    }
+
+    alert(`✅ Insumo "${ing.name}" eliminado correctamente.`)
+  }
+
+  const handleCreateOrUpdateIngredient = async () => {
     if (!newIngName.trim()) {
       alert('Ingresa el nombre del insumo.')
       return
@@ -163,48 +237,99 @@ export default function InventoryManagement() {
     const stock = parseFloat(newIngStock) || 0
     const reorder = parseFloat(newIngReorder) || 1
 
-    const newIng: DemoIngredient = {
-      id: `ing-${Date.now()}`,
-      name: newIngName.trim(),
-      category: newIngCategory,
-      unitType: newIngUnit,
-      currentStock: stock,
-      reorderLevel: reorder,
-      wasteMarginPercent: 5,
-      costPerUnit: cost
-    }
-
-    setIngredientsList(prev => [newIng, ...prev])
-    setRecipeItems(prev => [...prev, { ingredientId: newIng.id, quantityRequired: 1 }])
-    setShowNewIngredientModal(false)
-    setNewIngName('')
-    setNewIngCost('')
-
-    // Registro de Auditoría
-    try {
-      await supabaseService.logAudit({
-        organization_id: supabaseService.getCurrentOrgId(),
-        user_id: currentUser?.id,
-        action: 'INGREDIENT_CREATED',
-        table_name: 'ingredients',
-        record_id: newIng.id,
-        changes: {
-          name: newIng.name,
-          category: newIng.category,
-          unitType: newIng.unitType,
-          currentStock: newIng.currentStock,
-          reorderLevel: newIng.reorderLevel,
-          costPerUnit: newIng.costPerUnit,
-          createdBy: currentUser?.username || currentUser?.name,
-          role: currentUser?.role,
-          timestamp: new Date().toISOString(),
+    if (editingIngredient) {
+      // Modificar existente
+      const updatedList = ingredientsList.map(item => {
+        if (item.id === editingIngredient.id) {
+          return {
+            ...item,
+            name: newIngName.trim(),
+            category: newIngCategory,
+            unitType: newIngUnit,
+            currentStock: stock,
+            reorderLevel: reorder,
+            costPerUnit: cost,
+          }
         }
+        return item
       })
-    } catch (e) {
-      logger.warn('audit', 'Error registrando auditoria de insumo:', e as any)
-    }
+      saveIngredientsList(updatedList)
+      setShowNewIngredientModal(false)
+      setEditingIngredient(null)
+      setNewIngName('')
+      setNewIngCost('')
 
-    alert(`✅ Insumo "${newIng.name}" creado y agregado a la receta.`)
+      // Auditoría
+      try {
+        await supabaseService.logAudit({
+          organization_id: supabaseService.getCurrentOrgId(),
+          user_id: currentUser?.id,
+          action: 'INGREDIENT_UPDATED',
+          table_name: 'ingredients',
+          record_id: editingIngredient.id,
+          changes: {
+            name: newIngName.trim(),
+            category: newIngCategory,
+            unitType: newIngUnit,
+            currentStock: stock,
+            reorderLevel: reorder,
+            costPerUnit: cost,
+            updatedBy: currentUser?.username || currentUser?.name,
+            role: currentUser?.role,
+            timestamp: new Date().toISOString(),
+          }
+        })
+      } catch (e) {
+        logger.warn('audit', 'Error registrando auditoria:', e as any)
+      }
+
+      alert(`✅ Insumo "${newIngName.trim()}" actualizado correctamente.`)
+    } else {
+      // Crear nuevo
+      const newIng: DemoIngredient = {
+        id: `ing-${Date.now()}`,
+        name: newIngName.trim(),
+        category: newIngCategory,
+        unitType: newIngUnit,
+        currentStock: stock,
+        reorderLevel: reorder,
+        wasteMarginPercent: 5,
+        costPerUnit: cost,
+      }
+
+      const updatedList = [newIng, ...ingredientsList]
+      saveIngredientsList(updatedList)
+      setRecipeItems(prev => [...prev, { ingredientId: newIng.id, quantityRequired: 1 }])
+      setShowNewIngredientModal(false)
+      setNewIngName('')
+      setNewIngCost('')
+
+      // Registro de Auditoría
+      try {
+        await supabaseService.logAudit({
+          organization_id: supabaseService.getCurrentOrgId(),
+          user_id: currentUser?.id,
+          action: 'INGREDIENT_CREATED',
+          table_name: 'ingredients',
+          record_id: newIng.id,
+          changes: {
+            name: newIng.name,
+            category: newIng.category,
+            unitType: newIng.unitType,
+            currentStock: newIng.currentStock,
+            reorderLevel: newIng.reorderLevel,
+            costPerUnit: newIng.costPerUnit,
+            createdBy: currentUser?.username || currentUser?.name,
+            role: currentUser?.role,
+            timestamp: new Date().toISOString(),
+          }
+        })
+      } catch (e) {
+        logger.warn('audit', 'Error registrando auditoria de insumo:', e as any)
+      }
+
+      alert(`✅ Insumo "${newIng.name}" creado y guardado en la lista de materias primas.`)
+    }
   }
 
   const loadProducts = async () => {
@@ -226,14 +351,13 @@ export default function InventoryManagement() {
     const oldStock = target?.currentStock ?? 0
     const newStock = Math.max(0, Number((oldStock + delta).toFixed(2)))
 
-    setIngredientsList(prev =>
-      prev.map(ing => {
-        if (ing.id === ingredientId) {
-          return { ...ing, currentStock: newStock }
-        }
-        return ing
-      })
-    )
+    const updated = ingredientsList.map(ing => {
+      if (ing.id === ingredientId) {
+        return { ...ing, currentStock: newStock }
+      }
+      return ing
+    })
+    saveIngredientsList(updated)
 
     // Registro de auditoría obligatorio
     try {
@@ -579,7 +703,13 @@ export default function InventoryManagement() {
   })
 
   const filteredIngredients = ingredientsList.filter(ing => {
-    if (filter === 'low-stock') return ing.currentStock <= ing.reorderLevel
+    if (filter === 'low-stock' && ing.currentStock > ing.reorderLevel) return false
+    if (ingredientSearchTerm.trim()) {
+      const q = ingredientSearchTerm.toLowerCase()
+      const matchName = ing.name.toLowerCase().includes(q)
+      const matchCat = ing.category && ing.category.toLowerCase().includes(q)
+      return matchName || matchCat
+    }
     return true
   })
 
@@ -640,6 +770,15 @@ export default function InventoryManagement() {
               </button>
 
               <button
+                onClick={handleOpenNewIngredient}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-black flex items-center gap-2 shadow-lg transition-all text-xs active:scale-95"
+                title="Agregar nuevo insumo o materia prima a la lista"
+              >
+                <Plus size={16} />
+                <span>+ Agregar Materia Prima</span>
+              </button>
+
+              <button
                 onClick={() => setShowCategoryModal(true)}
                 className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-teal-300 font-bold flex items-center gap-1.5 border border-teal-500/30 text-xs transition-all shadow-md active:scale-95"
               >
@@ -649,10 +788,10 @@ export default function InventoryManagement() {
 
               <button
                 onClick={() => handleOpenProductModal()}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black flex items-center gap-2 shadow-lg transition-all text-xs active:scale-95"
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 hover:bg-slate-700 text-amber-300 font-black flex items-center gap-2 shadow-lg transition-all text-xs active:scale-95 border border-amber-500/30"
               >
                 <Plus size={16} />
-                <span>+ Crear Nuevo Platillo</span>
+                <span>+ Crear Platillo</span>
               </button>
             </>
           )}
@@ -660,7 +799,7 @@ export default function InventoryManagement() {
       </div>
 
       {/* Main Tabs Selector */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
         <div className="flex gap-2">
           <button
             onClick={() => setActiveTab('ingredients')}
@@ -705,55 +844,113 @@ export default function InventoryManagement() {
 
       {/* VISTA 1: TABLA DE INSUMOS */}
       {activeTab === 'ingredients' && (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-lg">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-lg space-y-0">
+          {/* Barra de Filtro y Acción Directa de Insumos */}
+          <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+            <div className="relative flex-1 min-w-[240px]">
+              <input
+                type="text"
+                placeholder="🔍 Buscar materia prima por nombre o categoría..."
+                value={ingredientSearchTerm}
+                onChange={(e) => setIngredientSearchTerm(e.target.value)}
+                className="w-full pl-4 pr-4 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-500 shadow-sm"
+              />
+            </div>
+            {canManageInventory && !isReadOnly && (
+              <button
+                onClick={handleOpenNewIngredient}
+                className="px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-black rounded-xl text-xs shadow-md flex items-center gap-1.5 active:scale-95 transition-all"
+              >
+                <Plus size={15} />
+                <span>+ Agregar Materia Prima</span>
+              </button>
+            )}
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-700">
               <thead className="bg-slate-900 text-slate-300 text-xs uppercase font-extrabold">
                 <tr>
                   <th className="p-4">Insumo / Materia Prima</th>
                   <th className="p-4">Categoría</th>
+                  <th className="p-4 text-center">Costo Unitario</th>
                   <th className="p-4 text-center">Stock Actual</th>
                   <th className="p-4 text-center">Stock Mínimo</th>
-                  <th className="p-4 text-right">Ajuste Rápido</th>
+                  <th className="p-4 text-right">Ajuste & Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredIngredients.map(ing => {
-                  const isLow = ing.currentStock <= ing.reorderLevel
-                  return (
-                    <tr key={ing.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-4 font-bold text-slate-900">
-                        {ing.name}
-                        <span className="block text-xs font-normal text-slate-400">Unidad: {ing.unitType}</span>
-                      </td>
-                      <td className="p-4 text-xs font-bold text-slate-500">{ing.category}</td>
-                      <td className="p-4 text-center">
-                        <span className={`px-3 py-1 rounded-full text-xs font-black ${isLow ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-800'}`}>
-                          {ing.currentStock} {ing.unitType}
-                        </span>
-                      </td>
-                      <td className="p-4 text-center text-xs font-bold text-slate-500">{ing.reorderLevel} {ing.unitType}</td>
-                      <td className="p-4 text-right">
-                        <div className="inline-flex items-center gap-1">
-                          <button
-                            onClick={() => handleAdjustIngredientStock(ing.id, ing.unitType === 'kg' || ing.unitType === 'liter' ? -0.5 : -1)}
-                            className="p-1.5 bg-rose-100 text-rose-700 hover:bg-rose-200 rounded-lg transition-colors font-bold"
-                            title="Descontar stock"
-                          >
-                            <TrendingDown size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleAdjustIngredientStock(ing.id, ing.unitType === 'kg' || ing.unitType === 'liter' ? 1 : 10)}
-                            className="p-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg transition-colors font-bold"
-                            title="Reabastecer stock"
-                          >
-                            <TrendingUp size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
+                {filteredIngredients.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-slate-400 font-bold text-xs">
+                      No se encontraron materias primas que coincidan con la búsqueda.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredIngredients.map(ing => {
+                    const isLow = ing.currentStock <= ing.reorderLevel
+                    return (
+                      <tr key={ing.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="p-4 font-bold text-slate-900">
+                          {ing.name}
+                          <span className="block text-xs font-normal text-slate-400">Unidad: {ing.unitType}</span>
+                        </td>
+                        <td className="p-4 text-xs font-bold text-slate-500">
+                          <span className="px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">
+                            {ing.category}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center text-xs font-bold text-slate-700">
+                          ${Number(ing.costPerUnit || 0).toFixed(2)} MXN
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className={`px-3 py-1 rounded-full text-xs font-black ${isLow ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-800'}`}>
+                            {ing.currentStock} {ing.unitType}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center text-xs font-bold text-slate-500">{ing.reorderLevel} {ing.unitType}</td>
+                        <td className="p-4 text-right">
+                          <div className="inline-flex items-center gap-1.5">
+                            <button
+                              onClick={() => handleAdjustIngredientStock(ing.id, ing.unitType === 'kg' || ing.unitType === 'liter' ? -0.5 : -1)}
+                              className="p-1.5 bg-rose-100 text-rose-700 hover:bg-rose-200 rounded-lg transition-colors font-bold"
+                              title="Descontar stock (-0.5 / -1)"
+                            >
+                              <TrendingDown size={15} />
+                            </button>
+                            <button
+                              onClick={() => handleAdjustIngredientStock(ing.id, ing.unitType === 'kg' || ing.unitType === 'liter' ? 1 : 10)}
+                              className="p-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg transition-colors font-bold"
+                              title="Reabastecer stock (+1 / +10)"
+                            >
+                              <TrendingUp size={15} />
+                            </button>
+
+                            {canManageInventory && !isReadOnly && (
+                              <>
+                                <button
+                                  onClick={() => handleOpenEditIngredient(ing)}
+                                  className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
+                                  title="Modificar / Editar Insumo"
+                                >
+                                  <Edit2 size={15} />
+                                </button>
+
+                                <button
+                                  onClick={() => handleDeleteIngredient(ing)}
+                                  className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors"
+                                  title="Remover / Eliminar Insumo"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -1121,26 +1318,34 @@ export default function InventoryManagement() {
         </div>
       )}
 
-      {/* MODAL CREAR INSUMO RÁPIDO */}
+      {/* MODAL CREAR / EDITAR INSUMO O MATERIA PRIMA */}
       {showNewIngredientModal && (
         <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 text-white shadow-2xl space-y-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 text-white shadow-2xl space-y-4 animate-fadeIn">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2 text-teal-400 font-black">
                 <ChefHat size={20} />
-                <span className="text-base">Crear Insumo / Materia Prima</span>
+                <span className="text-base">
+                  {editingIngredient ? 'Modificar Insumo / Materia Prima' : 'Crear Insumo / Materia Prima'}
+                </span>
               </div>
-              <button onClick={() => setShowNewIngredientModal(false)} className="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white">
+              <button
+                onClick={() => {
+                  setShowNewIngredientModal(false)
+                  setEditingIngredient(null)
+                }}
+                className="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
+              >
                 <X size={16} />
               </button>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block font-bold text-slate-300 mb-1">Nombre del Insumo *</label>
+                <label className="block font-bold text-slate-300 mb-1">Nombre del Insumo / Materia Prima *</label>
                 <input
                   type="text"
-                  placeholder="Ej. Cecina Enchilada, Salsa Verde, Crema"
+                  placeholder="Ej. Cecina Enchilada, Salsa Verde, Crema, Tortillas"
                   value={newIngName}
                   onChange={(e) => setNewIngName(e.target.value)}
                   className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold focus:outline-none focus:border-teal-500"
@@ -1155,12 +1360,16 @@ export default function InventoryManagement() {
                     onChange={(e) => setNewIngCategory(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold"
                   >
-                    <option value="Proteínas">Proteínas</option>
-                    <option value="Bases & Masas">Bases & Masas</option>
-                    <option value="Verduras & Frescos">Verduras & Frescos</option>
+                    <option value="Proteínas">Proteínas & Carnes</option>
+                    <option value="Bases & Masas">Bases, Masas & Tortillas</option>
                     <option value="Lácteos & Quesos">Lácteos & Quesos</option>
-                    <option value="Abarrotes & Salsas">Abarrotes & Salsas</option>
-                    <option value="Desechables & Empaque">Desechables & Empaque</option>
+                    <option value="Verduras & Saludables">Verduras & Frescos</option>
+                    <option value="Salsas & Cremas">Salsas & Cremas</option>
+                    <option value="Panadería">Panadería</option>
+                    <option value="Abarrotes & Masas">Abarrotes</option>
+                    <option value="Bebidas Naturales">Bebidas Naturales</option>
+                    <option value="Café & Té">Café & Té</option>
+                    <option value="Empaques To-Go">Empaques & Desechables</option>
                   </select>
                 </div>
 
@@ -1173,7 +1382,7 @@ export default function InventoryManagement() {
                   >
                     <option value="kg">Kilogramos (kg)</option>
                     <option value="g">Gramos (g)</option>
-                    <option value="l">Litros (L)</option>
+                    <option value="liter">Litros (L)</option>
                     <option value="ml">Mililitros (ml)</option>
                     <option value="units">Piezas / Unidades</option>
                   </select>
@@ -1185,6 +1394,7 @@ export default function InventoryManagement() {
                   <label className="block font-bold text-slate-300 mb-1">Costo Unit. ($)</label>
                   <input
                     type="number"
+                    step="0.5"
                     placeholder="90.00"
                     value={newIngCost}
                     onChange={(e) => setNewIngCost(e.target.value)}
@@ -1192,9 +1402,10 @@ export default function InventoryManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-300 mb-1">Stock Inicial</label>
+                  <label className="block font-bold text-slate-300 mb-1">Stock Actual</label>
                   <input
                     type="number"
+                    step="0.1"
                     value={newIngStock}
                     onChange={(e) => setNewIngStock(e.target.value)}
                     className="w-full px-2.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-center font-bold"
@@ -1204,6 +1415,7 @@ export default function InventoryManagement() {
                   <label className="block font-bold text-slate-300 mb-1">Punto Reorden</label>
                   <input
                     type="number"
+                    step="0.1"
                     value={newIngReorder}
                     onChange={(e) => setNewIngReorder(e.target.value)}
                     className="w-full px-2.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-center font-bold"
@@ -1215,17 +1427,20 @@ export default function InventoryManagement() {
             <div className="pt-3 border-t border-slate-800 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setShowNewIngredientModal(false)}
+                onClick={() => {
+                  setShowNewIngredientModal(false)
+                  setEditingIngredient(null)
+                }}
                 className="px-4 py-2 bg-slate-800 text-slate-400 hover:text-white rounded-xl text-xs font-bold"
               >
                 Cancelar
               </button>
               <button
                 type="button"
-                onClick={handleCreateIngredient}
-                className="px-5 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 font-black rounded-xl text-xs shadow-md"
+                onClick={handleCreateOrUpdateIngredient}
+                className="px-5 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 font-black rounded-xl text-xs shadow-md active:scale-95 transition-all"
               >
-                Guardar Insumo
+                {editingIngredient ? 'Actualizar Insumo' : 'Guardar Insumo'}
               </button>
             </div>
           </div>
