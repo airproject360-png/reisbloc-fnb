@@ -17,7 +17,7 @@ const isoNow = () => new Date().toISOString()
 const isoMinutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60 * 1000).toISOString()
 
 async function getRecentAuditCount(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: any,
   orgId: string,
   userId: string | null,
   ipAddress: string | null,
@@ -47,7 +47,7 @@ async function getRecentAuditCount(
 }
 
 async function writeInviteAudit(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: any,
   orgId: string,
   userId: string,
   ipAddress: string | null,
@@ -56,7 +56,7 @@ async function writeInviteAudit(
   blocked: boolean,
   reason?: string
 ) {
-  const payload = {
+  const payload: any = {
     organization_id: orgId,
     user_id: userId,
     action: blocked ? 'INVITE_BLOCKED' : 'INVITE_SENT',
@@ -76,12 +76,12 @@ async function writeInviteAudit(
 }
 
 async function upsertAppUser(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: any,
   orgId: string,
   email: string,
   role: InviteRole,
 ) {
-  const baseUserPayload = {
+  const baseUserPayload: any = {
     organization_id: orgId,
     name: email.split('@')[0],
     username: email.split('@')[0],

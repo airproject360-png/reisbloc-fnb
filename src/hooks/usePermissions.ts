@@ -10,16 +10,16 @@ export function usePermissions() {
 
   // Permisos administrativos completos
   const canManageUsers = role === 'admin'
-  const canManageInventory = role === 'admin'
+  const canManageInventory = ['admin', 'cocina', 'cocinero'].includes(role || '')
   const canManageDevices = role === 'admin'
   const canViewLogs = role === 'admin' || role === 'supervisor'
   const canExportReports = role === 'admin'
   
   // Permisos operativos
-  const canCreateSales = ['admin', 'capitan', 'mesero', 'bar'].includes(role || '')
-  const canModifyOrders = ['admin', 'capitan', 'mesero'].includes(role || '')
-  const canDeleteProducts = role === 'admin'
-  const canAccessKitchen = ['admin', 'cocina'].includes(role || '')
+  const canCreateSales = ['admin', 'capitan', 'mesero', 'bar', 'cocina', 'cocinero'].includes(role || '')
+  const canModifyOrders = ['admin', 'capitan', 'mesero', 'cocina', 'cocinero'].includes(role || '')
+  const canDeleteProducts = ['admin', 'cocina', 'cocinero'].includes(role || '')
+  const canAccessKitchen = ['admin', 'cocina', 'cocinero', 'capitan', 'mesero'].includes(role || '')
   const canAccessBar = ['admin', 'bar'].includes(role || '')
   const canManageTables = ['admin', 'capitan'].includes(role || '')
   // Solo admin/capitan/supervisor acceden a monitor - mesero usa OrdersToServe

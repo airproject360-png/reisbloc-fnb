@@ -32,17 +32,18 @@ export interface DemoProduct extends Omit<Product, 'id'> {
   estimatedPreparationTimeMinutes?: number
 }
 
+import { APP_CONFIG } from '@/config/constants'
+
 // 1. USUARIO ADMIN ÚNICO
 export const DEMO_ADMIN_USER: User = {
   id: '504f4d91-02ea-4693-bb9a-993614a55f03',
   username: 'admin',
   role: 'admin',
-  email: 'admin@localito.reisbloc.com',
-
+  email: `admin@${APP_CONFIG.CLIENT_SUBDOMAIN}`,
   active: true,
   createdAt: new Date(),
-  businessName: 'LOCALITO - Guisos & Barra Fría',
-  organizationId: '1a70643e-23a3-4224-939e-d7daf381c083'
+  businessName: `${APP_CONFIG.CLIENT_NAME} - ${APP_CONFIG.CLIENT_TAGLINE}`,
+  organizationId: APP_CONFIG.ORGANIZATION_ID
 }
 
 

@@ -19,6 +19,7 @@ import logger from '@/utils/logger'
 import { getStoredToken } from './jwtService'
 import { useAppStore } from '@/store/appStore'
 import { getStoredOrganizationId } from './authService'
+import { APP_CONFIG } from '@/config/constants'
 import deviceService from './deviceService'
 import {
   User,
@@ -106,8 +107,8 @@ class SupabaseService {
       return envOrgId
     }
 
-    // Default Fallback Oficial para LOCALITO F&B
-    return '1a70643e-23a3-4224-939e-d7daf381c083'
+    // Default Fallback Oficial desde APP_CONFIG
+    return APP_CONFIG.ORGANIZATION_ID
   }
 
   // ==================== USERS ====================

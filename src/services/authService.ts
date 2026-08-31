@@ -14,14 +14,11 @@ import { clearAuthToken } from './jwtService'
 
 import logger from '@/utils/logger'
 import { User } from '@/types/index'
+import { APP_CONFIG } from '@/config/constants'
 
 const LOCAL_ORG_KEY = 'reisbloc_org_id'
 
-const FORCED_ADMIN_EMAILS = new Set([
-  'airproject360@gmail.com',
-  'hunab.arredondo@gmail.com',
-  'adminlocalito@gmail.com',
-])
+const FORCED_ADMIN_EMAILS = new Set(APP_CONFIG.ADMIN_EMAILS)
 
 const normalizeEventRole = (role: unknown): 'admin' | 'supervisor' => {
   if (typeof role !== 'string') return 'supervisor'
@@ -131,10 +128,7 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
       return null
     }
 
-    const LOCALITO_ORG_ID = '1a70643e-23a3-4224-939e-d7daf381c083'
-    const targetOrgId = (FALLBACK_EVENT_ORG_ID && !FALLBACK_EVENT_ORG_ID.includes('cb86de9f'))
-      ? FALLBACK_EVENT_ORG_ID
-      : LOCALITO_ORG_ID
+    const targetOrgId = FALLBACK_EVENT_ORG_ID || APP_CONFIG.ORGANIZATION_ID
 
     const { data, error } = await supabase
       .from('users')
@@ -151,7 +145,7 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
     }
 
     // Asegurar que el usuario de Auth exista en la tabla users para evitar errores de clave foránea en ventas/órdenes
-    const username = data?.username || data?.name || authUser.user_metadata?.full_name || email.split('@')[0] || 'Admin LOCALITO'
+    const username = data?.username || data?.name || authUser.user_metadata?.full_name || email.split('@')[0] || `Admin ${APP_CONFIG.CLIENT_NAME}`
     const role = FORCED_ADMIN_EMAILS.has(email) ? 'admin' : (String(data?.role || 'admin') as User['role'])
 
     try {
@@ -178,7 +172,7 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
       email,
       active: true,
       createdAt: data?.created_at ? new Date(data.created_at) : new Date(),
-      businessName: 'LOCALITO - Guisos & Barra Fría',
+      businessName: `${APP_CONFIG.CLIENT_NAME} - ${APP_CONFIG.CLIENT_TAGLINE}`,
       organizationId: targetOrgId
     }
   } catch (error) {

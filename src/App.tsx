@@ -247,12 +247,14 @@ function App() {
                                 <Route path="/mesas" element={<Navigate to="/cuentas" replace />} />
                                 <Route path="/admin" element={currentUser?.role === 'admin' ? <Admin /> : <Navigate to="/pos" />} />
                                 {APP_CONFIG.EVENT_FEATURES.INVENTORY && (
-                                  <Route path="/inventory" element={['admin', 'supervisor'].includes(currentUser?.role || '') ? <Inventory /> : <Navigate to="/pos" />} />
+                                  <Route path="/inventory" element={['admin', 'supervisor', 'cocina', 'cocinero'].includes(currentUser?.role || '') ? <Inventory /> : <Navigate to="/pos" />} />
                                 )}
                                 {APP_CONFIG.EVENT_FEATURES.PURCHASES && (
-                                  <Route path="/purchases" element={['admin', 'supervisor'].includes(currentUser?.role || '') ? <Purchases /> : <Navigate to="/pos" />} />
+                                  <Route path="/purchases" element={['admin', 'supervisor', 'cocina', 'cocinero'].includes(currentUser?.role || '') ? <Purchases /> : <Navigate to="/pos" />} />
                                 )}
-                                {APP_CONFIG.EVENT_FEATURES.REPORTS && <Route path="/reports" element={<Reports />} />}
+                                {APP_CONFIG.EVENT_FEATURES.REPORTS && (
+                                  <Route path="/reports" element={['admin', 'supervisor', 'capitan'].includes(currentUser?.role || '') ? <Reports /> : <Navigate to="/pos" />} />
+                                )}
                                 {APP_CONFIG.EVENT_FEATURES.CLOSING && (
                                   <Route path="/closing" element={currentUser?.role === 'admin' ? <Closing /> : <Navigate to="/pos" />} />
                                 )}

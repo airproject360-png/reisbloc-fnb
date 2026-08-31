@@ -30,7 +30,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 
-type ReportTab = 'sales' | 'financial' | 'employees'
+type ReportTab = 'sales' | 'financial' | 'employees' | 'monthly_closing'
 
 export default function Reports() {
   const { currentUser } = useAppStore()
@@ -42,10 +42,33 @@ export default function Reports() {
 
   const [activeTab, setActiveTab] = useState<ReportTab>('sales')
   const [loading, setLoading] = useState(false)
+  const [showAIInsights, setShowAIInsights] = useState(false)
   const [dateRange, setDateRange] = useState({
     from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA'),
     to: new Date().toLocaleDateString('en-CA'),
   })
+
+  const setPreset = (preset: 'today' | 'week' | 'month' | 'last_month' | 'last30') => {
+    const now = new Date()
+    if (preset === 'today') {
+      const todayStr = now.toLocaleDateString('en-CA')
+      setDateRange({ from: todayStr, to: todayStr })
+    } else if (preset === 'week') {
+      const start = new Date(now)
+      start.setDate(now.getDate() - 7)
+      setDateRange({ from: start.toLocaleDateString('en-CA'), to: now.toLocaleDateString('en-CA') })
+    } else if (preset === 'month') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1)
+      setDateRange({ from: start.toLocaleDateString('en-CA'), to: now.toLocaleDateString('en-CA') })
+    } else if (preset === 'last_month') {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const end = new Date(now.getFullYear(), now.getMonth(), 0)
+      setDateRange({ from: start.toLocaleDateString('en-CA'), to: end.toLocaleDateString('en-CA') })
+    } else if (preset === 'last30') {
+      const start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      setDateRange({ from: start.toLocaleDateString('en-CA'), to: now.toLocaleDateString('en-CA') })
+    }
+  }
 
   const [salesData, setSalesData] = useState<any>(null)
   const [topProducts, setTopProducts] = useState<any[]>([])
@@ -226,51 +249,97 @@ export default function Reports() {
           </div>
         </div>
 
-        {/* Date Range Selector */}
-        <div className="surface-warm p-6">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Calendar size={20} className="text-teal-700" />
-              <span className="font-semibold text-slate-700">Período:</span>
+        {/* Date Range Selector & Quick Presets */}
+        <div className="surface-warm p-6 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Calendar size={20} className="text-teal-700" />
+                <span className="font-bold text-slate-700 text-sm">Rango:</span>
+              </div>
+              <input
+                type="date"
+                value={dateRange.from}
+                onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
+                className="px-3.5 py-1.5 border-2 border-slate-200 rounded-xl focus:border-teal-600 focus:outline-none text-sm font-semibold"
+              />
+              <span className="text-slate-500 font-bold text-xs">al</span>
+              <input
+                type="date"
+                value={dateRange.to}
+                onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
+                className="px-3.5 py-1.5 border-2 border-slate-200 rounded-xl focus:border-teal-600 focus:outline-none text-sm font-semibold"
+              />
             </div>
-            <input
-              type="date"
-              value={dateRange.from}
-              onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
-              className="px-4 py-2 border-2 border-slate-200 rounded-lg focus:border-teal-600 focus:outline-none"
-            />
-            <span className="text-slate-500">hasta</span>
-            <input
-              type="date"
-              value={dateRange.to}
-              onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
-              className="px-4 py-2 border-2 border-slate-200 rounded-lg focus:border-teal-600 focus:outline-none"
-            />
+
+            {/* Quick Presets */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                onClick={() => setPreset('today')}
+                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+              >
+                Hoy
+              </button>
+              <button
+                onClick={() => setPreset('week')}
+                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+              >
+                Esta Semana
+              </button>
+              <button
+                onClick={() => setPreset('month')}
+                className="px-3 py-1.5 rounded-lg bg-teal-100 hover:bg-teal-200 text-teal-900 text-xs font-bold transition-all"
+              >
+                Este Mes (Corte)
+              </button>
+              <button
+                onClick={() => setPreset('last_month')}
+                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+              >
+                Mes Anterior
+              </button>
+              <button
+                onClick={() => setPreset('last30')}
+                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+              >
+                30 Días
+              </button>
+
+              <button
+                onClick={() => setShowAIInsights(true)}
+                className="ml-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black shadow-md flex items-center gap-1.5 transition-all"
+              >
+                <Lightbulb size={15} />
+                <span>Auditoría IA</span>
+              </button>
+            </div>
+
             {loading && (
-              <div className="flex items-center gap-2 text-teal-700 ml-auto">
-                <Loader size={18} className="animate-spin" />
-                <span>Cargando...</span>
+              <div className="flex items-center gap-2 text-teal-700 text-xs font-bold">
+                <Loader size={16} className="animate-spin" />
+                <span>Cargando datos...</span>
               </div>
             )}
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 overflow-x-auto pb-1">
           {[
             { id: 'sales' as const, label: '📊 Ventas', enabled: canViewSalesReport },
-            { id: 'financial' as const, label: '💸 Finanzas', enabled: canViewSalesReport },
-            { id: 'employees' as const, label: '👥 Empleados', enabled: canViewEmployeeMetrics },
+            { id: 'financial' as const, label: '💸 Finanzas & Utilidad', enabled: canViewSalesReport },
+            { id: 'employees' as const, label: '👥 Empleados & Propinas', enabled: canViewEmployeeMetrics },
+            { id: 'monthly_closing' as const, label: '📑 Corte Mensual Detallado', enabled: canViewSalesReport },
           ]
             .filter(t => t.enabled)
             .map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+                className={`px-5 py-3 rounded-2xl font-black text-xs sm:text-sm whitespace-nowrap transition-all ${
                   activeTab === tab.id
-                    ? 'bg-gradient-to-r from-slate-900 to-teal-700 text-white shadow-lg'
-                    : 'bg-white text-slate-700 shadow-md hover:shadow-lg border border-slate-200'
+                    ? 'bg-gradient-to-r from-slate-950 to-teal-800 text-white shadow-xl scale-105 border border-teal-500/30'
+                    : 'bg-white text-slate-700 shadow-sm hover:shadow-md border border-slate-200'
                 }`}
               >
                 {tab.label}
@@ -662,6 +731,132 @@ export default function Reports() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB 4: CORTE MENSUAL DETALLADO & RESUMEN EJECUTIVO */}
+        {activeTab === 'monthly_closing' && canViewSalesReport && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-teal-950 p-6 sm:p-8 rounded-3xl text-white shadow-2xl border border-teal-500/20">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-5">
+                <div>
+                  <span className="px-3 py-1 bg-teal-500/20 border border-teal-400/30 text-teal-300 text-xs font-black rounded-full uppercase tracking-wider">
+                    Balance Mensual Oficial · LOCALITO
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-black mt-2">Corte & Estado Financiero</h2>
+                  <p className="text-slate-400 text-xs mt-1">Período evaluado: {dateRange.from} al {dateRange.to}</p>
+                </div>
+                <button
+                  onClick={() => window.print()}
+                  className="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-slate-950 font-black rounded-xl text-xs shadow-lg flex items-center gap-2"
+                >
+                  <DollarSign size={16} />
+                  <span>Imprimir / Exportar Balance</span>
+                </button>
+              </div>
+
+              {/* Grid Métricas Principales del Corte */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
+                  <p className="text-slate-400 text-xs font-bold uppercase">Ingresos Brutos (Ventas)</p>
+                  <p className="text-2xl font-black text-emerald-400 mt-1">${(metrics?.totalSales || 0).toFixed(2)}</p>
+                  <p className="text-[11px] text-slate-500 mt-1">{metrics?.totalOrders || 0} tickets emitidos</p>
+                </div>
+
+                <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
+                  <p className="text-slate-400 text-xs font-bold uppercase">Inversión / Compras Insumos</p>
+                  <p className="text-2xl font-black text-rose-400 mt-1">${(purchaseMetrics?.totalInvestment || 0).toFixed(2)}</p>
+                  <p className="text-[11px] text-slate-500 mt-1">{purchaseMetrics?.totalPurchases || 0} compras a proveedores</p>
+                </div>
+
+                <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
+                  <p className="text-slate-400 text-xs font-bold uppercase">Utilidad Operativa Neta</p>
+                  <p className="text-2xl font-black text-teal-300 mt-1">
+                    ${((metrics?.totalSales || 0) - (purchaseMetrics?.totalInvestment || 0)).toFixed(2)}
+                  </p>
+                  <p className="text-[11px] text-teal-400 mt-1">
+                    Margen: {(metrics?.totalSales ? (((metrics.totalSales - (purchaseMetrics?.totalInvestment || 0)) / metrics.totalSales) * 100).toFixed(1) : 0)}%
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
+                  <p className="text-slate-400 text-xs font-bold uppercase">Ticket Promedio</p>
+                  <p className="text-2xl font-black text-amber-400 mt-1">${(metrics?.averageTicket || 0).toFixed(2)}</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Gasto medio por comensal</p>
+                </div>
+              </div>
+
+              {/* Recomendación de Cierre */}
+              <div className="mt-6 p-4 rounded-2xl bg-teal-950/50 border border-teal-500/30 flex items-start gap-3">
+                <Lightbulb size={24} className="text-amber-400 shrink-0 mt-0.5" />
+                <div className="text-xs space-y-1">
+                  <p className="font-black text-teal-200 uppercase tracking-wide">Diagnóstico Operativo Mensual:</p>
+                  <p className="text-slate-300 leading-relaxed">{financialOverview?.recommendation || 'Opera con rentabilidad estable.'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Top Platillos Más Vendidos del Mes */}
+            <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-200">
+              <h3 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
+                <Package className="text-teal-600" size={20} />
+                <span>Top Platillos con Mayor Facturación del Período</span>
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                {(topProducts || []).slice(0, 5).map((prod: any, idx: number) => (
+                  <div key={idx} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                    <span className="text-[10px] font-black text-teal-600 uppercase">#{idx + 1} Más Vendido</span>
+                    <p className="font-bold text-slate-900 text-sm line-clamp-1">{prod.name}</p>
+                    <p className="text-xs font-semibold text-slate-500">{prod.quantity} unidades vendidas</p>
+                    <p className="text-sm font-black text-emerald-600">${prod.totalSales.toFixed(2)} MXN</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL AUDITORÍA IA DE REPORTES */}
+        {showAIInsights && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 text-white shadow-2xl space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div className="flex items-center gap-2 text-amber-400 font-black">
+                  <Lightbulb size={24} />
+                  <span className="text-xl">Auditoría & Análisis IA POS</span>
+                </div>
+                <button onClick={() => setShowAIInsights(false)} className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white">
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4 text-xs">
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                  <p className="text-teal-400 font-black uppercase text-[10px]">Resumen Ejecutivo Generado por IA:</p>
+                  <p className="text-slate-200 leading-relaxed">
+                    Durante el período seleccionado ({dateRange.from} al {dateRange.to}), el tenant <strong>LOCALITO</strong> generó un total de <strong>${(metrics?.totalSales || 0).toFixed(2)} MXN</strong> en {metrics?.totalOrders || 0} operaciones de venta, con un ticket promedio de <strong>${(metrics?.averageTicket || 0).toFixed(2)} MXN</strong>.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+                  <p className="text-amber-400 font-black uppercase text-[10px]">Sugerencias de Optimización & Costos:</p>
+                  <ul className="list-disc pl-4 space-y-1 text-slate-300">
+                    <li>Revisar stock de insumos para los platillos más vendidos ({topProducts[0]?.name || 'Platillos principales'}).</li>
+                    <li>Margen de utilidad operativa actual proyectada en {metrics?.totalSales ? (((metrics.totalSales - (purchaseMetrics?.totalInvestment || 0)) / metrics.totalSales) * 100).toFixed(1) : 0}%.</li>
+                    <li>Mantener control de cancelaciones y descuentos en caja para preservar la integridad financiera.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-800 flex justify-end">
+                <button
+                  onClick={() => setShowAIInsights(false)}
+                  className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-lg"
+                >
+                  Entendido
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -68,10 +68,23 @@ export default function TableMonitor() {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
   const [cashReceived, setCashReceived] = useState<string>('')
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [showChangeCalculator, setShowChangeCalculator] = useState(false)
+  const [enablePriceAdjustment, setEnablePriceAdjustment] = useState(false)
+  const [adjustedTotal, setAdjustedTotal] = useState<string>('')
+  const [adjustmentReason, setAdjustmentReason] = useState<string>('')
+  const [ticketNotes, setTicketNotes] = useState<string>('')
 
-  const buildTicketHTML = (ordersList: Order[], tableNumber: number, title = 'Cuenta', paymentDetails?: { tip: number, total: number, method: string }): string => {
+  const canAdjustSale = currentUser?.role === 'admin' || currentUser?.role === 'capitan'
+
+  const buildTicketHTML = (
+    ordersList: Order[],
+    tableNumber: number,
+    title = 'Cuenta',
+    paymentDetails?: { tip: number; total: number; method: string; adjustmentNote?: string },
+    customNotes?: string
+  ): string => {
     const allItems = ordersList.flatMap(o => o.items || [])
-    const total = paymentDetails?.total || allItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+    const total = paymentDetails?.total ?? allItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
     const dateStr = new Date().toLocaleString('es-MX')
     const ticketFolio = ordersList[0]?.id ? ordersList[0].id.slice(-8).toUpperCase() : `LOC-${Date.now().toString().slice(-6)}`
     const isPaymentTicket = Boolean(paymentDetails)
@@ -113,6 +126,14 @@ export default function TableMonitor() {
           <div>Atendido por: ${currentUser?.username || currentUser?.name || 'Personal LOCALITO'}</div>
         </div>
 
+        ${customNotes ? `
+        <!-- Custom Customer & Order Notes -->
+        <div style="border:1px dashed #000;padding:4px;margin-bottom:6px;font-size:9px;background:#f9f9f9;">
+          <div style="font-weight:bold;">NOTAS / DIRECCIÓN DEL PEDIDO:</div>
+          <div>${customNotes}</div>
+        </div>
+        ` : ''}
+
         <!-- Itemized List -->
         <div style="border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:6px;">
           <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:9px;border-bottom:1px stroke #ccc;padding-bottom:2px;margin-bottom:4px;">
@@ -122,7 +143,7 @@ export default function TableMonitor() {
           ${lines || '<div style="text-align:center;font-size:10px;">(Sin consumos registrados)</div>'}
         </div>
 
-        <!-- Totals (Sin Propina) -->
+        <!-- Totals -->
         <div style="border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
           <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:900;">
             <span>${isPaymentTicket ? 'TOTAL PAGADO:' : 'TOTAL A PAGAR:'}</span>
@@ -132,6 +153,11 @@ export default function TableMonitor() {
           <div style="display:flex;justify-content:space-between;font-size:10px;margin-top:4px;">
             <span>FORMA DE PAGO:</span>
             <span><strong>${paymentDetails.method.toUpperCase()}</strong></span>
+          </div>
+          ` : ''}
+          ${paymentDetails?.adjustmentNote ? `
+          <div style="font-size:9px;color:#333;margin-top:4px;font-style:italic;">
+            * Ajuste autorizado por administración: ${paymentDetails.adjustmentNote}
           </div>
           ` : ''}
         </div>
@@ -287,17 +313,30 @@ export default function TableMonitor() {
     })
     setPaymentMethod('cash')
     setCashReceived(total.toString())
+    setShowChangeCalculator(false)
+    setEnablePriceAdjustment(false)
+    setAdjustedTotal(total.toString())
+    setAdjustmentReason('')
+    setTicketNotes('')
   }
 
   // CONFIRMAR PAGO (DEDUCE RECETA + VENTA BD + IMPRIME TICKET 58mm + CIERRA CUENTA)
   const handleConfirmFastPayment = async () => {
     if (!currentUser || !fastPaymentData || isProcessingPayment) return
 
-    const total = fastPaymentData.total
-    const received = parseFloat(cashReceived) || total
+    const originalTotal = fastPaymentData.total
+    const isAdjusted = canAdjustSale && enablePriceAdjustment && parseFloat(adjustedTotal) >= 0 && parseFloat(adjustedTotal) !== originalTotal
+    const finalTotal = isAdjusted ? parseFloat(adjustedTotal) : originalTotal
 
-    if (paymentMethod === 'cash' && received < total) {
-      alert(`⚠️ El monto recibido ($${received.toFixed(2)}) es menor al total a pagar ($${total.toFixed(2)}).`)
+    if (isAdjusted && !adjustmentReason.trim()) {
+      alert('⚠️ Para realizar un ajuste al total de la venta, es OBLIGATORIO ingresar el motivo en el apartado de notas.')
+      return
+    }
+
+    const received = parseFloat(cashReceived) || finalTotal
+
+    if (paymentMethod === 'cash' && received < finalTotal) {
+      alert(`⚠️ El monto recibido ($${received.toFixed(2)}) es menor al total a pagar ($${finalTotal.toFixed(2)}).`)
       return
     }
 
@@ -308,15 +347,41 @@ export default function TableMonitor() {
       const allItems = ordersToProcess.flatMap(o => o.items || [])
       const mappedMethod = paymentMethod === 'card' ? 'card' : paymentMethod === 'transfer' ? 'transfer' : 'cash'
 
+      // Si hubo ajuste de precio por Admin/Capitán, registrar en audit_logs de Supabase
+      if (isAdjusted) {
+        try {
+          await supabaseService.logAudit({
+            organization_id: supabaseService.getCurrentOrgId(),
+            user_id: currentUser.id,
+            action: 'SALE_AMOUNT_ADJUSTED',
+            table_name: 'sales',
+            record_id: `table-${tableNumber}`,
+            changes: {
+              originalTotal,
+              adjustedTotal: finalTotal,
+              difference: finalTotal - originalTotal,
+              reason: adjustmentReason.trim(),
+              authorizedBy: currentUser.username || currentUser.name,
+              role: currentUser.role,
+              tableNumber,
+              orderIds,
+              timestamp: new Date().toISOString(),
+            },
+          })
+        } catch (auditErr) {
+          logger.warn('audit', 'Error registrando log de auditoría:', auditErr as any)
+        }
+      }
+
       // 1. Registrar venta en Supabase DB
       await supabaseService.createSale({
         orderIds,
         tableNumber,
         items: allItems,
-        subtotal: total,
-        discounts: 0,
+        subtotal: finalTotal,
+        discounts: isAdjusted ? originalTotal - finalTotal : 0,
         tax: 0,
-        total: total,
+        total: finalTotal,
         paymentMethod: mappedMethod as any,
         tip: 0,
         tipSource: 'none',
@@ -335,11 +400,18 @@ export default function TableMonitor() {
 
       // 3. Imprimir ticket de venta 58mm
       try {
-        const ticketHTML = buildTicketHTML(ordersToProcess, tableNumber, 'Ticket de Venta', {
-          tip: 0,
-          total: total,
-          method: mappedMethod
-        })
+        const ticketHTML = buildTicketHTML(
+          ordersToProcess,
+          tableNumber,
+          'Ticket de Venta',
+          {
+            tip: 0,
+            total: finalTotal,
+            method: mappedMethod,
+            adjustmentNote: isAdjusted ? adjustmentReason.trim() : undefined,
+          },
+          ticketNotes.trim() || undefined
+        )
         await printService.printReceipt(ticketHTML, { title: 'Ticket de Venta', width: 58 })
       } catch (prtErr) {
         logger.warn('print', 'Advertencia imprimiendo ticket:', prtErr as any)
@@ -563,9 +635,9 @@ export default function TableMonitor() {
                     <button
                       key={m.id}
                       onClick={() => setPaymentMethod(m.id as any)}
-                      className={`py-3 px-2 rounded-xl text-xs font-black border transition-all ${
+                      className={`py-2.5 px-2 rounded-xl text-xs font-black border transition-all ${
                         paymentMethod === m.id
-                          ? 'bg-emerald-600 text-white border-emerald-400 shadow-lg scale-105'
+                          ? 'bg-emerald-600 text-white border-emerald-400 shadow-lg scale-102'
                           : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
                       }`}
                     >
@@ -575,40 +647,118 @@ export default function TableMonitor() {
                 </div>
               </div>
 
-              {/* Calculadora de Efectivo */}
+              {/* Calculadora de Efectivo (Colapsable / Compacta) */}
               {paymentMethod === 'cash' && (
-                <div className="space-y-3 bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                  <div className="flex justify-between items-center text-xs font-bold">
-                    <span className="text-slate-400">Efectivo Recibido:</span>
-                    <input
-                      type="number"
-                      value={cashReceived}
-                      onChange={(e) => setCashReceived(e.target.value)}
-                      placeholder={fastPaymentData.total.toString()}
-                      className="w-28 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-right text-white font-black text-sm focus:outline-none focus:border-emerald-500"
-                    />
+                <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setShowChangeCalculator(!showChangeCalculator)}
+                      className="text-xs font-bold text-teal-400 hover:text-teal-300 flex items-center gap-1"
+                    >
+                      <span>{showChangeCalculator ? '▼ Ocultar Calculadora de Cambio' : '▶ Calculadora de Cambio (Opcional)'}</span>
+                    </button>
                   </div>
-                  {(() => {
-                    const rec = parseFloat(cashReceived) || fastPaymentData.total
-                    const change = rec - fastPaymentData.total
-                    return (
-                      <div className="flex justify-between items-center text-xs font-bold border-t border-slate-800 pt-2">
-                        <span className="text-slate-400">Cambio a Entregar:</span>
-                        <span className={`text-base font-black ${change >= 0 ? 'text-amber-400' : 'text-rose-500'}`}>
-                          ${change >= 0 ? change.toFixed(2) : '0.00'} MXN
-                        </span>
+
+                  {showChangeCalculator && (
+                    <div className="space-y-2 pt-2 border-t border-slate-900">
+                      <div className="flex justify-between items-center text-xs font-bold">
+                        <span className="text-slate-400">Efectivo Recibido:</span>
+                        <input
+                          type="number"
+                          value={cashReceived}
+                          onChange={(e) => setCashReceived(e.target.value)}
+                          placeholder={fastPaymentData.total.toString()}
+                          className="w-28 px-3 py-1 bg-slate-900 border border-slate-700 rounded-lg text-right text-white font-black text-xs focus:outline-none focus:border-emerald-500"
+                        />
                       </div>
-                    )
-                  })()}
+                      {(() => {
+                        const targetTotal = (canAdjustSale && enablePriceAdjustment && parseFloat(adjustedTotal) >= 0) ? parseFloat(adjustedTotal) : fastPaymentData.total
+                        const rec = parseFloat(cashReceived) || targetTotal
+                        const change = rec - targetTotal
+                        return (
+                          <div className="flex justify-between items-center text-xs font-bold border-t border-slate-800 pt-1.5">
+                            <span className="text-slate-400">Cambio a Entregar:</span>
+                            <span className={`text-sm font-black ${change >= 0 ? 'text-amber-400' : 'text-rose-500'}`}>
+                              ${change >= 0 ? change.toFixed(2) : '0.00'} MXN
+                            </span>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Ajuste de Venta Exclusivo Admin & Capitán con Registro en LOG */}
+              {canAdjustSale && (
+                <div className="bg-slate-950 p-3.5 rounded-2xl border border-amber-500/30 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-amber-400 flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={enablePriceAdjustment}
+                        onChange={(e) => setEnablePriceAdjustment(e.target.checked)}
+                        className="rounded text-amber-500 focus:ring-0 w-4 h-4 cursor-pointer"
+                      />
+                      <span>Ajustar Monto de Venta (Admin/Capitán)</span>
+                    </label>
+                    <span className="text-[10px] uppercase font-bold text-amber-300 bg-amber-950 px-2 py-0.5 rounded-full border border-amber-800">
+                      Audit Log
+                    </span>
+                  </div>
+
+                  {enablePriceAdjustment && (
+                    <div className="space-y-2 pt-2 border-t border-slate-800 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 font-semibold">Nuevo Monto a Cobrar:</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={adjustedTotal}
+                          onChange={(e) => setAdjustedTotal(e.target.value)}
+                          placeholder="Monto ajustado"
+                          className="w-32 px-3 py-1.5 bg-slate-900 border border-amber-500/60 rounded-xl text-right text-amber-300 font-black text-sm focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 font-bold mb-1">
+                          Motivo del Ajuste * <span className="text-rose-400">(Obligatorio para auditoría)</span>:
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ej. Descuento cortesía 15%, Ajuste por queja, etc."
+                          value={adjustmentReason}
+                          onChange={(e) => setAdjustmentReason(e.target.value)}
+                          className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-white font-medium text-xs focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Apartado de Notas del Pedido / Dirección para Ticket */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-300">
+                  📝 Notas / Dirección del Cliente (Se imprime en el Ticket):
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Ej. Dirección: Av. Principal 123 Int 4B / Sin picante / Para llevar..."
+                  value={ticketNotes}
+                  onChange={(e) => setTicketNotes(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-teal-500"
+                />
+              </div>
 
               <button
                 onClick={handleConfirmFastPayment}
                 disabled={isProcessingPayment}
-                className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black rounded-2xl shadow-xl hover:shadow-emerald-500/20 active:scale-98 transition-all flex items-center justify-center gap-2 text-base"
+                className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black rounded-2xl shadow-xl hover:shadow-emerald-500/20 active:scale-98 transition-all flex items-center justify-center gap-2 text-sm"
               >
-                <Printer size={20} />
+                <Printer size={18} />
                 <span>{isProcessingPayment ? 'Procesando Pago...' : 'Confirmar & Imprimir Ticket'}</span>
               </button>
             </div>

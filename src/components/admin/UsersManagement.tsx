@@ -393,10 +393,13 @@ function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSucces
               onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
               className="input-field"
             >
-              <option value="mesero">Mesero</option>
-              <option value="capitan">Capitán</option>
-              <option value="supervisor">Supervisor</option>
-              <option value="admin">Administrador</option>
+              <option value="mesero">Mesero (Toma de Órdenes)</option>
+              <option value="capitan">Capitán (Ajustes & Cuentas)</option>
+              <option value="cocinero">Cocinero/a (Inventarios, Guisos & Recetas)</option>
+              <option value="cocina">Cocina (KDS Pantalla)</option>
+              <option value="bar">Bar</option>
+              <option value="supervisor">Supervisor (Auditoría)</option>
+              <option value="admin">Administrador (Control Total)</option>
             </select>
           </div>
 
@@ -489,12 +492,13 @@ function EditUserModal({
               onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
               className="input-field"
             >
-              <option value="mesero">Mesero</option>
-              <option value="capitan">Capitán</option>
-              <option value="cocina">Cocina</option>
+              <option value="mesero">Mesero (Toma de Órdenes)</option>
+              <option value="capitan">Capitán (Ajustes & Cuentas)</option>
+              <option value="cocinero">Cocinero/a (Inventarios, Guisos & Recetas)</option>
+              <option value="cocina">Cocina (KDS Pantalla)</option>
               <option value="bar">Bar</option>
-              <option value="supervisor">Supervisor</option>
-              <option value="admin">Administrador</option>
+              <option value="supervisor">Supervisor (Auditoría)</option>
+              <option value="admin">Administrador (Control Total)</option>
             </select>
           </div>
 

@@ -6,7 +6,7 @@ import InventoryManagement from '@/components/admin/InventoryManagement'
 export default function Inventory() {
   const { currentUser } = useAppStore()
 
-  if (!['admin', 'supervisor'].includes(currentUser?.role || '')) {
+  if (!['admin', 'supervisor', 'cocina', 'cocinero'].includes(currentUser?.role || '')) {
     return <Navigate to="/pos" replace />
   }
 

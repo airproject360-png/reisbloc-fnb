@@ -28,8 +28,8 @@ async function getGeolocation(ipAddress: string): Promise<any> {
       timezone: data.timezone,
       timestamp: new Date().toISOString()
     };
-  } catch (error) {
-    console.warn('⚠️ Geolocation error:', error.message);
+  } catch (error: any) {
+    console.warn('⚠️ Geolocation error:', error?.message || error);
     return null;
   }
 }
@@ -91,8 +91,8 @@ async function generateJWT(
     );
 
     return `${signatureInput}.${signatureEncoded}`;
-  } catch (error) {
-    console.error('❌ JWT generation error:', error.message);
+  } catch (error: any) {
+    console.error('❌ JWT generation error:', error?.message || error);
     throw new Error('Failed to generate JWT');
   }
 }
@@ -218,8 +218,8 @@ serve(async (req) => {
         anomalies = result.anomalies || {};
         console.log('✅ Anomaly check complete:', { requires_2fa: requiresTwoFA, anomalies });
       }
-    } catch (error) {
-      console.error('⚠️ Anomaly detection exception:', error.message);
+    } catch (error: any) {
+      console.error('⚠️ Anomaly detection exception:', error?.message || error);
     }
 
     // ============================================================
@@ -264,8 +264,8 @@ serve(async (req) => {
         sessionId = sessionResult.session_id;
         console.log('✅ Session registered:', sessionId);
       }
-    } catch (error) {
-      console.error('⚠️ Session registration exception:', error.message);
+    } catch (error: any) {
+      console.error('⚠️ Session registration exception:', error?.message || error);
     }
 
     // ============================================================
@@ -305,12 +305,12 @@ serve(async (req) => {
       { status: 200, headers: corsHeaders }
     );
 
-  } catch (error) {
-    console.error('❌ Unexpected error:', error.message);
+  } catch (error: any) {
+    console.error('❌ Unexpected error:', error?.message || error);
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error',
-        details: error.message 
+        details: error?.message || String(error)
       }),
       { status: 500, headers: corsHeaders }
     );

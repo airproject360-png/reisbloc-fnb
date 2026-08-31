@@ -41,9 +41,17 @@ export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGrid
     return categoryColors[category] || 'from-gray-500 to-gray-600'
   }
 
-  // Lista dinámica de categorías basadas en el menú de LOCALITO
+  // Lista dinámica de categorías sincronizadas con la gestión de inventario
   const categories = useMemo(() => {
-    const defaultCats = ['Todos', 'Quesadillas Maíz', 'Quesadillas Harina', 'Platos', 'Especialidades', 'Extras', 'Bebidas']
+    let savedCats = ['Quesadillas Maíz', 'Quesadillas Harina', 'Platos', 'Especialidades', 'Extras', 'Bebidas']
+    try {
+      const stored = localStorage.getItem('localito_categories')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0) savedCats = parsed
+      }
+    } catch {}
+    const defaultCats = ['Todos', ...savedCats]
     const prodCats = Array.from(new Set(products.map(p => p.category))).filter(c => c && !defaultCats.includes(c))
     return [...defaultCats, ...prodCats]
   }, [products])
@@ -106,7 +114,7 @@ export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGrid
           <p className="text-gray-500 text-lg font-medium">No hay productos disponibles</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5 sm:gap-3.5">
           {filteredProducts.map(product => {
             const CategoryIcon = getCategoryIcon(product.category)
             const outOfStock = isOutOfStock(product)
@@ -117,81 +125,68 @@ export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGrid
               key={product.id}
               onClick={() => !disableAdd && onAdd(product)}
               disabled={disableAdd}
-              className={`group relative text-left rounded-2xl border-2 p-5 shadow-md transition-all transform hover:scale-105 ${
+              className={`group relative text-left rounded-2xl border p-2.5 sm:p-3 shadow-sm transition-all transform active:scale-95 hover:shadow-md ${
                 outOfStock || disableAdd
-                  ? 'border-red-300 bg-red-50/50 opacity-60 cursor-not-allowed'
-                  : 'border-transparent bg-gradient-to-br from-white to-slate-50 hover:shadow-xl hover:-translate-y-1'
+                  ? 'border-red-200 bg-red-50/40 opacity-60 cursor-not-allowed'
+                  : 'border-slate-200/80 bg-white hover:border-amber-400 hover:-translate-y-0.5'
               }`}
             >
-              {/* Product Image */}
-              <div className="relative mb-4 h-40 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-inner">
+              {/* Product Image - Compact & Optimized */}
+              <div className="relative mb-2 h-24 sm:h-28 w-full overflow-hidden rounded-xl border border-slate-100 bg-slate-100 shadow-inner">
                 {product.imageUrl && !brokenImages[product.id] ? (
                   <img
                     src={product.imageUrl}
                     alt={product.name}
                     loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     onError={() => {
                       setBrokenImages(prev => ({ ...prev, [product.id]: true }))
                     }}
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 text-slate-500">
-                    <CategoryIcon size={34} />
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 text-slate-400">
+                    <CategoryIcon size={24} />
                   </div>
                 )}
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
 
-                <div className={`absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-gradient-to-r ${getCategoryGradient(product.category)} px-3 py-1 text-xs font-bold text-white shadow-lg`}>
-                  <CategoryIcon size={12} />
-                  {product.category}
+                <div className={`absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-gradient-to-r ${getCategoryGradient(product.category)} px-2 py-0.5 text-[9px] font-bold text-white shadow-sm`}>
+                  <CategoryIcon size={10} />
+                  <span>{product.category}</span>
                 </div>
 
                 {!outOfStock && !disableAdd && (
-                  <div className="absolute bottom-3 right-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-slate-900 shadow-lg opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                    + Agregar
+                  <div className="absolute bottom-1.5 right-1.5 rounded-full bg-amber-400 text-slate-950 px-2 py-0.5 text-[10px] font-black shadow-md opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                    + Añadir
                   </div>
                 )}
               </div>
 
-              <div className="mt-2">
-                <p className="text-lg font-bold text-gray-900 mb-1 pr-20">{product.name}</p>
-                <p className="text-2xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                  {currency.format(product.price)}
+              {/* Title and Price */}
+              <div className="space-y-0.5">
+                <p className="text-xs sm:text-sm font-black text-slate-900 line-clamp-1 group-hover:text-amber-600 transition-colors" title={product.name}>
+                  {product.name}
                 </p>
-              </div>
-
-              {/* Stock Status */}
-              {product.hasInventory && (
-                <div className="mt-4">
-                  {outOfStock ? (
-                    <div className="flex items-center gap-2 bg-red-100 border border-red-300 rounded-xl px-3 py-2">
-                      <AlertTriangle className="text-red-600" size={18} />
-                      <span className="text-sm font-bold text-red-700">Agotado</span>
-                    </div>
-                  ) : lowStock ? (
-                    <div className="flex items-center gap-2 bg-amber-100 border border-amber-300 rounded-xl px-3 py-2">
-                      <AlertTriangle className="text-amber-600" size={18} />
-                      <span className="text-sm font-bold text-amber-700">
-                        Stock bajo: {product.currentStock ?? 0}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 bg-green-50 border border-green-300 rounded-xl px-3 py-2">
-                      <CheckCircle className="text-green-600" size={18} />
-                      <span className="text-sm font-bold text-green-700">
-                        Stock: {product.currentStock ?? 0}
-                      </span>
-                    </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm sm:text-base font-black text-emerald-600">
+                    {currency.format(product.price)}
+                  </p>
+                  
+                  {/* Compact Stock indicator */}
+                  {product.hasInventory && (
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                      outOfStock
+                        ? 'bg-red-100 text-red-700'
+                        : lowStock
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-emerald-50 text-emerald-700'
+                    }`}>
+                      {outOfStock ? 'Agotado' : `${product.currentStock ?? 0}`}
+                    </span>
                   )}
                 </div>
-              )}
-
-              {/* Hover Effect */}
-              {!outOfStock && (
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/10 group-hover:to-purple-500/10 transition-all pointer-events-none" />
-              )}
+              </div>
             </button>
           )})}
         </div>
@@ -201,3 +196,4 @@ export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGrid
 }
 
 export default ProductGrid
+

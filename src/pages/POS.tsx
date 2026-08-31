@@ -57,6 +57,13 @@ export default function POS() {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
   const [cashReceived, setCashReceived] = useState<string>('')
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [showChangeCalculator, setShowChangeCalculator] = useState(false)
+  const [enablePriceAdjustment, setEnablePriceAdjustment] = useState(false)
+  const [adjustedTotal, setAdjustedTotal] = useState<string>('')
+  const [adjustmentReason, setAdjustmentReason] = useState<string>('')
+  const [posTicketNotes, setPosTicketNotes] = useState<string>('')
+
+  const canAdjustSale = currentUser?.role === 'admin' || currentUser?.role === 'capitan'
 
   // Lista simplificada de ubicaciones / mesas
   const tableLocations = [
@@ -75,7 +82,19 @@ export default function POS() {
   const cartSubtotal = cartItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
   const isReadOnly = currentUser?.role === 'supervisor'
 
-  const categories = ['Todos', 'Quesadillas Maíz', 'Quesadillas Harina', 'Platos', 'Especialidades', 'Extras', 'Bebidas']
+  const categories = useMemo(() => {
+    let savedCats = ['Quesadillas Maíz', 'Quesadillas Harina', 'Platos', 'Especialidades', 'Extras', 'Bebidas']
+    try {
+      const stored = localStorage.getItem('localito_categories')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0) savedCats = parsed
+      }
+    } catch {}
+    const defaultCats = ['Todos', ...savedCats]
+    const prodCats = Array.from(new Set((products || []).map(p => p.category))).filter(c => c && !defaultCats.includes(c))
+    return [...defaultCats, ...prodCats]
+  }, [products])
 
   useEffect(() => {
     loadProducts()
@@ -188,25 +207,59 @@ export default function POS() {
   const handleConfirmPayment = async () => {
     if (!currentUser || cartItems.length === 0 || isProcessingPayment) return
 
-    const received = parseFloat(cashReceived) || cartSubtotal
-    if (paymentMethod === 'cash' && received < cartSubtotal) {
-      alert(`⚠️ El monto recibido ($${received}) es menor al total a pagar ($${cartSubtotal}).`)
+    const originalTotal = cartSubtotal
+    const isAdjusted = canAdjustSale && enablePriceAdjustment && parseFloat(adjustedTotal) >= 0 && parseFloat(adjustedTotal) !== originalTotal
+    const finalTotal = isAdjusted ? parseFloat(adjustedTotal) : originalTotal
+
+    if (isAdjusted && !adjustmentReason.trim()) {
+      alert('⚠️ Para realizar un ajuste al total de la venta, es OBLIGATORIO ingresar el motivo en el apartado de notas.')
+      return
+    }
+
+    const received = parseFloat(cashReceived) || finalTotal
+    if (paymentMethod === 'cash' && received < finalTotal) {
+      alert(`⚠️ El monto recibido ($${received}) es menor al total a pagar ($${finalTotal}).`)
       return
     }
 
     setIsProcessingPayment(true)
     try {
       const locLabel = tableLocations.find(l => l.id === currentLoc)?.label || `Mesa ${currentLoc}`
+
+      // Si hubo ajuste por Admin/Capitán, registrar en audit_logs de Supabase
+      if (isAdjusted) {
+        try {
+          await supabaseService.logAudit({
+            organization_id: supabaseService.getCurrentOrgId(),
+            user_id: currentUser.id,
+            action: 'SALE_AMOUNT_ADJUSTED',
+            table_name: 'sales',
+            record_id: `pos-${currentLoc}-${Date.now()}`,
+            changes: {
+              originalTotal,
+              adjustedTotal: finalTotal,
+              difference: finalTotal - originalTotal,
+              reason: adjustmentReason.trim(),
+              authorizedBy: currentUser.username || currentUser.name,
+              role: currentUser.role,
+              location: locLabel,
+              timestamp: new Date().toISOString(),
+            },
+          })
+        } catch (auditErr) {
+          logger.warn('audit', 'Error registrando log de auditoría:', auditErr as any)
+        }
+      }
       
       // 1. Crear venta en base de datos (con fallback)
       await supabaseService.createSale({
         orderIds: [],
         tableNumber: currentLoc,
         items: cartItems,
-        subtotal: cartSubtotal,
-        discounts: 0,
+        subtotal: finalTotal,
+        discounts: isAdjusted ? originalTotal - finalTotal : 0,
         tax: 0,
-        total: cartSubtotal,
+        total: finalTotal,
         paymentMethod: paymentMethod === 'card' ? 'clip' : paymentMethod === 'transfer' ? 'digital' : 'cash',
         tip: 0,
         tipSource: 'none',
@@ -219,7 +272,7 @@ export default function POS() {
         const ticketFolio = `LOC-${Date.now().toString().slice(-6)}`
         const dateStr = new Date().toLocaleString('es-MX')
         const methodLabel = paymentMethod === 'card' ? 'TARJETA (TERMINAL)' : paymentMethod === 'transfer' ? 'TRANSFERENCIA SPEI' : 'EFECTIVO'
-        const changeAmount = paymentMethod === 'cash' ? Math.max(0, received - cartSubtotal) : 0
+        const changeAmount = paymentMethod === 'cash' ? Math.max(0, received - finalTotal) : 0
 
         const html = `
           <div style="width:58mm;padding:6px;font-family:'Courier New', monospace;font-size:11px;line-height:1.25;color:#000;">
@@ -243,6 +296,14 @@ export default function POS() {
               <div>Atendido por: ${currentUser.username || currentUser.name || 'Personal LOCALITO'}</div>
             </div>
 
+            ${posTicketNotes.trim() ? `
+            <!-- Customer Notes / Address -->
+            <div style="border:1px dashed #000;padding:4px;margin-bottom:6px;font-size:9px;background:#f9f9f9;">
+              <div style="font-weight:bold;">NOTAS / DIRECCIÓN DEL CLIENTE:</div>
+              <div>${posTicketNotes.trim()}</div>
+            </div>
+            ` : ''}
+
             <!-- Itemized List -->
             <div style="border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:6px;">
               <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:9px;border-bottom:1px stroke #ccc;padding-bottom:2px;margin-bottom:4px;">
@@ -263,16 +324,21 @@ export default function POS() {
               `).join('')}
             </div>
 
-            <!-- Totals (Sin Propina) -->
+            <!-- Totals -->
             <div style="border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
               <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:900;">
                 <span>TOTAL A PAGAR:</span>
-                <span>$${cartSubtotal.toFixed(2)} MXN</span>
+                <span>$${finalTotal.toFixed(2)} MXN</span>
               </div>
               <div style="display:flex;justify-content:space-between;font-size:10px;margin-top:4px;">
                 <span>FORMA DE PAGO:</span>
                 <span><strong>${methodLabel}</strong></span>
               </div>
+              ${isAdjusted ? `
+              <div style="font-size:9px;color:#333;margin-top:4px;font-style:italic;">
+                * Ajuste autorizado por administración: ${adjustmentReason.trim()}
+              </div>
+              ` : ''}
               ${paymentMethod === 'cash' ? `
               <div style="display:flex;justify-content:space-between;font-size:9px;margin-top:2px;color:#444;">
                 <span>Efectivo Recibido:</span>
@@ -303,6 +369,11 @@ export default function POS() {
       setShowPaymentModal(false)
       setShowCartDrawer(false)
       setCashReceived('')
+      setAdjustedTotal('')
+      setAdjustmentReason('')
+      setPosTicketNotes('')
+      setEnablePriceAdjustment(false)
+      setShowChangeCalculator(false)
       alert('✅ Pago cobrado exitosamente y ticket generado')
     } catch (err: any) {
       alert(`❌ Error al procesar el cobro: ${err?.message || err}`)
@@ -679,48 +750,62 @@ export default function POS() {
 
             {/* Detalles de Cobro según Método */}
             {paymentMethod === 'cash' && (
-              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-                <p className="text-xs font-bold text-slate-300">Calculadora de Cambio (Monto Recibido):</p>
-                <input
-                  type="number"
-                  placeholder={`$${cartSubtotal.toFixed(2)}`}
-                  value={cashReceived}
-                  onChange={(e) => setCashReceived(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-white font-black text-lg focus:outline-none focus:border-emerald-500"
-                />
-
-                <div className="flex items-center gap-2">
-                  {[50, 100, 200, 500].map((amt) => (
-                    <button
-                      key={amt}
-                      onClick={() => setCashReceived(amt.toString())}
-                      className="flex-1 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold rounded-lg"
-                    >
-                      ${amt}
-                    </button>
-                  ))}
+              <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setShowChangeCalculator(!showChangeCalculator)}
+                    className="text-xs font-bold text-teal-400 hover:text-teal-300 flex items-center gap-1"
+                  >
+                    <span>{showChangeCalculator ? '▼ Ocultar Calculadora de Cambio' : '▶ Calculadora de Cambio (Opcional)'}</span>
+                  </button>
                 </div>
 
-                {parseFloat(cashReceived) >= cartSubtotal && (
-                  <div className="flex items-center justify-between text-sm font-black text-emerald-400 pt-2 border-t border-slate-800">
-                    <span>Cambio a Entregar:</span>
-                    <span>${(parseFloat(cashReceived) - cartSubtotal).toFixed(2)} MXN</span>
+                {showChangeCalculator && (
+                  <div className="space-y-2.5 pt-2 border-t border-slate-900">
+                    <input
+                      type="number"
+                      placeholder={`$${cartSubtotal.toFixed(2)}`}
+                      value={cashReceived}
+                      onChange={(e) => setCashReceived(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-black text-base focus:outline-none focus:border-emerald-500"
+                    />
+
+                    <div className="flex items-center gap-2">
+                      {[50, 100, 200, 500].map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setCashReceived(amt.toString())}
+                          className="flex-1 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-bold rounded-lg"
+                        >
+                          ${amt}
+                        </button>
+                      ))}
+                    </div>
+
+                    {parseFloat(cashReceived) >= cartSubtotal && (
+                      <div className="flex items-center justify-between text-xs font-black text-emerald-400 pt-1.5 border-t border-slate-800">
+                        <span>Cambio a Entregar:</span>
+                        <span>${(parseFloat(cashReceived) - cartSubtotal).toFixed(2)} MXN</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             )}
 
             {paymentMethod === 'card' && (
-              <div className="bg-teal-950/40 p-4 rounded-2xl border border-teal-500/30 text-xs text-teal-200 space-y-1 text-center">
+              <div className="bg-teal-950/40 p-3.5 rounded-2xl border border-teal-500/30 text-xs text-teal-200 space-y-1 text-center">
                 <p className="font-bold text-sm">💳 Cobro Manual con Tarjeta</p>
                 <p className="text-slate-300">
-                  Cobrar en tu terminal bancaria / Clip física de la tiendita y haz clic en confirmar cuando la terminal marque aprobado.
+                  Cobrar en tu terminal bancaria física / Clip y confirma cuando apruebe la transacción.
                 </p>
               </div>
             )}
 
             {paymentMethod === 'transfer' && (
-              <div className="bg-amber-950/40 p-4 rounded-2xl border border-amber-500/30 text-xs text-amber-200 space-y-1 text-center">
+              <div className="bg-amber-950/40 p-3.5 rounded-2xl border border-amber-500/30 text-xs text-amber-200 space-y-1 text-center">
                 <p className="font-bold text-sm">📲 Transferencia SPEI / QR</p>
                 <p className="text-slate-300">
                   Verificar comprobante o app bancaria y haz clic en confirmar pago.
@@ -728,13 +813,76 @@ export default function POS() {
               </div>
             )}
 
+            {/* Ajuste de Venta Exclusivo Admin & Capitán con Registro en LOG */}
+            {canAdjustSale && (
+              <div className="bg-slate-950 p-3.5 rounded-2xl border border-amber-500/30 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-amber-400 flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={enablePriceAdjustment}
+                      onChange={(e) => setEnablePriceAdjustment(e.target.checked)}
+                      className="rounded text-amber-500 focus:ring-0 w-4 h-4 cursor-pointer"
+                    />
+                    <span>Ajustar Monto de Venta (Admin/Capitán)</span>
+                  </label>
+                  <span className="text-[10px] uppercase font-bold text-amber-300 bg-amber-950 px-2 py-0.5 rounded-full border border-amber-800">
+                    Audit Log
+                  </span>
+                </div>
+
+                {enablePriceAdjustment && (
+                  <div className="space-y-2 pt-2 border-t border-slate-800 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 font-semibold">Nuevo Monto a Cobrar:</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={adjustedTotal}
+                        onChange={(e) => setAdjustedTotal(e.target.value)}
+                        placeholder="Monto ajustado"
+                        className="w-32 px-3 py-1.5 bg-slate-900 border border-amber-500/60 rounded-xl text-right text-amber-300 font-black text-sm focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">
+                        Motivo del Ajuste * <span className="text-rose-400">(Obligatorio para auditoría)</span>:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej. Descuento cortesía 15%, Ajuste por queja, etc."
+                        value={adjustmentReason}
+                        onChange={(e) => setAdjustmentReason(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-white font-medium text-xs focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Apartado de Notas del Pedido / Dirección para Ticket */}
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-slate-300">
+                📝 Notas / Dirección del Cliente (Para el Ticket):
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Ej. Dirección de entrega, sin cebolla, recoger a las 3pm..."
+                value={posTicketNotes}
+                onChange={(e) => setPosTicketNotes(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-teal-500"
+              />
+            </div>
+
             {/* Confirmar Cobro */}
             <button
               onClick={handleConfirmPayment}
               disabled={isProcessingPayment}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-base flex items-center justify-center gap-2 shadow-2xl active:scale-98 transition-all disabled:opacity-50"
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-2xl active:scale-98 transition-all disabled:opacity-50"
             >
-              <CheckCircle2 size={22} />
+              <CheckCircle2 size={20} />
               <span>{isProcessingPayment ? 'Procesando Pago...' : 'Confirmar Cobro e Imprimir Ticket'}</span>
             </button>
           </div>

@@ -1,5 +1,5 @@
 // Tipos principales del sistema
-export type UserRole = 'admin' | 'capitan' | 'mesero' | 'cocina' | 'bar' | 'supervisor';
+export type UserRole = 'admin' | 'capitan' | 'mesero' | 'cocina' | 'cocinero' | 'bar' | 'supervisor';
 
 export interface User {
   id: string;

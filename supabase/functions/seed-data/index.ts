@@ -144,11 +144,11 @@ serve(async (req) => {
           }
         }), { status: 200, headers: corsHeaders });
 
-      } catch (error) {
-        console.error('❌ Error in seed-event-menu:', error.message);
+      } catch (error: any) {
+        console.error('❌ Error in seed-event-menu:', error?.message || error);
         return new Response(JSON.stringify({ 
           error: 'Failed to create event menu',
-          details: error.message 
+          details: error?.message || String(error)
         }), { status: 500, headers: corsHeaders });
       }
     }
@@ -316,11 +316,11 @@ serve(async (req) => {
           }
         }), { status: 200, headers: corsHeaders });
 
-      } catch (error) {
-        console.error('❌ Error:', error.message);
+      } catch (error: any) {
+        console.error('❌ Error:', error?.message || error);
         return new Response(JSON.stringify({ 
           error: 'Failed to create demo data',
-          details: error.message 
+          details: error?.message || String(error)
         }), { status: 500, headers: corsHeaders });
       }
     }
