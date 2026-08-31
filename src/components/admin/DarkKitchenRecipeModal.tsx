@@ -3,20 +3,21 @@ import { X, ChefHat, Package, FileText, CheckCircle2, DollarSign } from 'lucide-
 import { DemoProduct } from '@/services/demoSeedService'
 
 interface DarkKitchenRecipeModalProps {
-  product: DemoProduct | null
+  product: DemoProduct | null | any
   onClose: () => void
+  isOpen?: boolean
 }
 
-export default function DarkKitchenRecipeModal({ product, onClose }: DarkKitchenRecipeModalProps) {
-  if (!product) return null
+export default function DarkKitchenRecipeModal({ product, onClose, isOpen = true }: DarkKitchenRecipeModalProps) {
+  if (!product || !isOpen) return null
 
   const recipeIngredients = product.recipeIngredients || []
 
   // Calcular costo aproximado de receta
-  const estimatedCost = recipeIngredients.reduce((total, item) => {
+  const estimatedCost = recipeIngredients.reduce((total: number, item: any) => {
     // Estimación rápida para demo escandallo
-    if (item.ingredientId.includes('ing-26') || item.ingredientId.includes('ing-27')) return total + 3.8
-    if (item.ingredientId.includes('ing-36') || item.ingredientId.includes('ing-37')) return total + 2.5
+    if (item.ingredientId?.includes('ing-26') || item.ingredientId?.includes('ing-27')) return total + 3.8
+    if (item.ingredientId?.includes('ing-36') || item.ingredientId?.includes('ing-37')) return total + 2.5
     if (item.quantityRequired < 1) return total + item.quantityRequired * 80
     return total + item.quantityRequired * 15
   }, 0)
@@ -82,7 +83,7 @@ export default function DarkKitchenRecipeModal({ product, onClose }: DarkKitchen
           </h3>
 
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-            {recipeIngredients.map((item, idx) => (
+            {recipeIngredients.map((item: any, idx: number) => (
               <div
                 key={idx}
                 className="p-3 rounded-xl bg-slate-800/60 border border-slate-800 flex items-center justify-between text-xs"

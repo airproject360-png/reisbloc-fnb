@@ -44,13 +44,13 @@ function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
           Puedes intentar continuar o recargar la aplicación si el problema persiste.
         </p>
         
-        {error && (
+        {Boolean(error) && (
           <details className="mb-4">
             <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 mb-2">
               Ver detalles técnicos
             </summary>
             <pre className="text-xs bg-gray-50 border border-gray-200 rounded p-3 overflow-auto max-h-32 text-gray-600">
-              {error.message}
+              {(error as any)?.message || String(error)}
             </pre>
           </details>
         )}
@@ -58,23 +58,24 @@ function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
         <div className="flex gap-2">
           {!isRecurring && (
             <button 
-              onClick={resetErrorBoundary} 
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors"
+              onClick={resetErrorBoundary}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
             >
-              ↻ Intentar de Nuevo
+              Reintentar
             </button>
           )}
+          
           <button 
-            onClick={handleReload} 
-            className={`${isRecurring ? 'flex-1' : 'flex-1'} px-4 py-3 bg-gray-600 text-white rounded-lg text-sm font-bold hover:bg-gray-700 transition-colors`}
+            onClick={handleReload}
+            className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition-colors"
           >
-            {isRecurring ? '⟳ Recargar Aplicación' : 'Recargar'}
+            Recargar Página
           </button>
         </div>
-        
+
         {isRecurring && (
-          <p className="text-xs text-amber-600 mt-3 text-center">
-            ⚠️ Error persistente detectado. Recargar puede ayudar.
+          <p className="text-xs text-red-600 mt-3 text-center">
+            ⚠️ El error persiste. Te recomendamos recargar la página completamente.
           </p>
         )}
       </div>
@@ -82,12 +83,16 @@ function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
   )
 }
 
-// Función para manejar errores capturados
-function onError(error: Error, info: { componentStack: string }) {
+// Función para registrar errores
+function onError(error: unknown, info: any) {
   errorCount++
+  
+  if (errorCount > 3) {
+    logger.warn('error-boundary', `Error recurrente detectado (${errorCount} veces), sugiriendo recarga`)
+  }
 
   // Detectar error de carga de módulos (común tras un nuevo deploy en Vercel)
-  const errorStr = error?.message || String(error);
+  const errorStr = (error as any)?.message || String(error);
   if (
     errorStr.includes('Failed to fetch dynamically imported module') || 
     errorStr.includes('Load chunk') ||
@@ -100,8 +105,8 @@ function onError(error: Error, info: { componentStack: string }) {
   }
 
   logger.error('error-boundary', 'Error capturado por ErrorBoundary', { 
-    error, 
-    componentStack: info.componentStack,
+    error: (error as any)?.message || String(error), 
+    componentStack: info?.componentStack,
     errorCount 
   })
 }

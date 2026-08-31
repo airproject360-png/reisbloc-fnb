@@ -52,8 +52,9 @@ export default function AuditLogsPanel() {
     if (filter.action !== 'all' && log.action !== filter.action) return false
     if (filter.entityType !== 'all' && log.entityType !== filter.entityType) return false
     if (filter.search && !JSON.stringify(log).toLowerCase().includes(filter.search.toLowerCase())) return false
-    if (filter.dateFrom && new Date(log.timestamp) < new Date(filter.dateFrom)) return false
-    if (filter.dateTo && new Date(log.timestamp) > new Date(filter.dateTo)) return false
+    const logDate = new Date(log.timestamp || (log as any).created_at || Date.now())
+    if (filter.dateFrom && logDate < new Date(filter.dateFrom)) return false
+    if (filter.dateTo && logDate > new Date(filter.dateTo)) return false
     return true
   })
 
@@ -222,10 +223,10 @@ export default function AuditLogsPanel() {
 
                   <div className="text-right text-xs">
                     <span className="font-bold text-slate-300">
-                      {format(new Date(log.timestamp), 'dd MMM yyyy', { locale: es })}
+                      {format(new Date(log.timestamp || (log as any).created_at || Date.now()), 'dd MMM yyyy', { locale: es })}
                     </span>
                     <span className="text-slate-500 ml-2 font-mono text-[11px]">
-                      {format(new Date(log.timestamp), 'HH:mm:ss')}
+                      {format(new Date(log.timestamp || (log as any).created_at || Date.now()), 'HH:mm:ss')}
                     </span>
                   </div>
                 </div>

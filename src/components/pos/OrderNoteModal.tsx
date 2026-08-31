@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react'
 import { X, Save } from 'lucide-react'
 
 interface OrderNoteModalProps {
-  isOpen: boolean
+  isOpen?: boolean
   onClose: () => void
   onSave: (note: string) => void
   initialNote?: string
   itemName?: string
+  item?: any
 }
 
 // Etiquetas comunes de cocina/bar
@@ -17,12 +18,14 @@ const QUICK_TAGS = [
   'Alergia', 'Para llevar', 'Extra limón'
 ]
 
-export default function OrderNoteModal({ isOpen, onClose, onSave, initialNote = '', itemName }: OrderNoteModalProps) {
-  const [note, setNote] = useState(initialNote)
+export default function OrderNoteModal({ isOpen = true, onClose, onSave, initialNote = '', itemName, item }: OrderNoteModalProps) {
+  const currentInitialNote = initialNote || item?.notes || ''
+  const currentItemName = itemName || item?.productName || ''
+  const [note, setNote] = useState(currentInitialNote)
 
   useEffect(() => {
-    setNote(initialNote)
-  }, [initialNote, isOpen])
+    setNote(currentInitialNote)
+  }, [currentInitialNote, isOpen])
 
   if (!isOpen) return null
 
@@ -31,7 +34,7 @@ export default function OrderNoteModal({ isOpen, onClose, onSave, initialNote = 
     if (note.includes(tag)) {
       setNote(note.replace(tag, '').replace(', ,', ',').trim().replace(/^,|,$/g, ''))
     } else {
-      setNote(prev => prev ? `${prev}, ${tag}` : tag)
+      setNote((prev: string) => prev ? `${prev}, ${tag}` : tag)
     }
   }
 

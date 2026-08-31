@@ -198,7 +198,7 @@ export default function EventInvitationSettings() {
                     {details?.reason && <p className="text-[11px] text-slate-400">Motivo: {details.reason}</p>}
                   </div>
                   <div className="text-xs text-slate-400 md:text-right">
-                    <p className="font-bold text-slate-300">{new Date(log.timestamp).toLocaleString('es-MX')}</p>
+                    <p className="font-bold text-slate-300">{new Date(log.timestamp || (log as any).created_at || Date.now()).toLocaleString('es-MX')}</p>
                     {log.ipAddress && <p className="text-[11px] font-mono text-slate-500">IP: {log.ipAddress}</p>}
                   </div>
                 </div>

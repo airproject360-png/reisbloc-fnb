@@ -37,7 +37,7 @@ export default function AIAssistantModal({
     if (currentCartItems.length > 0) return currentCartItems
     const tableNum = currentTableNumber || 1
     const items = draftOrders[tableNum] || []
-    return items.map(i => ({ productName: i.productName, category: i.category }))
+    return items.map((i: any) => ({ productName: i.productName, category: i.category || 'general' }))
   }, [currentCartItems, draftOrders, currentTableNumber])
 
   // Obtener insumos/productos reales con stock bajo

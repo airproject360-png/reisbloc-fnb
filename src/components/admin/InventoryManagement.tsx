@@ -719,7 +719,7 @@ export default function InventoryManagement() {
             user_id: currentUser?.id,
             action: 'PRODUCT_CREATED',
             table_name: 'products',
-            record_id: created?.id || `prod-${Date.now()}`,
+            record_id: (typeof created === 'string' ? created : (created as any)?.id) || `prod-${Date.now()}`,
             changes: {
               name: productName.trim(),
               category: productCategory,

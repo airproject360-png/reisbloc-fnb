@@ -426,7 +426,7 @@ export default function TableMonitor() {
       setOrders(prev => prev.filter(o => !orderIds.includes(o.id)))
       setFastPaymentData(null)
 
-      alert(`✅ Pago registrado exitosamente (Mesa #${tableNumber} · $${total.toFixed(2)} MXN)`)
+      alert(`✅ Pago registrado exitosamente (Mesa #${tableNumber} · $${finalTotal.toFixed(2)} MXN)`)
     } catch (err: any) {
       alert(`❌ Error procesando el pago: ${err?.message || err}`)
     } finally {
@@ -438,7 +438,7 @@ export default function TableMonitor() {
     return <Navigate to="/login" replace />
   }
 
-  const availableTables = tables?.map(t => t.number) || [1, 2, 3, 4, 5, 6, 99, 100]
+  const availableTables: number[] = (tables || [1, 2, 3, 4, 5, 6, 99, 100]).map((t: any) => typeof t === 'number' ? t : t.number || Number(t))
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6 pb-24">

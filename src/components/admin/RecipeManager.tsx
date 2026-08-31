@@ -120,11 +120,11 @@ export function RecipeManager() {
       : 'N/A';
   };
 
-  const getStockStatus = (ingredientId: string) => {
+  const getStockStatus = (ingredientId: string): 'danger' | 'warning' | 'success' | 'info' => {
     const ingredient = ingredients.find((i) => i.id === ingredientId);
-    if (!ingredient) return 'unknown';
-    if (ingredient.stock_status === 'CRITICAL') return 'danger';
-    if (ingredient.stock_status === 'LOW') return 'warning';
+    if (!ingredient) return 'info';
+    if ((ingredient as any).stock_status === 'CRITICAL' || (ingredient.current_stock ?? 0) <= 0) return 'danger';
+    if ((ingredient as any).stock_status === 'LOW' || (ingredient.current_stock ?? 0) <= ((ingredient as any).min_stock ?? (ingredient as any).minimumStock ?? 5)) return 'warning';
     return 'success';
   };
 

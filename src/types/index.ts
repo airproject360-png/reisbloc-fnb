@@ -4,6 +4,7 @@ export type UserRole = 'admin' | 'capitan' | 'mesero' | 'cocina' | 'cocinero' | 
 export interface User {
   id: string;
   username: string;
+  name?: string;
   pin?: string;
   role: UserRole;
 
@@ -47,7 +48,7 @@ export interface Product {
   currentStock?: number;
   minimumStock?: number;
   active: boolean;
-  createdAt: Date;
+  createdAt?: Date;
   deletedAt?: Date;
 }
 
@@ -55,6 +56,7 @@ export interface OrderItem {
   id: string;
   productId: string;
   productName: string;
+  category?: string;
   quantity: number;
   unitPrice: number;
   addedAt: Date;

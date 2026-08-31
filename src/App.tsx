@@ -141,12 +141,7 @@ function App() {
   }
 
   return (
-    <Router
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      }}
-    >
+    <Router>
       <ToastProvider>
         {/* 🎨 FONDO BASE GLOBAL */}
         <div className="fixed inset-0 bg-slate-50 z-[-2]" />

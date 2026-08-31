@@ -378,7 +378,7 @@ export default function Closing() {
               <span>Auditoría IA</span>
             </button>
             <button
-              onClick={handlePrint}
+              onClick={handlePrintClosing}
               className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors"
             >
               <Printer size={18} />

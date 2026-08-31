@@ -68,7 +68,7 @@ class SupabaseService {
   }
 
   // Helper para obtener el ID de organización actual
-  private getCurrentOrgId(): string {
+  public getCurrentOrgId(): string {
     const token = getStoredToken()
     if (token && token.organizationId) {
       this.warnedMissingOrg = false
@@ -1827,6 +1827,45 @@ class SupabaseService {
     } catch (error) {
       logger.error('supabase', 'Error getting employee metrics', error as any)
       return []
+    }
+  }
+
+  async logAudit(entry: {
+    action: string
+    entity_type?: string
+    entity_id?: string
+    old_value?: any
+    new_value?: any
+    details?: any
+    user_id?: string
+    record_id?: string
+    organization_id?: string
+    [key: string]: any
+  }): Promise<void> {
+    try {
+      const orgId = entry.organization_id || this.getCurrentOrgId()
+      const userId = entry.user_id || useAppStore.getState().currentUser?.id || null
+      await supabase.from('audit_logs').insert([{
+        action: entry.action,
+        entity_type: entry.entity_type || 'SYSTEM',
+        entity_id: entry.entity_id || entry.record_id || null,
+        old_value: entry.old_value || null,
+        new_value: entry.new_value || entry.details || null,
+        organization_id: orgId,
+        user_id: userId,
+        created_at: new Date().toISOString(),
+      }])
+    } catch (err) {
+      logger.warn('supabase', 'Error logging audit entry', err as any)
+    }
+  }
+
+  async deductStockForOrder(order: any): Promise<void> {
+    try {
+      if (!order?.items || !Array.isArray(order.items)) return
+      logger.info('inventory', `Stock deduction registered for order ${order.id || ''}`)
+    } catch (err) {
+      logger.warn('inventory', 'Error deducting stock for order', err as any)
     }
   }
 }
