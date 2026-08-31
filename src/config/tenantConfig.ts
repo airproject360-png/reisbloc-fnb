@@ -26,8 +26,7 @@ export function isLocalitoTenant(): boolean {
   }
   return (
     (APP_CONFIG.CLIENT_NAME || '').toUpperCase().includes('LOCALITO') ||
-    (APP_CONFIG.CLIENT_SUBDOMAIN || '').toLowerCase().includes('localito') ||
-    APP_CONFIG.ORGANIZATION_ID === '1a70643e-23a3-4224-939e-d7daf381c083'
+    (APP_CONFIG.CLIENT_SUBDOMAIN || '').toLowerCase().includes('localito')
   )
 }
 

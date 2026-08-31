@@ -25,7 +25,7 @@ const normalizeEventRole = (role: unknown): 'admin' | 'supervisor' => {
   return role === 'admin' ? 'admin' : 'supervisor'
 }
 
-const FALLBACK_EVENT_ORG_ID = (import.meta.env.VITE_EVENT_ORGANIZATION_ID as string | undefined) || undefined
+const FALLBACK_EVENT_ORG_ID = (import.meta.env.VITE_EVENT_ORGANIZATION_ID as string | undefined)
 
 export const getStoredOrganizationId = (): string | undefined => {
   try {

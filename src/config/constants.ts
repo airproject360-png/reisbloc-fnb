@@ -12,7 +12,7 @@ export const APP_CONFIG = {
   CLIENT_TAGLINE: import.meta.env.VITE_CLIENT_TAGLINE || 'GUISOS & BARRA FRÍA',
   CLIENT_SUBDOMAIN: import.meta.env.VITE_CLIENT_SUBDOMAIN || 'localito.reisbloc.com',
   LOGO_URL: import.meta.env.VITE_LOGO_URL || '/logo_localito.jpg',
-  ORGANIZATION_ID: import.meta.env.VITE_EVENT_ORGANIZATION_ID || '1a70643e-23a3-4224-939e-d7daf381c083',
+  ORGANIZATION_ID: import.meta.env.VITE_EVENT_ORGANIZATION_ID,
   ADMIN_EMAILS: (import.meta.env.VITE_ADMIN_EMAILS || 'airproject360@gmail.com,hunab.arredondo@gmail.com,adminlocalito@gmail.com')
     .split(',')
     .map((e: string) => e.trim().toLowerCase())
