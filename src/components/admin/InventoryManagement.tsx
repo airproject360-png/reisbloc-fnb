@@ -94,7 +94,7 @@ export default function InventoryManagement() {
     { ingredientId: 'ing-26', quantityRequired: 1 }, // Tortilla maíz por defecto
   ])
 
-  // Estado para gestión de categorías
+  // Estado para gestión de categorías de menú / platillos
   const [categoriesList, setCategoriesList] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem('localito_categories')
@@ -106,12 +106,47 @@ export default function InventoryManagement() {
   const [newCatInput, setNewCatInput] = useState('')
   const [editingCatName, setEditingCatName] = useState<string | null>(null)
   const [editCatInput, setEditCatInput] = useState('')
+  const [isAddingDishCat, setIsAddingDishCat] = useState(false)
+  const [inlineDishCatInput, setInlineDishCatInput] = useState('')
+
+  // Estado para categorías de insumos / materias primas
+  const [ingredientCategoriesList, setIngredientCategoriesList] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('localito_ingredient_categories')
+      if (stored) return JSON.parse(stored)
+    } catch {}
+    return [
+      'Proteínas & Carnes',
+      'Bases, Masas & Tortillas',
+      'Lácteos & Quesos',
+      'Verduras & Frescos',
+      'Salsas & Cremas',
+      'Panadería',
+      'Abarrotes & Especias',
+      'Bebidas Naturales',
+      'Café & Té',
+      'Empaques & Desechables'
+    ]
+  })
+  const [isAddingIngCat, setIsAddingIngCat] = useState(false)
+  const [inlineIngCatInput, setInlineIngCatInput] = useState('')
+
+  // Estado para unidades de medida de insumos
+  const [unitsList, setUnitsList] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('localito_units_list')
+      if (stored) return JSON.parse(stored)
+    } catch {}
+    return ['kg', 'g', 'liter', 'ml', 'units', 'pzas', 'paq', 'caja', 'lata', 'bolsa', 'manojo', 'porción', 'cubeta', 'frasco']
+  })
+  const [isAddingUnit, setIsAddingUnit] = useState(false)
+  const [inlineUnitInput, setInlineUnitInput] = useState('')
 
   // Estado para crear / editar insumo
   const [showNewIngredientModal, setShowNewIngredientModal] = useState(false)
   const [newIngName, setNewIngName] = useState('')
-  const [newIngCategory, setNewIngCategory] = useState('Proteínas')
-  const [newIngUnit, setNewIngUnit] = useState<'kg' | 'g' | 'l' | 'ml' | 'units'>('kg')
+  const [newIngCategory, setNewIngCategory] = useState('Proteínas & Carnes')
+  const [newIngUnit, setNewIngUnit] = useState<string>('kg')
   const [newIngCost, setNewIngCost] = useState('')
   const [newIngStock, setNewIngStock] = useState('10')
   const [newIngReorder, setNewIngReorder] = useState('2')
@@ -134,6 +169,57 @@ export default function InventoryManagement() {
     } catch (e) {
       console.error('Error guardando categorías:', e)
     }
+  }
+
+  const saveIngredientCategories = (newCats: string[]) => {
+    setIngredientCategoriesList(newCats)
+    try {
+      localStorage.setItem('localito_ingredient_categories', JSON.stringify(newCats))
+    } catch (e) {
+      console.error('Error guardando categorías de insumos:', e)
+    }
+  }
+
+  const saveUnitsList = (newUnits: string[]) => {
+    setUnitsList(newUnits)
+    try {
+      localStorage.setItem('localito_units_list', JSON.stringify(newUnits))
+    } catch (e) {
+      console.error('Error guardando unidades de medida:', e)
+    }
+  }
+
+  const handleCreateInlineDishCat = () => {
+    const trimmed = inlineDishCatInput.trim()
+    if (!trimmed) return
+    if (!categoriesList.includes(trimmed)) {
+      saveCategories([...categoriesList, trimmed])
+    }
+    setProductCategory(trimmed)
+    setInlineDishCatInput('')
+    setIsAddingDishCat(false)
+  }
+
+  const handleCreateInlineIngCat = () => {
+    const trimmed = inlineIngCatInput.trim()
+    if (!trimmed) return
+    if (!ingredientCategoriesList.includes(trimmed)) {
+      saveIngredientCategories([...ingredientCategoriesList, trimmed])
+    }
+    setNewIngCategory(trimmed)
+    setInlineIngCatInput('')
+    setIsAddingIngCat(false)
+  }
+
+  const handleCreateInlineUnit = () => {
+    const trimmed = inlineUnitInput.trim()
+    if (!trimmed) return
+    if (!unitsList.includes(trimmed)) {
+      saveUnitsList([...unitsList, trimmed])
+    }
+    setNewIngUnit(trimmed)
+    setInlineUnitInput('')
+    setIsAddingUnit(false)
   }
 
   const handleAddCategory = () => {
@@ -178,11 +264,13 @@ export default function InventoryManagement() {
   const handleOpenNewIngredient = () => {
     setEditingIngredient(null)
     setNewIngName('')
-    setNewIngCategory('Proteínas')
+    setNewIngCategory(ingredientCategoriesList[0] || 'Proteínas & Carnes')
     setNewIngUnit('kg')
     setNewIngCost('')
     setNewIngStock('10')
     setNewIngReorder('2')
+    setIsAddingIngCat(false)
+    setIsAddingUnit(false)
     setShowNewIngredientModal(true)
   }
 
@@ -1047,16 +1135,52 @@ export default function InventoryManagement() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-300 mb-1">Categoría del Menú *</label>
-                  <select
-                    value={productCategory}
-                    onChange={(e) => setProductCategory(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-teal-500 text-sm font-semibold"
-                  >
-                    {categoriesList.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-bold text-slate-300">Categoría del Menú *</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingDishCat(prev => !prev)}
+                      className="text-[11px] text-teal-400 hover:text-teal-300 font-bold"
+                    >
+                      {isAddingDishCat ? 'Cancelar' : '+ Nueva Categoría'}
+                    </button>
+                  </div>
+                  {isAddingDishCat ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Nombre de nueva categoría..."
+                        value={inlineDishCatInput}
+                        onChange={(e) => setInlineDishCatInput(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-slate-950 border border-teal-500 rounded-xl text-white text-xs font-bold focus:outline-none"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCreateInlineDishCat}
+                        className="px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold shadow-md"
+                      >
+                        + Guardar
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={productCategory}
+                      onChange={(e) => {
+                        if (e.target.value === '__new_dish_cat__') {
+                          setIsAddingDishCat(true)
+                        } else {
+                          setProductCategory(e.target.value)
+                        }
+                      }}
+                      className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-teal-500 text-sm font-semibold"
+                    >
+                      {categoriesList.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                      <option value="__new_dish_cat__" className="text-teal-400 font-bold">+ Crear nueva categoría...</option>
+                    </select>
+                  )}
                 </div>
               </div>
 
@@ -1157,7 +1281,11 @@ export default function InventoryManagement() {
                         value={item.ingredientId}
                         onChange={(e) => {
                           const val = e.target.value
-                          setRecipeItems(prev => prev.map((ri, i) => i === idx ? { ...ri, ingredientId: val } : ri))
+                          if (val === '__new_ing__') {
+                            handleOpenNewIngredient()
+                          } else {
+                            setRecipeItems(prev => prev.map((ri, i) => i === idx ? { ...ri, ingredientId: val } : ri))
+                          }
                         }}
                         className="flex-1 bg-slate-950 text-white p-2 rounded-lg border border-slate-800 font-bold text-xs"
                       >
@@ -1166,6 +1294,7 @@ export default function InventoryManagement() {
                             {ing.name} ({ing.unitType})
                           </option>
                         ))}
+                        <option value="__new_ing__" className="text-teal-400 font-bold">+ Crear nuevo insumo / materia prima...</option>
                       </select>
 
                       <input
@@ -1354,38 +1483,101 @@ export default function InventoryManagement() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-300 mb-1">Categoría</label>
-                  <select
-                    value={newIngCategory}
-                    onChange={(e) => setNewIngCategory(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold"
-                  >
-                    <option value="Proteínas">Proteínas & Carnes</option>
-                    <option value="Bases & Masas">Bases, Masas & Tortillas</option>
-                    <option value="Lácteos & Quesos">Lácteos & Quesos</option>
-                    <option value="Verduras & Saludables">Verduras & Frescos</option>
-                    <option value="Salsas & Cremas">Salsas & Cremas</option>
-                    <option value="Panadería">Panadería</option>
-                    <option value="Abarrotes & Masas">Abarrotes</option>
-                    <option value="Bebidas Naturales">Bebidas Naturales</option>
-                    <option value="Café & Té">Café & Té</option>
-                    <option value="Empaques To-Go">Empaques & Desechables</option>
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-bold text-slate-300">Categoría *</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingIngCat(prev => !prev)}
+                      className="text-[10px] text-teal-400 hover:text-teal-300 font-bold"
+                    >
+                      {isAddingIngCat ? 'Cancelar' : '+ Nueva'}
+                    </button>
+                  </div>
+                  {isAddingIngCat ? (
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        placeholder="Nueva categoría..."
+                        value={inlineIngCatInput}
+                        onChange={(e) => setInlineIngCatInput(e.target.value)}
+                        className="flex-1 px-2.5 py-1.5 bg-slate-950 border border-teal-500 rounded-xl text-white text-xs font-bold focus:outline-none"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCreateInlineIngCat}
+                        className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold shadow-md"
+                      >
+                        OK
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={newIngCategory}
+                      onChange={(e) => {
+                        if (e.target.value === '__new_ing_cat__') {
+                          setIsAddingIngCat(true)
+                        } else {
+                          setNewIngCategory(e.target.value)
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold focus:outline-none focus:border-teal-500"
+                    >
+                      {ingredientCategoriesList.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                      <option value="__new_ing_cat__" className="text-teal-400 font-bold">+ Crear nueva categoría...</option>
+                    </select>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-300 mb-1">Unidad de Medida</label>
-                  <select
-                    value={newIngUnit}
-                    onChange={(e) => setNewIngUnit(e.target.value as any)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold"
-                  >
-                    <option value="kg">Kilogramos (kg)</option>
-                    <option value="g">Gramos (g)</option>
-                    <option value="liter">Litros (L)</option>
-                    <option value="ml">Mililitros (ml)</option>
-                    <option value="units">Piezas / Unidades</option>
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-bold text-slate-300">Unidad de Medida *</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingUnit(prev => !prev)}
+                      className="text-[10px] text-teal-400 hover:text-teal-300 font-bold"
+                    >
+                      {isAddingUnit ? 'Cancelar' : '+ Nueva'}
+                    </button>
+                  </div>
+                  {isAddingUnit ? (
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        placeholder="Ej. cubeta, lata, frasco..."
+                        value={inlineUnitInput}
+                        onChange={(e) => setInlineUnitInput(e.target.value)}
+                        className="flex-1 px-2.5 py-1.5 bg-slate-950 border border-teal-500 rounded-xl text-white text-xs font-bold focus:outline-none"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCreateInlineUnit}
+                        className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold shadow-md"
+                      >
+                        OK
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={newIngUnit}
+                      onChange={(e) => {
+                        if (e.target.value === '__new_unit__') {
+                          setIsAddingUnit(true)
+                        } else {
+                          setNewIngUnit(e.target.value)
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold focus:outline-none focus:border-teal-500"
+                    >
+                      {unitsList.map(u => (
+                        <option key={u} value={u}>{u}</option>
+                      ))}
+                      <option value="__new_unit__" className="text-teal-400 font-bold">+ Crear nueva unidad...</option>
+                    </select>
+                  )}
                 </div>
               </div>
 
@@ -1532,14 +1724,26 @@ export default function InventoryManagement() {
                   />
                   <select
                     value={customItemUnit}
-                    onChange={(e) => setCustomItemUnit(e.target.value)}
-                    className="px-2 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs font-bold"
+                    onChange={(e) => {
+                      if (e.target.value === '__new_unit__') {
+                        const custom = prompt('Ingresa la nueva unidad de medida (ej. cubeta, caja, frasco):')
+                        if (custom && custom.trim()) {
+                          const trimmed = custom.trim()
+                          if (!unitsList.includes(trimmed)) {
+                            saveUnitsList([...unitsList, trimmed])
+                          }
+                          setCustomItemUnit(trimmed)
+                        }
+                      } else {
+                        setCustomItemUnit(e.target.value)
+                      }
+                    }}
+                    className="px-2 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs font-bold focus:outline-none"
                   >
-                    <option value="kg">kg</option>
-                    <option value="pzas">pzas</option>
-                    <option value="L">L</option>
-                    <option value="paq">paq</option>
-                    <option value="cajas">cajas</option>
+                    {unitsList.map(u => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
+                    <option value="__new_unit__" className="text-teal-400 font-bold">+ Nueva unidad...</option>
                   </select>
                   <button
                     type="button"

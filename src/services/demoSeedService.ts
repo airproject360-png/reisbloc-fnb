@@ -11,7 +11,7 @@ export interface DemoIngredient {
   id: string
   name: string
   category: string
-  unitType: 'kg' | 'liter' | 'units'
+  unitType: 'kg' | 'liter' | 'units' | string
   currentStock: number
   reorderLevel: number
   wasteMarginPercent: number

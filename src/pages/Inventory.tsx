@@ -1,42 +1,54 @@
 import { Navigate } from 'react-router-dom'
 import { Package, Sparkles } from 'lucide-react'
 import { useAppStore } from '@/store/appStore'
+import { getTenantSettings } from '@/config/tenantConfig'
 import InventoryManagement from '@/components/admin/InventoryManagement'
 
 export default function Inventory() {
   const { currentUser } = useAppStore()
+  const tenant = getTenantSettings()
 
-  if (!['admin', 'supervisor', 'cocina', 'cocinero'].includes(currentUser?.role || '')) {
+  if (!['admin', 'supervisor', 'cocina', 'cocinero', 'capitan'].includes(currentUser?.role || '')) {
     return <Navigate to="/pos" replace />
   }
 
   return (
-    <div className="min-h-screen relative bg-[color:var(--bg-canvas)]">
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(15,118,110,0.12),transparent_45%),radial-gradient(circle_at_85%_12%,rgba(24,33,46,0.12),transparent_40%),linear-gradient(180deg,rgba(247,246,242,0.96),rgba(242,239,232,0.94))]" />
-        <div className="absolute inset-0 opacity-25 [background-image:repeating-linear-gradient(45deg,rgba(15,23,42,0.035)_0,rgba(15,23,42,0.035)_2px,transparent_2px,transparent_18px)]" />
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-28 select-none relative overflow-x-hidden">
+      {/* Resplandor Ambiental de Fondo */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-amber-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 w-[600px] h-[600px] bg-slate-900/50 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8 space-y-6">
-        <header className="page-hero overflow-hidden">
-          <div className="px-6 py-6 md:px-8 md:py-8 bg-[linear-gradient(130deg,rgba(24,33,46,0.96),rgba(15,118,110,0.88),rgba(139,111,71,0.82))] text-white">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="space-y-2">
-                <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold tracking-wide uppercase border border-white/10">
-                  <Sparkles size={14} /> Reisbloc Labs
-                </p>
-                <h1 className="text-3xl md:text-4xl font-black tracking-tight">Inventario Inteligente</h1>
-                <p className="text-sm md:text-base text-cyan-50/90 max-w-2xl">
-                  Controla stock, disponibilidad e imagen de producto en un solo flujo para celular y tablet.
-                </p>
-              </div>
-              <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center">
-                <Package size={30} />
+      {/* Header Banner F&B */}
+      <header className="relative bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 border-b border-teal-500/20 px-4 py-6 overflow-hidden shadow-2xl z-10">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col items-center md:items-start text-center md:text-left gap-1">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold mb-1">
+              <Sparkles size={14} className="text-amber-400" />
+              <span>Gestión de Insumos & Recetas · {tenant.clientName}</span>
+            </div>
+            <div className="flex items-center gap-3.5">
+              <img
+                src={tenant.logoUrl}
+                alt={tenant.clientName}
+                className="h-14 md:h-16 w-auto object-contain rounded-2xl border border-amber-500/30 shadow-xl shadow-amber-500/10"
+              />
+              <div>
+                <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">Inventario & Escandallos</h1>
+                <p className="text-xs md:text-sm text-teal-300 font-semibold">{tenant.clientTagline} · Stock, Materias Primas & Menú</p>
               </div>
             </div>
           </div>
-        </header>
 
+          <div className="w-14 h-14 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 shadow-xl">
+            <Package size={28} />
+          </div>
+        </div>
+      </header>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 mt-6">
         <InventoryManagement />
       </div>
     </div>
