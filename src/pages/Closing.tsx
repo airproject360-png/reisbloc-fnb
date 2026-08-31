@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom'
 import { useAppStore } from '@/store/appStore'
 import { usePermissions } from '@/hooks/usePermissions'
 import supabaseService from '@/services/supabaseService'
+import { getTenantSettings } from '@/config/tenantConfig'
 import {
   DollarSign,
   Check,
@@ -32,6 +33,7 @@ import {
 export default function Closing() {
   const { currentUser } = useAppStore()
   const { isAdmin } = usePermissions()
+  const tenant = getTenantSettings()
 
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -217,8 +219,8 @@ export default function Closing() {
   const generatePrintHTML = () => {
     const total = closingData?.totalSales || 0
     const discounts = closingData?.totalDiscounts || 0
-    const tips = closingData?.totalTips || 0
-    const toDeposit = total - discounts + tips
+    const tips = tenant.enableTips ? (closingData?.totalTips || 0) : 0
+    const toDeposit = total - discounts + (tenant.enableTips ? tips : 0)
 
     return `
       <!DOCTYPE html>
@@ -227,73 +229,27 @@ export default function Closing() {
         <meta charset="UTF-8">
         <title>Cierre de Caja - ${new Date().toLocaleDateString('es-MX')}</title>
         <style>
-          body {
-            font-family: 'Courier New', monospace;
-            margin: 0;
-            padding: 20px;
-            background: white;
-          }
-          .receipt {
-            max-width: 400px;
-            margin: 0 auto;
-            border: 1px solid #000;
-            padding: 20px;
-          }
-          .header {
-            text-align: center;
-            border-bottom: 2px dashed #000;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
-          }
+          body { font-family: 'Courier New', monospace; margin: 0; padding: 20px; background: white; }
+          .receipt { max-width: 400px; margin: 0 auto; border: 1px solid #000; padding: 20px; }
+          .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
           .header h1 { margin: 0; font-size: 18px; }
           .header p { margin: 5px 0; font-size: 12px; }
-          .section {
-            margin: 15px 0;
-            border-bottom: 1px dashed #000;
-            padding-bottom: 10px;
-          }
-          .line {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            margin: 5px 0;
-          }
+          .section { margin: 15px 0; border-bottom: 1px dashed #000; padding-bottom: 10px; }
+          .line { display: flex; justify-content: space-between; font-size: 12px; margin: 5px 0; }
           .line strong { font-weight: bold; }
-          .total-line {
-            font-size: 14px;
-            font-weight: bold;
-            margin-top: 10px;
-          }
-          .employee-table {
-            width: 100%;
-            font-size: 11px;
-            border-collapse: collapse;
-          }
-          .employee-table th {
-            border-bottom: 1px solid #000;
-            padding: 5px;
-            text-align: left;
-          }
-          .employee-table td {
-            padding: 5px;
-            border-bottom: 1px dotted #ccc;
-          }
-          .footer {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 10px;
-          }
-          @media print {
-            body { margin: 0; padding: 0; }
-            .receipt { border: none; margin: 0; padding: 0; }
-          }
+          .total-line { font-size: 14px; font-weight: bold; margin-top: 10px; }
+          .employee-table { width: 100%; font-size: 11px; border-collapse: collapse; }
+          .employee-table th { border-bottom: 1px solid #000; padding: 5px; text-align: left; }
+          .employee-table td { padding: 5px; border-bottom: 1px dotted #ccc; }
+          .footer { text-align: center; margin-top: 20px; font-size: 10px; }
+          @media print { body { margin: 0; padding: 0; } .receipt { border: none; margin: 0; padding: 0; } }
         </style>
       </head>
       <body>
         <div class="receipt">
           <div class="header">
-            <h1>🏪 REISBLOC F&B</h1>
-            <p>CIERRE DE CAJA</p>
+            <h1>🏪 ${tenant.clientName}</h1>
+            <p>CIERRE DE CAJA OFICIAL</p>
             <p>${new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
             <p>Cajero: ${currentUser?.username}</p>
           </div>
@@ -307,10 +263,11 @@ export default function Closing() {
               <span>Descuentos:</span>
               <strong>-$${discounts.toFixed(2)}</strong>
             </div>
+            ${tenant.enableTips ? `
             <div class="line">
               <span>Propinas:</span>
               <strong>+$${tips.toFixed(2)}</strong>
-            </div>
+            </div>` : ''}
             <div class="line total-line">
               <span>A DEPOSITAR:</span>
               <span>$${toDeposit.toFixed(2)}</span>
@@ -324,11 +281,11 @@ export default function Closing() {
               <span>$${(closingData?.totalCash || 0).toFixed(2)}</span>
             </div>
             <div class="line">
-              <span>Digital:</span>
+              <span>Digital / Transf:</span>
               <span>$${(closingData?.totalDigital || 0).toFixed(2)}</span>
             </div>
             <div class="line">
-              <span>CLIP:</span>
+              <span>Tarjeta / CLIP:</span>
               <span>$${(closingData?.totalClip || 0).toFixed(2)}</span>
             </div>
           </div>
@@ -347,13 +304,13 @@ export default function Closing() {
 
           ${employeeMetrics && employeeMetrics.length > 0 ? `
           <div class="section">
-            <strong>DESEMPEÑO DE EMPLEADOS</strong>
+            <strong>DESEMPEÑO DE COLABORADORES</strong>
             <table class="employee-table">
               <thead>
                 <tr>
-                  <th>Empleado</th>
+                  <th>Colaborador</th>
                   <th>Ventas</th>
-                  <th>Propinas</th>
+                  ${tenant.enableTips ? '<th>Propinas</th>' : ''}
                 </tr>
               </thead>
               <tbody>
@@ -361,7 +318,7 @@ export default function Closing() {
                   <tr>
                     <td>${emp.userName}</td>
                     <td>$${emp.totalSales.toFixed(2)}</td>
-                    <td>$${emp.totalTips.toFixed(2)}</td>
+                    ${tenant.enableTips ? `<td>$${emp.totalTips.toFixed(2)}</td>` : ''}
                   </tr>
                 `).join('')}
               </tbody>
@@ -404,56 +361,36 @@ export default function Closing() {
   const COLORS = ['#0f766e', '#0f172a', '#b45309']
 
   return (
-    <div className="page-shell bg-[color:var(--bg-canvas)] p-6">
-      {/* Background Doodle */}
-      <div 
-        className="fixed inset-0 z-0 opacity-25 pointer-events-none bg-repeat"
-        style={{
-          backgroundImage: 'url("/doodle_ceviche.png?v=2")',
-          backgroundSize: '450px',
-        }}
-      />
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(24,33,46,0.06),transparent_28%),radial-gradient(circle_at_top_right,rgba(15,118,110,0.08),transparent_26%),linear-gradient(180deg,rgba(247,246,242,1),rgba(242,239,232,1))] z-0 pointer-events-none" />
-
-      <div className="relative z-10 max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen bg-slate-900 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 rounded-3xl p-8 text-white shadow-xl border border-white/10">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-4 bg-white/15 rounded-2xl backdrop-blur-sm border border-white/10">
-                <DollarSign size={36} />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold">Cierre de Caja</h1>
-                <p className="text-cyan-50/85 mt-2">
-                  {new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowAIModal(true)}
-                className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2 border border-purple-400/30"
-              >
-                <Sparkles size={18} className="animate-pulse text-teal-300" />
-                <span>Auditoría IA de Turno</span>
-              </button>
-
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2.5 rounded-xl">
-                <span className="font-semibold">{currentUser?.username}</span>
-              </div>
-            </div>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Cierre de Caja</h1>
+            <p className="text-slate-400 mt-1">Cierre diario y balance de operaciones · {tenant.clientName}</p>
           </div>
-        </div>
-
-
-        {/* Alert */}
-        <div className="surface-muted border-l-4 border-amber-600 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle className="text-amber-700 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-slate-700">
-            <p className="font-semibold">Importante</p>
-            <p>Este proceso generará un cierre oficial del día. Revisa todos los números antes de confirmar.</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowAIModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white rounded-lg font-medium transition-all shadow-md active:scale-95"
+            >
+              <Sparkles size={18} />
+              <span>Auditoría IA</span>
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors"
+            >
+              <Printer size={18} />
+              <span>Imprimir Ticket</span>
+            </button>
+            <button
+              onClick={handleSendEmail}
+              className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors"
+            >
+              <Mail size={18} />
+              <span>Enviar por Correo</span>
+            </button>
           </div>
         </div>
 
@@ -465,13 +402,20 @@ export default function Closing() {
               <p className="text-4xl font-bold mt-2">${closingData.totalSales?.toFixed(2)}</p>
             </div>
             <div className="bg-gradient-to-br from-slate-800 to-slate-600 rounded-2xl p-6 text-white shadow-lg">
-              <p className="text-white/80 text-sm font-medium">Transacciones</p>
+              <p className="text-white/80 text-sm font-medium">Comandas Emitidas</p>
               <p className="text-4xl font-bold mt-2">{closingData.transactionCount || 0}</p>
             </div>
-            <div className="bg-gradient-to-br from-teal-700 to-cyan-700 rounded-2xl p-6 text-white shadow-lg">
-              <p className="text-white/80 text-sm font-medium">Propinas</p>
-              <p className="text-4xl font-bold mt-2">${closingData.totalTips?.toFixed(2)}</p>
-            </div>
+            {tenant.enableTips ? (
+              <div className="bg-gradient-to-br from-teal-700 to-cyan-700 rounded-2xl p-6 text-white shadow-lg">
+                <p className="text-white/80 text-sm font-medium">Propinas</p>
+                <p className="text-4xl font-bold mt-2">${closingData.totalTips?.toFixed(2)}</p>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-br from-teal-700 to-cyan-700 rounded-2xl p-6 text-white shadow-lg">
+                <p className="text-white/80 text-sm font-medium">Efectivo en Caja</p>
+                <p className="text-4xl font-bold mt-2">${(closingData.totalCash || 0).toFixed(2)}</p>
+              </div>
+            )}
             <div className="bg-gradient-to-br from-amber-700 to-stone-700 rounded-2xl p-6 text-white shadow-lg">
               <p className="text-white/80 text-sm font-medium">Ticket Promedio</p>
               <p className="text-3xl font-bold mt-2">${closingData.averageTicket?.toFixed(2)}</p>
@@ -483,7 +427,7 @@ export default function Closing() {
         {closingData && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Payment Methods Chart */}
-            <div className="surface-warm p-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <h3 className="text-xl font-bold text-slate-900 mb-4">Métodos de Pago</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
@@ -507,28 +451,11 @@ export default function Closing() {
                   <Tooltip formatter={(value: any) => `$${typeof value === 'number' ? value.toFixed(2) : value}`} />
                 </PieChart>
               </ResponsiveContainer>
-
-              {/* Payment Summary */}
-              <div className="mt-6 space-y-3">
-                <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg border-l-4 border-emerald-600">
-                  <span className="font-semibold text-slate-900">Efectivo</span>
-                  <span className="text-lg font-bold text-emerald-700">${(closingData.totalCash || 0).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-slate-100 rounded-lg border-l-4 border-slate-500">
-                  <span className="font-semibold text-slate-900">Transferencia</span>
-                  <span className="text-lg font-bold text-slate-700">${(closingData.totalDigital || 0).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border-l-4 border-amber-500">
-                  <span className="font-semibold text-slate-900">Tarjeta</span>
-                  <span className="text-lg font-bold text-amber-700">${(closingData.totalClip || 0).toFixed(2)}</span>
-                </div>
-              </div>
             </div>
 
-            {/* Discounts & Taxes */}
-            <div className="surface-warm p-6 space-y-4">
+            {/* Financial Summary */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
               <h3 className="text-xl font-bold text-slate-900">Resumen Financiero</h3>
-
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-3 border-b border-gray-200">
                   <span className="text-gray-700">Subtotal</span>
@@ -538,14 +465,16 @@ export default function Closing() {
                   <span className="text-gray-700">Descuentos</span>
                   <span className="text-lg font-semibold text-red-600">-${(closingData.totalDiscounts || 0).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between items-center py-3 border-b border-slate-200">
-                  <span className="text-slate-700">Propinas</span>
-                  <span className="text-lg font-semibold text-emerald-700">+${(closingData.totalTips || 0).toFixed(2)}</span>
-                </div>
+                {tenant.enableTips && (
+                  <div className="flex justify-between items-center py-3 border-b border-slate-200">
+                    <span className="text-slate-700">Propinas</span>
+                    <span className="text-lg font-semibold text-emerald-700">+${(closingData.totalTips || 0).toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center py-4 bg-gradient-to-r from-slate-50 to-emerald-50 rounded-lg p-4 border border-slate-200">
                   <span className="font-bold text-slate-900">Total a Depositar</span>
                   <span className="text-2xl font-bold text-slate-900">
-                    ${((closingData.totalSales || 0) - (closingData.totalDiscounts || 0) + (closingData.totalTips || 0)).toFixed(2)}
+                    ${((closingData.totalSales || 0) - (closingData.totalDiscounts || 0) + (tenant.enableTips ? (closingData.totalTips || 0) : 0)).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -555,8 +484,8 @@ export default function Closing() {
 
         {/* Employee Metrics */}
         {employeeMetrics && employeeMetrics.length > 0 && (
-          <div className="surface-warm p-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-4">Desempeño de Empleados</h3>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <h3 className="text-xl font-bold text-slate-900 mb-4">Desempeño de Personal</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={employeeMetrics}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -568,7 +497,7 @@ export default function Closing() {
                 />
                 <Legend />
                   <Bar dataKey="totalSales" name="Ventas" fill="#0f172a" />
-                  <Bar dataKey="totalTips" name="Propinas" fill="#0f766e" />
+                  {tenant.enableTips && <Bar dataKey="totalTips" name="Propinas" fill="#0f766e" />}
               </BarChart>
             </ResponsiveContainer>
 
@@ -577,11 +506,11 @@ export default function Closing() {
               <table className="w-full">
                 <thead className="bg-slate-100">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Empleado</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Colaborador</th>
                     <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">Ventas</th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">Tickets</th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">Propinas</th>
-                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">Ganancias</th>
+                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">Comandas</th>
+                    {tenant.enableTips && <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">Propinas</th>}
+                    <th className="px-6 py-3 text-right text-sm font-semibold text-slate-700">Total Vendido</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -590,9 +519,9 @@ export default function Closing() {
                       <td className="px-6 py-4 font-medium text-slate-900">{emp.userName}</td>
                       <td className="px-6 py-4 text-right font-semibold text-emerald-700">${emp.totalSales.toFixed(2)}</td>
                       <td className="px-6 py-4 text-right text-slate-700">{emp.salesCount}</td>
-                      <td className="px-6 py-4 text-right text-amber-700 font-semibold">${emp.totalTips.toFixed(2)}</td>
+                      {tenant.enableTips && <td className="px-6 py-4 text-right text-amber-700 font-semibold">${emp.totalTips.toFixed(2)}</td>}
                       <td className="px-6 py-4 text-right text-lg font-bold text-slate-900">
-                        ${(emp.totalSales + emp.totalTips).toFixed(2)}
+                        ${emp.totalSales.toFixed(2)}
                       </td>
                     </tr>
                   ))}
@@ -603,7 +532,7 @@ export default function Closing() {
         )}
 
         {/* Notes Section */}
-        <div className="surface-warm p-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
           <h3 className="text-lg font-bold text-slate-900 mb-4">Notas del Cierre</h3>
           <textarea
             value={notes}

@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { useAppStore } from '@/store/appStore'
 import { usePermissions } from '@/hooks/usePermissions'
 import supabaseService from '@/services/supabaseService'
+import { getTenantSettings } from '@/config/tenantConfig'
 import { generateDemoReportsData, DemoReportsData } from '@/services/reportsDemoData'
 import {
   TrendingUp,
@@ -23,13 +24,11 @@ import {
   Clock,
   CheckCircle2,
   Users,
-  ChevronRight,
-  TrendingDown,
   Percent,
   RefreshCw,
   Info,
-  ShieldCheck,
   Zap,
+  Utensils,
 } from 'lucide-react'
 import {
   AreaChart,
@@ -77,18 +76,18 @@ const CustomDarkTooltip = ({ active, payload, label, prefix = '$', suffix = '' }
 export default function Reports() {
   const { currentUser } = useAppStore()
   const permissions = usePermissions()
+  const tenant = getTenantSettings()
+
   const canViewReports = permissions.canViewReports || currentUser?.role === 'capitan'
   const canViewSalesReport = permissions.canViewSalesReport || currentUser?.role === 'capitan'
   const canViewEmployeeMetrics = permissions.canViewEmployeeMetrics || currentUser?.role === 'capitan'
-  const isReadOnly = permissions.isReadOnly
 
   const [activeTab, setActiveTab] = useState<ReportTab>('sales')
   const [loading, setLoading] = useState(false)
   const [showAIInsights, setShowAIInsights] = useState(false)
   const [forceDemoData, setForceDemoData] = useState<boolean>(false)
-  const [isRealDataEmpty, setIsRealDataEmpty] = useState<boolean>(false)
 
-  // Selector de fechas con formato local
+  // Selector de fechas
   const [dateRange, setDateRange] = useState({
     from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA'),
     to: new Date().toLocaleDateString('en-CA'),
@@ -126,10 +125,11 @@ export default function Reports() {
   const [financialOverview, setFinancialOverview] = useState<any>(null)
   const [weeklyFinancialTrend, setWeeklyFinancialTrend] = useState<any[]>([])
 
-  // Generar datos demo dinámicos correspondientes al rango de fechas
-  const demoGenerated: DemoReportsData = useMemo(() => {
+  // Generar datos demo solo si está habilitado por el tenant
+  const demoGenerated: DemoReportsData | null = useMemo(() => {
+    if (!tenant.enableDemoMode) return null
     return generateDemoReportsData(dateRange.from, dateRange.to)
-  }, [dateRange.from, dateRange.to])
+  }, [dateRange.from, dateRange.to, tenant.enableDemoMode])
 
   useEffect(() => {
     if (dateRange.from && dateRange.to) {
@@ -138,8 +138,7 @@ export default function Reports() {
   }, [dateRange, forceDemoData])
 
   const loadReports = async () => {
-    if (forceDemoData) {
-      // Cargar datos demo directamente
+    if (tenant.enableDemoMode && forceDemoData && demoGenerated) {
       applyDemoData(demoGenerated)
       return
     }
@@ -152,21 +151,68 @@ export default function Reports() {
       const sales = await supabaseService.getSalesByDateRange(startDate, endDate)
 
       if (!sales || sales.length === 0) {
-        setIsRealDataEmpty(true)
-        // Auto-fallback a datos muestra para que la UI se vea completa de inmediato
-        applyDemoData(demoGenerated)
+        if (tenant.enableDemoMode && demoGenerated) {
+          applyDemoData(demoGenerated)
+        } else {
+          // Datos reales vacíos para Localito sin mock fake
+          setSalesData([])
+          setHourlyData([])
+          setTopProducts([])
+          setEmployeeMetrics([])
+          setMetrics({
+            totalSales: 0,
+            totalOrders: 0,
+            averageTicket: 0,
+            totalCash: 0,
+            totalDigital: 0,
+            totalClip: 0,
+          })
+          setPurchaseMetrics({ totalInvestment: 0, totalPurchases: 0, byCategory: [] })
+          setWeeklyFinancialTrend([])
+          setFinancialOverview({
+            revenue: 0,
+            investment: 0,
+            grossProfit: 0,
+            netProfit: 0,
+            margin: 0,
+            netMargin: 0,
+            suggestedReinvestment: 0,
+            suggestedPartnerDistribution: 0,
+            suggestedReserve: 0,
+            recommendation: 'Aún no se registran ventas en el período seleccionado. Emite comandas desde el POS para ver métricas en tiempo real.',
+          })
+        }
         return
       }
 
-      setIsRealDataEmpty(false)
-
       // Agrupar ventas por día
       const byDay: Record<string, any[]> = {}
+      const hourlyMap: Record<string, { orders: number; total: number }> = {
+        '08:00 - 10:00': { orders: 0, total: 0 },
+        '10:00 - 12:00': { orders: 0, total: 0 },
+        '12:00 - 14:00': { orders: 0, total: 0 },
+        '14:00 - 16:00 (Rush)': { orders: 0, total: 0 },
+        '16:00 - 18:00': { orders: 0, total: 0 },
+        '18:00 - 20:00': { orders: 0, total: 0 },
+        '20:00 - 22:00': { orders: 0, total: 0 },
+      }
+
       sales.forEach((sale: any) => {
         const date = sale.created_at ? new Date(sale.created_at) : new Date()
         const dayKey = date.toLocaleDateString('en-CA')
         if (!byDay[dayKey]) byDay[dayKey] = []
         byDay[dayKey].push(sale)
+
+        // Agrupación horaria real
+        const hour = date.getHours()
+        const total = Number(sale.total || 0)
+        if (hour >= 8 && hour < 10) { hourlyMap['08:00 - 10:00'].orders++; hourlyMap['08:00 - 10:00'].total += total }
+        else if (hour >= 10 && hour < 12) { hourlyMap['10:00 - 12:00'].orders++; hourlyMap['10:00 - 12:00'].total += total }
+        else if (hour >= 12 && hour < 14) { hourlyMap['12:00 - 14:00'].orders++; hourlyMap['12:00 - 14:00'].total += total }
+        else if (hour >= 14 && hour < 16) { hourlyMap['14:00 - 16:00 (Rush)'].orders++; hourlyMap['14:00 - 16:00 (Rush)'].total += total }
+        else if (hour >= 16 && hour < 18) { hourlyMap['16:00 - 18:00'].orders++; hourlyMap['16:00 - 18:00'].total += total }
+        else if (hour >= 18 && hour < 20) { hourlyMap['18:00 - 20:00'].orders++; hourlyMap['18:00 - 20:00'].total += total }
+        else if (hour >= 20 && hour <= 23) { hourlyMap['20:00 - 22:00'].orders++; hourlyMap['20:00 - 22:00'].total += total }
       })
 
       const chartData = Object.entries(byDay)
@@ -189,8 +235,7 @@ export default function Reports() {
       const revenue = Number(metricsData?.totalSales || 0)
       const investment = Number(purchaseMetricsData?.totalInvestment || 0)
       const grossProfit = revenue - investment
-      const totalTips = Number(metricsData?.totalTips || 0)
-      const netProfit = grossProfit - totalTips
+      const netProfit = grossProfit // En Localito sin deducción de propinas
       const margin = revenue > 0 ? (grossProfit / revenue) * 100 : 0
       const netMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0
       const distributableProfit = netProfit > 0 ? netProfit : 0
@@ -200,7 +245,7 @@ export default function Reports() {
 
       let recommendation = 'Mantener operación y monitoreo continuo de inventarios.'
       if (revenue === 0) {
-        recommendation = 'Aún no hay ventas en este período. Registra comandas en el POS para ver métricas reales.'
+        recommendation = 'Aún no hay ventas en este período. Registra comandas en el POS para ver métricas en tiempo real.'
       } else if (netMargin < 12) {
         recommendation = 'Margen ajustado. Sugerencia: optimizar costos de compras y negociar con proveedores de carne y queso.'
       } else if (netMargin < 25) {
@@ -210,12 +255,51 @@ export default function Reports() {
       }
 
       setSalesData(chartData)
-      setHourlyData(demoGenerated.hourlyData) // Fallback de distribución de horas
-      setTopProducts(topProductsData.length > 0 ? topProductsData : demoGenerated.topProducts)
-      setEmployeeMetrics(employeeMetricsData.length > 0 ? employeeMetricsData : demoGenerated.employeeMetrics)
+      setHourlyData(Object.entries(hourlyMap).map(([hour, data]) => ({ hour, orders: data.orders, total: data.total })))
+      setTopProducts(topProductsData)
+      setEmployeeMetrics(employeeMetricsData)
       setMetrics(metricsData)
       setPurchaseMetrics(purchaseMetricsData)
-      setWeeklyFinancialTrend(demoGenerated.weeklyFinancialTrend)
+
+      // Tendencia semanal
+      const toWeekStart = (date: Date) => {
+        const copy = new Date(date)
+        const day = copy.getDay()
+        const diff = day === 0 ? -6 : 1 - day
+        copy.setDate(copy.getDate() + diff)
+        copy.setHours(0, 0, 0, 0)
+        return copy
+      }
+
+      const weeklyMap = new Map<string, { weekStart: Date; revenue: number; investment: number }>()
+      sales.forEach((sale: any) => {
+        const sDate = sale.created_at ? new Date(sale.created_at) : new Date()
+        const wStart = toWeekStart(sDate)
+        const key = wStart.toISOString().split('T')[0]
+        const curr = weeklyMap.get(key) || { weekStart: wStart, revenue: 0, investment: 0 }
+        curr.revenue += Number(sale.total || 0)
+        weeklyMap.set(key, curr)
+      })
+
+      purchasesData.forEach((purch: any) => {
+        const pDate = purch.purchaseDate ? new Date(purch.purchaseDate) : new Date()
+        const wStart = toWeekStart(pDate)
+        const key = wStart.toISOString().split('T')[0]
+        const curr = weeklyMap.get(key) || { weekStart: wStart, revenue: 0, investment: 0 }
+        curr.investment += Number(purch.amount || 0)
+        weeklyMap.set(key, curr)
+      })
+
+      const weeklyTrend = Array.from(weeklyMap.values())
+        .sort((a, b) => a.weekStart.getTime() - b.weekStart.getTime())
+        .map((item) => ({
+          week: item.weekStart.toLocaleDateString('es-MX', { month: 'short', day: 'numeric' }),
+          revenue: item.revenue,
+          investment: item.investment,
+          net: item.revenue - item.investment,
+        }))
+
+      setWeeklyFinancialTrend(weeklyTrend)
       setFinancialOverview({
         revenue,
         investment,
@@ -223,7 +307,6 @@ export default function Reports() {
         netProfit,
         margin,
         netMargin,
-        totalTips,
         suggestedReinvestment,
         suggestedPartnerDistribution,
         suggestedReserve,
@@ -231,7 +314,6 @@ export default function Reports() {
       })
     } catch (error) {
       console.error('Error cargando reportes:', error)
-      applyDemoData(demoGenerated)
     } finally {
       setLoading(false)
     }
@@ -252,11 +334,6 @@ export default function Reports() {
     return <Navigate to="/pos" replace />
   }
 
-  // Paleta moderna para charts
-  const PIE_COLORS = ['#10b981', '#f59e0b', '#06b6d4', '#a855f7', '#ec4899', '#3b82f6']
-
-  const isShowingDemo = forceDemoData || isRealDataEmpty
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-28 select-none relative overflow-x-hidden">
       {/* Resplandor Ambiental de Fondo (Igual al POS) */}
@@ -272,38 +349,40 @@ export default function Reports() {
           <div className="flex flex-col items-center md:items-start text-center md:text-left gap-1">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold mb-1">
               <Sparkles size={14} className="text-amber-400" />
-              <span>Business Intelligence & Reportes · LOCALITO</span>
+              <span>Business Intelligence & Reportes · {tenant.clientName}</span>
             </div>
             <div className="flex items-center gap-3.5">
               <img
-                src="/logo_localito.jpg"
-                alt="LOCALITO"
+                src={tenant.logoUrl}
+                alt={tenant.clientName}
                 className="h-14 md:h-16 w-auto object-contain rounded-2xl border border-amber-500/30 shadow-xl shadow-amber-500/10"
               />
               <div>
                 <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">Reportes & Analíticas</h1>
-                <p className="text-xs md:text-sm text-teal-300 font-semibold">Métricas de ventas, costos, inventario y balance operativo</p>
+                <p className="text-xs md:text-sm text-teal-300 font-semibold">{tenant.clientTagline} · Desempeño Operativo</p>
               </div>
             </div>
           </div>
 
           {/* Botones de Control Superior */}
           <div className="flex items-center gap-2.5 flex-wrap justify-center">
-            {/* Toggle de Modo Demo / Datos Reales */}
-            <button
-              onClick={() => setForceDemoData(!forceDemoData)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all shadow-md active:scale-95 border ${
-                isShowingDemo
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-400/40 hover:bg-amber-500/30'
-                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40 hover:bg-emerald-500/30'
-              }`}
-              title="Alternar entre datos de demostración y datos en vivo de base de datos"
-            >
-              <Zap size={15} className={isShowingDemo ? 'text-amber-400' : 'text-emerald-400'} />
-              <span>{isShowingDemo ? '⚡ Modo Demo (Activo)' : '🟢 Datos Reales (En Vivo)'}</span>
-            </button>
+            {/* Solo mostrar toggle demo si el tenant lo permite (NO en Localito) */}
+            {tenant.enableDemoMode && (
+              <button
+                onClick={() => setForceDemoData(!forceDemoData)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all shadow-md active:scale-95 border ${
+                  forceDemoData
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-400/40 hover:bg-amber-500/30'
+                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40 hover:bg-emerald-500/30'
+                }`}
+                title="Alternar entre datos de demostración y datos en vivo"
+              >
+                <Zap size={15} className={forceDemoData ? 'text-amber-400' : 'text-emerald-400'} />
+                <span>{forceDemoData ? 'Modo Muestra' : 'Datos Reales'}</span>
+              </button>
+            )}
 
-            {/* Auditoría IA POS */}
+            {/* Auditoría IA */}
             <button
               onClick={() => setShowAIInsights(true)}
               className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black shadow-lg flex items-center gap-1.5 transition-all active:scale-95"
@@ -326,29 +405,6 @@ export default function Reports() {
 
       {/* Contenido Principal */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 mt-6 space-y-6">
-        {/* Banner de Estado Modo Demo si aplica */}
-        {isShowingDemo && (
-          <div className="bg-gradient-to-r from-amber-950/60 via-slate-900 to-slate-950 border border-amber-500/30 rounded-2xl p-3.5 px-5 flex items-center justify-between gap-3 text-xs shadow-lg">
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 bg-amber-500/20 rounded-lg text-amber-400">
-                <Info size={16} />
-              </div>
-              <p className="text-amber-200 font-medium">
-                <strong>Vista de Demostración Activa:</strong> Mostrando datos de ejemplo realistas de platillos, insumos y meseros de <strong>LOCALITO</strong> para previsualizar gráficos y KPIs.
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setForceDemoData(false)
-                loadReports()
-              }}
-              className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg font-black shrink-0 transition-colors"
-            >
-              Cargar BD Real
-            </button>
-          </div>
-        )}
-
         {/* Barra de Filtro de Fechas & Presets Rápidos */}
         <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3.5">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -415,12 +471,16 @@ export default function Reports() {
           </div>
         </div>
 
-        {/* Pestañas de Navegación del Reporte */}
+        {/* Pestañas de Navegación del Reporte (Sin mención de propinas para Localito) */}
         <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
           {[
             { id: 'sales' as const, label: '📊 Ventas & Rendimiento', enabled: canViewSalesReport },
             { id: 'financial' as const, label: '💸 Finanzas & Utilidad Neta', enabled: canViewSalesReport },
-            { id: 'employees' as const, label: '👥 Meseros & Propinas', enabled: canViewEmployeeMetrics },
+            {
+              id: 'employees' as const,
+              label: tenant.enableTips ? '👥 Meseros & Propinas' : '👥 Personal & Desempeño',
+              enabled: canViewEmployeeMetrics,
+            },
             { id: 'monthly_closing' as const, label: '📑 Corte Mensual Oficial', enabled: canViewSalesReport },
           ]
             .filter((t) => t.enabled)
@@ -453,10 +513,10 @@ export default function Reports() {
                     <div>
                       <span className="text-[11px] font-black text-emerald-400 uppercase tracking-wider">Total Ventas</span>
                       <p className="text-3xl font-black text-white mt-1">
-                        ${metrics.totalSales?.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${(metrics.totalSales || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                       <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-bold mt-1.5">
-                        <TrendingUp size={13} /> +14.8% vs período ant.
+                        <TrendingUp size={13} /> Facturación en Caja
                       </span>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
@@ -489,10 +549,10 @@ export default function Reports() {
                     <div>
                       <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Ticket Promedio</span>
                       <p className="text-3xl font-black text-white mt-1">
-                        ${metrics.averageTicket?.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${(metrics.averageTicket || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                       <span className="text-[11px] text-amber-300/80 font-bold mt-1.5 block">
-                        Por mesa o comanda
+                        Gasto medio por mesa
                       </span>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
@@ -501,20 +561,26 @@ export default function Reports() {
                   </div>
                 </div>
 
-                {/* Propinas del Equipo */}
+                {/* 4ta Métrica: Platillo Estrella en Localito (o Propinas si estuviera habilitado en otro tenant) */}
                 <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 hover:border-indigo-500/40 rounded-3xl p-5 shadow-xl transition-all group">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-[11px] font-black text-indigo-400 uppercase tracking-wider">Propinas Equipo</span>
-                      <p className="text-3xl font-black text-white mt-1">
-                        ${metrics.totalTips?.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <span className="text-[11px] font-black text-indigo-400 uppercase tracking-wider">
+                        {tenant.enableTips ? 'Propinas Equipo' : 'Platillo Más Vendido'}
+                      </span>
+                      <p className="text-2xl font-black text-white mt-1 truncate max-w-[180px]">
+                        {tenant.enableTips
+                          ? `$${(metrics.totalTips || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+                          : (topProducts[0]?.name || 'Platillos del Menú')}
                       </p>
                       <span className="text-[11px] text-indigo-300/80 font-bold mt-1.5 block">
-                        ~10% sugerido al cliente
+                        {tenant.enableTips
+                          ? '~10% sugerido al cliente'
+                          : `${topProducts[0]?.qty || topProducts[0]?.quantity || 0} piezas registradas`}
                       </span>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
-                      <Award size={24} />
+                      {tenant.enableTips ? <Award size={24} /> : <Utensils size={24} />}
                     </div>
                   </div>
                 </div>
@@ -560,7 +626,10 @@ export default function Reports() {
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-slate-500 text-center py-16">Sin datos disponibles en el rango</p>
+                  <div className="text-slate-500 text-center py-16 font-bold text-xs space-y-1">
+                    <p>No se encontraron operaciones de venta en el rango de fechas seleccionado.</p>
+                    <p className="text-[11px] text-slate-600 font-normal">Realiza ventas desde el POS para visualizar la evolución diaria.</p>
+                  </div>
                 )}
               </div>
 
@@ -625,7 +694,7 @@ export default function Reports() {
               </div>
             </div>
 
-            {/* Fila Gráfica 2: Horas Pico (Rush Hours) + Top 5 Platillos */}
+            {/* Fila Gráfica 2: Horas Pico (Rush Hours) + Top Platillos */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Horas Pico (Rush Hours) */}
               <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl p-6 shadow-xl">
@@ -662,37 +731,43 @@ export default function Reports() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  {(topProducts || []).slice(0, 5).map((prod: any, idx: number) => {
-                    const medals = ['🥇', '🥈', '🥉', '4°', '5°']
-                    const maxTotal = topProducts[0]?.total || 1
-                    const progressPercent = Math.min(100, Math.round((prod.total / maxTotal) * 100))
+                {topProducts.length === 0 ? (
+                  <div className="text-slate-500 text-center py-12 text-xs font-bold">
+                    No hay platillos vendidos registrados en este rango.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {(topProducts || []).slice(0, 5).map((prod: any, idx: number) => {
+                      const medals = ['🥇', '🥈', '🥉', '4°', '5°']
+                      const maxTotal = topProducts[0]?.total || 1
+                      const progressPercent = Math.min(100, Math.round((prod.total / maxTotal) * 100))
 
-                    return (
-                      <div key={idx} className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800/80 space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-base">{medals[idx]}</span>
-                            <span className="font-bold text-white text-xs sm:text-sm">{prod.name}</span>
+                      return (
+                        <div key={idx} className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800/80 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-base">{medals[idx]}</span>
+                              <span className="font-bold text-white text-xs sm:text-sm">{prod.name}</span>
+                            </div>
+                            <span className="font-black text-emerald-400 text-xs sm:text-sm">
+                              ${Number(prod.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                            </span>
                           </div>
-                          <span className="font-black text-emerald-400 text-xs sm:text-sm">
-                            ${Number(prod.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                          </span>
+                          <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                            <span>{prod.qty || prod.quantity || 0} piezas vendidas</span>
+                            <span>{prod.category || 'Guisado'}</span>
+                          </div>
+                          <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className="bg-gradient-to-r from-teal-500 to-emerald-400 h-full rounded-full transition-all"
+                              style={{ width: `${progressPercent}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                          <span>{prod.qty || prod.quantity || 0} piezas vendidas</span>
-                          <span>{prod.category || 'Guisado'}</span>
-                        </div>
-                        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className="bg-gradient-to-r from-teal-500 to-emerald-400 h-full rounded-full transition-all"
-                            style={{ width: `${progressPercent}%` }}
-                          />
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -734,18 +809,24 @@ export default function Reports() {
                 <h3 className="text-lg font-black text-white mb-1">Tendencia Semanal (Revenue vs Compras vs Neto)</h3>
                 <p className="text-xs text-slate-400 mb-4">Comportamiento financiero por ciclo semanal</p>
 
-                <ResponsiveContainer width="100%" height={270}>
-                  <BarChart data={weeklyFinancialTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis dataKey="week" stroke="#64748b" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                    <YAxis stroke="#64748b" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                    <Tooltip content={<CustomDarkTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
-                    <Bar dataKey="revenue" name="Ingresos" fill="#10b981" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="investment" name="Compras / Insumos" fill="#f43f5e" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="net" name="Utilidad Neta" fill="#06b6d4" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {weeklyFinancialTrend.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={270}>
+                    <BarChart data={weeklyFinancialTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                      <XAxis dataKey="week" stroke="#64748b" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                      <YAxis stroke="#64748b" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                      <Tooltip content={<CustomDarkTooltip />} />
+                      <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
+                      <Bar dataKey="revenue" name="Ingresos" fill="#10b981" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="investment" name="Compras / Insumos" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="net" name="Utilidad Neta" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-slate-500 text-center py-16 text-xs font-bold">
+                    Sin registros semanales suficientes en este rango.
+                  </div>
+                )}
               </div>
 
               {/* Sugerencia de Distribución de Utilidad */}
@@ -811,42 +892,56 @@ export default function Reports() {
               <h3 className="text-lg font-black text-white mb-1">Inversión & Compras por Categoría de Insumo</h3>
               <p className="text-xs text-slate-400 mb-4">Control del Costo de Ventas (COGS) por línea de insumos</p>
 
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                {(purchaseMetrics?.byCategory || []).map((cat: any, i: number) => (
-                  <div key={i} className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-1">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase">{cat.category}</p>
-                    <p className="text-xl font-black text-rose-400">
-                      ${Number(cat.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-[10px] text-slate-500 font-semibold">{cat.percentage || 20}% del gasto total</p>
-                  </div>
-                ))}
-              </div>
+              {(purchaseMetrics?.byCategory || []).length === 0 ? (
+                <div className="text-slate-500 text-center py-8 text-xs font-bold">
+                  No hay compras a proveedores registradas en este período.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                  {(purchaseMetrics?.byCategory || []).map((cat: any, i: number) => (
+                    <div key={i} className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-1">
+                      <p className="text-[11px] font-bold text-slate-400 uppercase">{cat.category}</p>
+                      <p className="text-xl font-black text-rose-400">
+                        ${Number(cat.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-[10px] text-slate-500 font-semibold">{cat.percentage || 20}% del gasto total</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {/* ============================================================
-            PESTAÑA 3: MESEROS & PROPINAS
+            PESTAÑA 3: PERSONAL & DESEMPEÑO (CERO PROPINAS EN LOCALITO)
            ============================================================ */}
         {activeTab === 'employees' && canViewEmployeeMetrics && (
           <div className="space-y-6">
             {/* Gráfica de Empleados */}
             <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl p-6 shadow-xl">
               <h3 className="text-lg font-black text-white mb-1">Desempeño en Ventas por Personal</h3>
-              <p className="text-xs text-slate-400 mb-4">Ventas acumuladas y propinas generadas por mesero / cajero</p>
+              <p className="text-xs text-slate-400 mb-4">Ventas acumuladas y comandas atendidas por mesero / cajero</p>
 
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={employeeMetrics} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis dataKey="userName" stroke="#64748b" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                  <YAxis stroke="#64748b" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                  <Tooltip content={<CustomDarkTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
-                  <Bar dataKey="totalSales" name="Venta Total" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="totalTips" name="Propinas" fill="#10b981" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {employeeMetrics.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={employeeMetrics} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                    <XAxis dataKey="userName" stroke="#64748b" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                    <YAxis stroke="#64748b" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                    <Tooltip content={<CustomDarkTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
+                    <Bar dataKey="totalSales" name="Venta Total" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    {tenant.enableTips && (
+                      <Bar dataKey="totalTips" name="Propinas" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    )}
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-slate-500 text-center py-12 text-xs font-bold">
+                  No hay ventas registradas por colaboradores en este rango.
+                </div>
+              )}
             </div>
 
             {/* Tabla Detallada de Personal */}
@@ -854,7 +949,7 @@ export default function Reports() {
               <div className="p-6 border-b border-slate-800 flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-black text-white">Tabla de Rendimiento Individual</h3>
-                  <p className="text-xs text-slate-400">Detalle de comandas, ticket promedio y propinas por colaborador</p>
+                  <p className="text-xs text-slate-400">Detalle de comandas y facturación por colaborador</p>
                 </div>
                 <Users size={20} className="text-teal-400" />
               </div>
@@ -868,35 +963,45 @@ export default function Reports() {
                       <th className="px-6 py-4 text-right">Comandas</th>
                       <th className="px-6 py-4 text-right">Total Vendido</th>
                       <th className="px-6 py-4 text-right">Ticket Prom.</th>
-                      <th className="px-6 py-4 text-right">Propinas</th>
+                      {tenant.enableTips && <th className="px-6 py-4 text-right">Propinas</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
-                    {employeeMetrics.map((emp: any, idx: number) => (
-                      <tr key={emp.userId || idx} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="px-6 py-4 font-bold text-white flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-300 text-xs font-black">
-                            {emp.userName.charAt(0)}
-                          </div>
-                          <span>{emp.userName}</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-slate-800 text-teal-300 border border-slate-700">
-                            {emp.role}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right font-bold text-slate-300">{emp.salesCount}</td>
-                        <td className="px-6 py-4 text-right font-black text-emerald-400">
-                          ${Number(emp.totalSales || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="px-6 py-4 text-right font-semibold text-slate-300">
-                          ${Number(emp.averageTicket || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="px-6 py-4 text-right font-black text-amber-400">
-                          ${Number(emp.totalTips || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                    {employeeMetrics.length === 0 ? (
+                      <tr>
+                        <td colSpan={tenant.enableTips ? 6 : 5} className="px-6 py-8 text-center text-slate-500 font-bold text-xs">
+                          Sin actividad registrada para este período.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      employeeMetrics.map((emp: any, idx: number) => (
+                        <tr key={emp.userId || idx} className="hover:bg-slate-800/40 transition-colors">
+                          <td className="px-6 py-4 font-bold text-white flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-300 text-xs font-black">
+                              {emp.userName.charAt(0)}
+                            </div>
+                            <span>{emp.userName}</span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide bg-slate-800 text-teal-300 border border-slate-700">
+                              {emp.role}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right font-bold text-slate-300">{emp.salesCount}</td>
+                          <td className="px-6 py-4 text-right font-black text-emerald-400">
+                            ${Number(emp.totalSales || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-6 py-4 text-right font-semibold text-slate-300">
+                            ${Number(emp.averageTicket || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                          </td>
+                          {tenant.enableTips && (
+                            <td className="px-6 py-4 text-right font-black text-amber-400">
+                              ${Number(emp.totalTips || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                            </td>
+                          )}
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -913,7 +1018,7 @@ export default function Reports() {
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-5">
                 <div>
                   <span className="px-3 py-1 bg-teal-500/20 border border-teal-400/30 text-teal-300 text-xs font-black rounded-full uppercase tracking-wider">
-                    Balance Ejecutivo Oficial · LOCALITO
+                    Balance Ejecutivo Oficial · {tenant.clientName}
                   </span>
                   <h2 className="text-2xl sm:text-3xl font-black mt-2">Corte & Estado Financiero</h2>
                   <p className="text-slate-400 text-xs mt-1">Período: {dateRange.from} al {dateRange.to}</p>
@@ -997,15 +1102,15 @@ export default function Reports() {
                 <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
                   <p className="text-teal-400 font-black uppercase text-[10px]">Resumen Ejecutivo Generado por IA:</p>
                   <p className="text-slate-200 leading-relaxed">
-                    Durante el período seleccionado ({dateRange.from} al {dateRange.to}), el establecimiento <strong>LOCALITO</strong> facturó un total de <strong>${(metrics?.totalSales || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN</strong> en <strong>{metrics?.totalOrders || 0}</strong> operaciones de venta, alcanzando un ticket promedio de <strong>${(metrics?.averageTicket || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN</strong>.
+                    Durante el período seleccionado ({dateRange.from} al {dateRange.to}), el establecimiento <strong>{tenant.clientName}</strong> facturó un total de <strong>${(metrics?.totalSales || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN</strong> en <strong>{metrics?.totalOrders || 0}</strong> operaciones de venta, alcanzando un ticket promedio de <strong>${(metrics?.averageTicket || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN</strong>.
                   </p>
                 </div>
 
                 <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
                   <p className="text-amber-400 font-black uppercase text-[10px]">Sugerencias de Optimización de Costos & Márgenes:</p>
                   <ul className="list-disc pl-4 space-y-1.5 text-slate-300">
-                    <li>Garantizar disponibilidad de insumos para el platillo estrella: <strong>{topProducts[0]?.name || 'Quesadilla Maíz c/ Guisado'}</strong>.</li>
-                    <li>Margen de utilidad neta actual proyectado en <strong>{financialOverview?.netMargin?.toFixed(1) || '32.5'}%</strong>.</li>
+                    <li>Garantizar disponibilidad de insumos para el platillo estrella: <strong>{topProducts[0]?.name || 'Platillos principales'}</strong>.</li>
+                    <li>Margen de utilidad neta actual proyectado en <strong>{financialOverview?.netMargin?.toFixed(1) || '0.0'}%</strong>.</li>
                     <li>Mantener control de cancelaciones y ajustes en comandas para preservar la integridad de caja.</li>
                   </ul>
                 </div>

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { X, Users, DollarSign, Check, CreditCard, Smartphone, PieChart, List, Trash2 } from 'lucide-react'
 import { Order, OrderItem, SplitPayment } from '@/types/index'
+import { getTenantSettings } from '@/config/tenantConfig'
 
 interface SplitBillModalProps {
   order: Order
@@ -9,6 +10,7 @@ interface SplitBillModalProps {
 }
 
 export default function SplitBillModal({ order, onClose, onConfirmSplit }: SplitBillModalProps) {
+  const tenant = getTenantSettings()
   const [numberOfPeople, setNumberOfPeople] = useState(2)
   const [currentStep, setCurrentStep] = useState<'setup' | 'assign' | 'payment'>('setup')
   const [splitType, setSplitType] = useState<'items' | 'amount'>('amount')
@@ -440,7 +442,7 @@ export default function SplitBillModal({ order, onClose, onConfirmSplit }: Split
                     const amount = m.currency === 'USD' ? m.amount * USD_TO_MXN : m.amount
                     return sum + amount
                   }, 0)
-                  const totalWithTip = split.subtotal + (split.tipAmount || 0)
+                  const totalWithTip = split.subtotal + (tenant.enableTips ? (split.tipAmount || 0) : 0)
                   const amountDue = totalWithTip - totalPaid
 
                   return (
@@ -593,41 +595,43 @@ export default function SplitBillModal({ order, onClose, onConfirmSplit }: Split
                           </div>
 
                           {/* Propina Simplificada */}
-                          <div className="mb-4 bg-purple-50 p-3 rounded-xl border border-purple-100">
-                            <label className="block text-xs font-bold text-purple-800 mb-2 flex justify-between">
-                              <span>Propina Sugerida</span>
-                              <span className="text-purple-600">${(split.tipAmount || 0).toFixed(2)}</span>
-                            </label>
-                            <div className="flex gap-2">
-                              {[10, 15, 20].map(pct => (
-                                <button
-                                  key={pct}
-                                  onClick={() => setTipPercentage(index, pct)}
-                                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                                    Math.abs((split.tipAmount || 0) - (split.subtotal * (pct / 100))) < 0.1
-                                      ? 'bg-purple-600 text-white shadow-md'
-                                      : 'bg-white text-purple-600 border border-purple-200 hover:bg-purple-100'
-                                  }`}
-                                >
-                                  {pct}%
-                                </button>
-                              ))}
-                              <div className="flex-1 relative">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">$</span>
-                                <input 
-                                  type="number"
-                                  value={split.tipAmount || ''}
-                                  onChange={(e) => {
-                                      const newSplits = [...splits]
-                                      newSplits[index].tipAmount = parseFloat(e.target.value) || 0
-                                      setSplits(newSplits)
-                                  }}
-                                  className="w-full pl-4 pr-1 py-2 border border-purple-200 rounded-lg text-xs font-bold text-center focus:ring-2 focus:ring-purple-500 outline-none"
-                                  placeholder="Otro"
-                                />
+                          {tenant.enableTips && (
+                            <div className="mb-4 bg-purple-50 p-3 rounded-xl border border-purple-100">
+                              <label className="block text-xs font-bold text-purple-800 mb-2 flex justify-between">
+                                <span>Propina Sugerida</span>
+                                <span className="text-purple-600">${(split.tipAmount || 0).toFixed(2)}</span>
+                              </label>
+                              <div className="flex gap-2">
+                                {[10, 15, 20].map(pct => (
+                                  <button
+                                    key={pct}
+                                    onClick={() => setTipPercentage(index, pct)}
+                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                                      Math.abs((split.tipAmount || 0) - (split.subtotal * (pct / 100))) < 0.1
+                                        ? 'bg-purple-600 text-white shadow-md'
+                                        : 'bg-white text-purple-600 border border-purple-200 hover:bg-purple-100'
+                                    }`}
+                                  >
+                                    {pct}%
+                                  </button>
+                                ))}
+                                <div className="flex-1 relative">
+                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">$</span>
+                                  <input 
+                                    type="number"
+                                    value={split.tipAmount || ''}
+                                    onChange={(e) => {
+                                        const newSplits = [...splits]
+                                        newSplits[index].tipAmount = parseFloat(e.target.value) || 0
+                                        setSplits(newSplits)
+                                    }}
+                                    className="w-full pl-4 pr-1 py-2 border border-purple-200 rounded-lg text-xs font-bold text-center focus:ring-2 focus:ring-purple-500 outline-none"
+                                    placeholder="Otro"
+                                  />
+                                </div>
                               </div>
                             </div>
-                          </div>
+                          )}
 
                           {/* Resumen */}
                           <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-3 border border-purple-200 space-y-1 text-xs">
@@ -635,10 +639,12 @@ export default function SplitBillModal({ order, onClose, onConfirmSplit }: Split
                               <span>Subtotal:</span>
                               <span className="font-semibold">${split.subtotal.toFixed(2)}</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span>Propina:</span>
-                              <span className="font-semibold">${(split.tipAmount || 0).toFixed(2)}</span>
-                            </div>
+                            {tenant.enableTips && (
+                              <div className="flex justify-between">
+                                <span>Propina:</span>
+                                <span className="font-semibold">${(split.tipAmount || 0).toFixed(2)}</span>
+                              </div>
+                            )}
                             <div className="border-t border-purple-300 pt-1 flex justify-between font-bold text-sm">
                               <span>Total Debido:</span>
                               <span className="text-purple-600">${totalWithTip.toFixed(2)}</span>

@@ -18,6 +18,8 @@ import {
  * <SeedDataButton token={jwtToken} onSuccess={() => loadRecipes()} />
  */
 
+import { getTenantSettings } from '@/config/tenantConfig';
+
 interface SeedDataButtonProps {
   token?: string;
   onSuccess?: () => void;
@@ -26,12 +28,17 @@ interface SeedDataButtonProps {
 
 export const SeedDataButton = React.forwardRef<HTMLButtonElement, SeedDataButtonProps>(
   ({ token, onSuccess, onError }, ref) => {
+    const tenant = getTenantSettings();
     const [showModal, setShowModal] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState<{
       type: 'success' | 'error' | 'warning' | 'info';
       text: string;
     } | null>(null);
+
+    if (!tenant.enableDemoMode) {
+      return null;
+    }
 
     const handleSeedData = async () => {
       if (!token) {

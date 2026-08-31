@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react'
 import { DollarSign, TrendingUp, Users, Calendar } from 'lucide-react'
 import supabaseService from '@/services/supabaseService'
 import { useAppStore } from '@/store/appStore'
+import { getTenantSettings } from '@/config/tenantConfig'
 import logger from '@/utils/logger'
 
 export default function TipsWidget() {
   const { currentUser } = useAppStore()
+  const tenant = getTenantSettings()
   const [loading, setLoading] = useState(true)
   const [tips, setTips] = useState({
     today: 0,
@@ -14,8 +16,14 @@ export default function TipsWidget() {
   })
 
   useEffect(() => {
-    loadTips()
-  }, [currentUser])
+    if (tenant.enableTips) {
+      loadTips()
+    }
+  }, [currentUser, tenant.enableTips])
+
+  if (!tenant.enableTips) {
+    return null
+  }
 
   const loadTips = async () => {
     if (!currentUser) return

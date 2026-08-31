@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
-import logger from '@/utils/logger'
 import { Order, Product } from '@/types/index'
+import { getTenantSettings } from '@/config/tenantConfig'
 
 interface ReceiptTicketProps {
   order: Order
@@ -8,7 +8,7 @@ interface ReceiptTicketProps {
   saleTotal: number
   paymentMethod: string
   tip: number
-  tableNumber: number
+  tableNumber: string | number
   businessName?: string
   address?: string
   phone?: string
@@ -21,18 +21,20 @@ export default function ReceiptTicket({
   paymentMethod,
   tip,
   tableNumber,
-  businessName = 'REISBLOC F&B',
+  businessName,
   address = 'reisbloc.com',
   phone = 'Soporte: reisbloc.com',
 }: ReceiptTicketProps) {
   const receiptRef = useRef<HTMLDivElement>(null)
+  const tenant = getTenantSettings()
+  const displayBusinessName = businessName || tenant.clientName
 
   // Calcular subtotal (total sin propina sugerida)
-  const subtotal = saleTotal - tip
+  const subtotal = saleTotal - (tenant.enableTips ? tip : 0)
 
   // Propina sugerida (15% por default si no hay tip)
-  const suggestedTip = tip > 0 ? tip : Math.round(subtotal * 0.15)
-  const totalWithSuggestedTip = subtotal + suggestedTip
+  const suggestedTip = tenant.enableTips ? (tip > 0 ? tip : Math.round(subtotal * 0.15)) : 0
+  const finalTotal = tenant.enableTips ? (subtotal + suggestedTip) : subtotal
 
   // Agrupar items por categoría
   const itemsByCategory = order.items.reduce((acc, item) => {
@@ -76,7 +78,7 @@ export default function ReceiptTicket({
     >
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: '8px', borderBottom: '1px solid #000' }}>
-        <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{businessName}</div>
+        <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{displayBusinessName}</div>
         <div style={{ fontSize: '9px' }}>{address}</div>
         <div style={{ fontSize: '9px' }}>{phone}</div>
       </div>
@@ -84,7 +86,7 @@ export default function ReceiptTicket({
       {/* Ticket Info */}
       <div style={{ marginBottom: '6px', fontSize: '9px' }}>
         <div>Ticket: {order.id?.slice(0, 8) || 'N/A'}</div>
-        <div>Cuenta: {tableNumber}</div>
+        <div>Cuenta / Mesa: {tableNumber}</div>
         <div>Fecha: {new Date().toLocaleString('es-MX')}</div>
       </div>
 
@@ -122,20 +124,22 @@ export default function ReceiptTicket({
           <span>Impuesto (0%):</span>
           <span>$0.00</span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-          <span>Propina sugerida (15%):</span>
-          <span>${suggestedTip.toFixed(2)}</span>
-        </div>
+        {tenant.enableTips && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span>Propina sugerida:</span>
+            <span>${suggestedTip.toFixed(2)}</span>
+          </div>
+        )}
         <div style={{ fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
           <span>TOTAL:</span>
-          <span>${totalWithSuggestedTip.toFixed(2)}</span>
+          <span>${finalTotal.toFixed(2)}</span>
         </div>
       </div>
 
       {/* Método de pago */}
       <div style={{ marginBottom: '8px', fontSize: '10px', textAlign: 'center' }}>
         <div>Pagado: {paymentMethod.toUpperCase()}</div>
-        {tip > 0 && <div>Propina recibida: ${tip.toFixed(2)}</div>}
+        {tenant.enableTips && tip > 0 && <div>Propina recibida: ${tip.toFixed(2)}</div>}
       </div>
 
       {/* Footer */}

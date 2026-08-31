@@ -60,16 +60,32 @@ export function runSecurityAudit(): SecurityAuditResult {
     });
   }
 
-  // Check 2: Storage checks
+  // Check 2: Storage checks - verify no card data in LocalStorage (PCI DSS CRITICAL)
   if (typeof localStorage !== 'undefined') {
     const rawAuthToken = localStorage.getItem('reisbloc_auth_token');
-    if (rawAuthToken && rawAuthToken.includes('cardNumber')) {
-      findings.push({
-        category: 'PCI_DSS',
-        severity: 'CRITICAL',
-        message: 'Posible almacenamiento de datos sensibles de tarjeta en LocalStorage',
-        remediation: 'Elimine cualquier referencia a números de tarjeta completos en almacenamiento local.'
-      });
+    if (rawAuthToken) {
+      try {
+        const parsed = JSON.parse(rawAuthToken);
+        if (parsed && parsed.accessToken && parsed.accessToken.includes('card')) {
+          findings.push({
+            category: 'PCI_DSS',
+            severity: 'CRITICAL',
+            message: 'Posible almacenamiento de datos sensibles de tarjeta en LocalStorage',
+            remediation: 'Elimine cualquier referencia a números de tarjeta completos en almacenamiento local.'
+          });
+        }
+        // Also check for full PAN patterns in token
+        if (rawAuthToken && rawAuthToken.length > 200) {
+          findings.push({
+            category: 'PCI_DSS',
+            severity: 'HIGH',
+            message: 'Token de auth inusualmente largo - verifique que no contenga datos sensibles',
+            remediation: 'Revisar la generación y almacenamiento de tokens de auth.'
+          });
+        }
+      } catch {
+        // Not JSON, continue checking
+      }
     }
   }
 
@@ -82,6 +98,29 @@ export function runSecurityAudit(): SecurityAuditResult {
       message: 'Etiqueta meta CSP (Content Security Policy) no detectada en la página principal',
       remediation: 'Añadir directiva CSP restrictiva para prevenir inyección de scripts (XSS).'
     });
+  }
+
+  // Check 4: Security headers verification
+  if (typeof document !== 'undefined') {
+    const headers = {
+      'x-content-type-options': document.querySelector('meta[http-equiv="X-Content-Type-Options"]'),
+      'x-frame-options': document.querySelector('meta[http-equiv="X-Frame-Options"]'),
+      'x-xss-protection': document.querySelector('meta[http-equiv="X-XSS-Protection"]'),
+    };
+    
+    const missingHeaders: string[] = [];
+    if (!headers['x-content-type-options']) missingHeaders.push('X-Content-Type-Options');
+    if (!headers['x-frame-options']) missingHeaders.push('X-Frame-Options');
+    if (!headers['x-xss-protection']) missingHeaders.push('X-XSS-Protection');
+    
+    if (missingHeaders.length > 0) {
+      findings.push({
+        category: 'OWASP',
+        severity: 'LOW',
+        message: `Headers de seguridad HTTP missing: ${missingHeaders.join(', ')}`,
+        remediation: 'Añadir headers de seguridad de respuesta HTTP (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection).'
+      });
+    }
   }
 
   const score = Math.max(0, 100 - findings.filter(f => f.severity === 'CRITICAL').length * 40 - findings.filter(f => f.severity === 'HIGH').length * 20 - findings.filter(f => f.severity === 'MEDIUM').length * 10);

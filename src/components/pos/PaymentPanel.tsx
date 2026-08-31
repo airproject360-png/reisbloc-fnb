@@ -135,7 +135,7 @@ export default function PaymentPanel({
               </span>
             </div>
             <p className="text-[11px] text-slate-400 mt-2.5 font-medium leading-relaxed border-t border-slate-800 pt-2">
-              💡 Las propinas se dejan en efectivo en mesa y no se ingresan al sistema.
+              💡 Revisa los montos y método antes de confirmar la transacción.
             </p>
           </div>
 
