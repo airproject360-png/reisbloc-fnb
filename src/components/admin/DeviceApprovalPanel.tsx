@@ -6,9 +6,13 @@ import {
   Shield, 
   RefreshCw,
   AlertTriangle,
-  Laptop
+  Laptop,
+  CheckCircle2,
+  ShieldCheck,
+  Ban
 } from 'lucide-react'
 import supabaseService from '@/services/supabaseService'
+import { getTenantSettings } from '@/config/tenantConfig'
 import { Device } from '@/types'
 import { supabase } from '@/config/supabase'
 
@@ -35,12 +39,11 @@ const timeAgo = (date: Date | string) => {
 export default function DeviceApprovalPanel() {
   const [devices, setDevices] = useState<Device[]>([])
   const [loading, setLoading] = useState(true)
+  const tenant = getTenantSettings()
 
   const fetchDevices = async () => {
     setLoading(true)
     try {
-      // Asegúrate de que este método exista en tu supabaseService
-      // Si no, usa: const { data } = await supabase.from('devices').select('*')
       const data = await supabaseService.getAllDevices()
       setDevices(data || [])
     } catch (error) {
@@ -60,7 +63,7 @@ export default function DeviceApprovalPanel() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'devices' },
         () => {
-          fetchDevices() // Recargar lista si hay cambios
+          fetchDevices()
         }
       )
       .subscribe()
@@ -93,45 +96,61 @@ export default function DeviceApprovalPanel() {
   const pendingDevices = devices.filter(d => !d.isApproved && !d.isRejected)
   const approvedDevices = devices.filter(d => d.isApproved)
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Cargando dispositivos...</div>
+  if (loading) return (
+    <div className="p-12 text-center text-slate-400 font-bold text-xs">
+      Cargando dispositivos autorizados de {tenant.clientName}...
+    </div>
+  )
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      <div>
-        <p className="section-kicker bg-slate-900 text-white w-fit">Device trust</p>
-        <h2 className="section-title mt-2">Aprobación de Dispositivos</h2>
-        <p className="text-slate-600 mt-2 max-w-2xl">Revisa solicitudes nuevas y administra los dispositivos autorizados desde una vista más clara y compacta.</p>
-      </div>
-
+    <div className="space-y-6 animate-fadeIn">
       {/* Sección de Pendientes */}
       {pendingDevices.length > 0 && (
-        <div className="panel-surface overflow-hidden">
-          <div className="p-6 bg-amber-50 border-b border-amber-100 flex justify-between items-center">
+        <div className="bg-slate-900/90 backdrop-blur-md border border-amber-500/40 rounded-3xl overflow-hidden shadow-2xl space-y-0">
+          <div className="p-6 bg-amber-500/10 border-b border-amber-500/30 flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-bold text-amber-900 flex items-center gap-2">
-                <AlertTriangle size={24} />
-                Solicitudes Pendientes
+              <h2 className="text-xl font-black text-amber-300 flex items-center gap-2">
+                <AlertTriangle size={22} className="text-amber-400" />
+                <span>Solicitudes de Dispositivos Pendientes</span>
               </h2>
-              <p className="text-amber-700 text-sm mt-1">Dispositivos esperando autorización.</p>
+              <p className="text-slate-300 text-xs mt-1">Terminales móviles o tablets esperando autorización para operar el POS.</p>
             </div>
-            <span className="bg-amber-200 text-amber-800 px-3 py-1 rounded-full font-bold text-sm">
-              {pendingDevices.length}
+            <span className="bg-amber-500 text-slate-950 px-3.5 py-1 rounded-full font-black text-xs">
+              {pendingDevices.length} por aprobar
             </span>
           </div>
-          <div className="divide-y divide-slate-100">
+
+          <div className="divide-y divide-slate-800">
             {pendingDevices.map(device => (
               <div key={device.id} className="p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="p-3 bg-sky-100 text-sky-600 rounded-2xl">{getDeviceIcon(device.deviceName)}</div>
+                  <div className="p-3 bg-teal-500/10 border border-teal-500/30 text-teal-400 rounded-2xl">
+                    {getDeviceIcon(device.deviceName)}
+                  </div>
                   <div>
-                    <h3 className="font-bold text-slate-900">{device.deviceName || 'Sin nombre'}</h3>
-                    <p className="text-sm text-slate-500">Usuario: {(device as any).userName || device.userId}</p>
-                    <p className="text-xs text-slate-400 font-mono mt-1 break-all">ID: {device.id}</p>
+                    <h3 className="font-black text-white text-base">{device.deviceName || 'Terminal POS'}</h3>
+                    <p className="text-xs text-slate-400 font-bold mt-0.5">
+                      Usuario Solicitante: <span className="text-teal-300">{(device as any).userName || device.userId}</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-mono mt-0.5 break-all">ID: {device.id}</p>
                   </div>
                 </div>
-                <div className="flex gap-3 w-full md:w-auto">
-                  <button onClick={() => handleStatusChange(device.id, 'reject')} className="flex-1 md:flex-none px-4 py-2 border border-rose-200 text-rose-700 hover:bg-rose-50 rounded-xl font-semibold flex items-center justify-center gap-2"><X size={18} /> Rechazar</button>
-                  <button onClick={() => handleStatusChange(device.id, 'approve')} className="flex-1 md:flex-none px-6 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110 text-white rounded-xl font-semibold shadow-md flex items-center justify-center gap-2"><Check size={18} /> Aprobar</button>
+
+                <div className="flex gap-2 w-full md:w-auto">
+                  <button 
+                    onClick={() => handleStatusChange(device.id, 'reject')} 
+                    className="flex-1 md:flex-none px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                  >
+                    <X size={15} />
+                    <span>Rechazar</span>
+                  </button>
+                  <button 
+                    onClick={() => handleStatusChange(device.id, 'approve')} 
+                    className="flex-1 md:flex-none px-6 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl font-black text-xs shadow-lg flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                  >
+                    <Check size={15} />
+                    <span>Aprobar Terminal</span>
+                  </button>
                 </div>
               </div>
             ))}
@@ -140,52 +159,73 @@ export default function DeviceApprovalPanel() {
       )}
 
       {/* Sección de Aprobados */}
-      <div className="panel-surface overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Shield size={24} className="text-emerald-600" />
-            Dispositivos Autorizados
-          </h2>
-          <button onClick={fetchDevices} className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl"><RefreshCw size={20} /></button>
+      <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+        <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-black text-white flex items-center gap-2">
+              <ShieldCheck size={22} className="text-emerald-400" />
+              <span>Dispositivos Autorizados ({approvedDevices.length})</span>
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">Terminales con credenciales activas en {tenant.clientName}</p>
+          </div>
+          <button 
+            onClick={fetchDevices} 
+            className="p-2.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white border border-slate-700 active:scale-95 transition-all"
+            title="Recargar lista"
+          >
+            <RefreshCw size={16} />
+          </button>
         </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50 text-slate-600 text-sm">
+          <table className="w-full text-left text-sm text-slate-300">
+            <thead className="bg-slate-950 text-slate-400 text-xs font-black uppercase tracking-wider">
               <tr>
-                <th className="px-6 py-3 text-left">Dispositivo</th>
-                <th className="px-6 py-3 text-left">Usuario</th>
-                <th className="px-6 py-3 text-left">Último Acceso</th>
-                <th className="px-6 py-3 text-right">Acciones</th>
+                <th className="px-6 py-4">Dispositivo</th>
+                <th className="px-6 py-4">Usuario Asignado</th>
+                <th className="px-6 py-4">Último Acceso</th>
+                <th className="px-6 py-4 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {approvedDevices.map(device => (
-                <tr key={device.id} className="hover:bg-slate-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="text-slate-400">{getDeviceIcon(device.deviceName)}</div>
-                      <div>
-                        <p className="font-semibold text-slate-900">{device.deviceName}</p>
-                        <p className="text-xs text-slate-500 font-mono">{device.macAddress || 'No MAC'}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    <div className="font-medium text-slate-900">{(device as any).userName || 'Desconocido'}</div>
-                    <div className="text-xs text-slate-400 font-mono">{device.userId.slice(0, 8)}...</div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{timeAgo(device.lastAccess)}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => handleStatusChange(device.id, 'reject')}
-                      className="px-3 py-2 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg text-sm font-semibold"
-                      title="Revocar"
-                    >
-                      Revocar
-                    </button>
+            <tbody className="divide-y divide-slate-800">
+              {approvedDevices.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-slate-500 font-bold text-xs">
+                    No hay terminales autorizadas registradas actualmente.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                approvedDevices.map(device => (
+                  <tr key={device.id} className="hover:bg-slate-800/40 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-slate-950 border border-slate-800 text-teal-400 rounded-xl">
+                          {getDeviceIcon(device.deviceName)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-white text-xs sm:text-sm">{device.deviceName || 'Terminal POS'}</p>
+                          <p className="text-[11px] text-slate-500 font-mono">{device.macAddress || 'ID: ' + device.id.slice(0, 8)}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-bold text-slate-300">
+                      <div className="text-white font-black">{(device as any).userName || 'Personal'}</div>
+                      <div className="text-[11px] text-slate-500 font-mono">UID: {device.userId.slice(0, 8)}...</div>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-medium text-slate-400">{timeAgo(device.lastAccess)}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => handleStatusChange(device.id, 'reject')}
+                        className="px-3 py-1.5 text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1 ml-auto"
+                        title="Revocar acceso a esta terminal"
+                      >
+                        <Ban size={13} />
+                        <span>Revocar</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

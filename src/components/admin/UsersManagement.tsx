@@ -1,22 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAppStore } from '@/store/appStore'
 import { usePermissions } from '@/hooks/usePermissions'
 import supabaseService from '@/services/supabaseService'
+import { getTenantSettings } from '@/config/tenantConfig'
 import { User, UserRole } from '@/types/index'
-
 import { 
   Plus, 
   Edit2, 
-  CheckCircle, 
+  CheckCircle2, 
   XCircle, 
-  Camera,
-  Eye,
-  Lock,
-  UserCog,
+  Camera, 
+  Eye, 
+  Lock, 
+  UserCog, 
   BadgeCheck,
+  Search,
+  Users,
+  Shield,
+  ChefHat,
+  Smartphone,
+  X,
+  Sparkles,
 } from 'lucide-react'
-
-
 
 async function cropImageToSquare(file: File): Promise<File> {
   const bitmap = await createImageBitmap(file)
@@ -58,7 +63,9 @@ async function cropImageToSquare(file: File): Promise<File> {
 export default function UsersManagement() {
   const { users, setUsers, currentUser } = useAppStore()
   const { canManageUsers, isReadOnly } = usePermissions()
+  const tenant = getTenantSettings()
   const [loading, setLoading] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
   const [uploadingAvatarUserId, setUploadingAvatarUserId] = useState<string | null>(null)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -100,12 +107,12 @@ export default function UsersManagement() {
 
     const isValidType = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
     if (!isValidType) {
-      alert('Formato no valido. Usa JPG, PNG o WEBP')
+      alert('Formato no válido. Usa JPG, PNG o WEBP')
       return
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      alert('La imagen supera 2MB. Usa una imagen mas ligera.')
+      alert('La imagen supera 2MB. Usa una imagen más ligera.')
       return
     }
 
@@ -122,174 +129,247 @@ export default function UsersManagement() {
     }
   }
 
-  const roleLabels = {
-    admin: 'Administrador',
-    capitan: 'Capitán',
-    mesero: 'Mesero',
-    cocina: 'Cocina',
-    bar: 'Bar',
-    supervisor: 'Supervisor',
+  const roleBadges: Record<string, { label: string; color: string; bg: string }> = {
+    admin: { label: 'Administrador', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
+    capitan: { label: 'Capitán', color: 'text-teal-300', bg: 'bg-teal-500/10 border-teal-500/30' },
+    cocinero: { label: 'Cocinero/a', color: 'text-emerald-300', bg: 'bg-emerald-500/10 border-emerald-500/30' },
+    cocina: { label: 'Cocina KDS', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
+    bar: { label: 'Barra & Bebidas', color: 'text-cyan-300', bg: 'bg-cyan-500/10 border-cyan-500/30' },
+    mesero: { label: 'Mesero / Salón', color: 'text-blue-300', bg: 'bg-blue-500/10 border-blue-500/30' },
+    supervisor: { label: 'Supervisor', color: 'text-purple-300', bg: 'bg-purple-500/10 border-purple-500/30' },
+  }
+
+  const filteredUsers = useMemo(() => {
+    return users.filter(u => {
+      if (!searchTerm.trim()) return true
+      const q = searchTerm.toLowerCase()
+      return (
+        u.username.toLowerCase().includes(q) ||
+        (u.email && u.email.toLowerCase().includes(q)) ||
+        u.role.toLowerCase().includes(q)
+      )
+    })
+  }, [users, searchTerm])
+
+  const stats = {
+    total: users.length,
+    active: users.filter(u => u.active).length,
+    admins: users.filter(u => u.role === 'admin' || u.role === 'capitan').length,
+    staff: users.filter(u => u.role === 'mesero' || u.role === 'cocina' || u.role === 'cocinero' || u.role === 'bar').length,
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-        <div>
-          <p className="section-kicker bg-slate-900 text-white w-fit">People ops</p>
-          <h2 className="section-title mt-2">Gestión de Usuarios</h2>
-          <p className="text-slate-600 mt-2 max-w-2xl">
-            {users.length} usuario{users.length !== 1 ? 's' : ''} registrado{users.length !== 1 ? 's' : ''}
-          </p>
+      {/* Cards de Métricas de Personal */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 p-5 rounded-3xl text-white shadow-xl flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Total Colaboradores</span>
+            <p className="text-3xl font-black text-teal-400 mt-1">{stats.total}</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
+            <Users size={24} />
+          </div>
+        </div>
+
+        <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 p-5 rounded-3xl text-white shadow-xl flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-black text-emerald-400 uppercase tracking-wider">Usuarios Activos</span>
+            <p className="text-3xl font-black text-emerald-400 mt-1">{stats.active}</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <CheckCircle2 size={24} />
+          </div>
+        </div>
+
+        <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 p-5 rounded-3xl text-white shadow-xl flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Admins & Capitanes</span>
+            <p className="text-3xl font-black text-amber-400 mt-1">{stats.admins}</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            <Shield size={24} />
+          </div>
+        </div>
+
+        <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 p-5 rounded-3xl text-white shadow-xl flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-black text-cyan-400 uppercase tracking-wider">Operación & Cocina</span>
+            <p className="text-3xl font-black text-cyan-400 mt-1">{stats.staff}</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+            <ChefHat size={24} />
+          </div>
+        </div>
+      </div>
+
+      {/* Toolbar: Búsqueda y Botón Crear */}
+      <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 p-4 rounded-3xl shadow-xl flex flex-wrap items-center justify-between gap-3">
+        <div className="relative flex-1 min-w-[260px]">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="🔍 Buscar por nombre, correo o rol..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-2xl text-xs font-bold text-white placeholder-slate-500 outline-none"
+          />
         </div>
 
         {canManageUsers && !isReadOnly && (
           <button
             onClick={() => setShowCreateModal(true)}
-            className="btn-primary flex items-center gap-2"
+            className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-black text-xs shadow-lg flex items-center gap-2 active:scale-95 transition-all"
           >
-            <Plus size={20} />
-            Nuevo Usuario
+            <Plus size={16} />
+            <span>+ Crear Nuevo Usuario</span>
           </button>
         )}
       </div>
 
       {/* Read-only warning */}
       {isReadOnly && (
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 flex items-center gap-3">
-          <Eye className="text-blue-600" size={24} />
-          <div>
-            <p className="font-bold text-blue-900">Modo Solo Lectura</p>
-            <p className="text-sm text-blue-700">No puedes crear, editar o desactivar usuarios</p>
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-center gap-3 text-amber-300">
+          <Eye size={20} className="shrink-0" />
+          <div className="text-xs">
+            <p className="font-bold">Modo Solo Lectura</p>
+            <p className="text-slate-400">No cuentas con permisos para crear o modificar usuarios.</p>
           </div>
         </div>
       )}
 
       {/* Users Grid */}
       {loading ? (
-        <div className="text-center py-12">
-          <div className="spinner mx-auto mb-4" />
-          <p className="text-gray-600">Cargando usuarios...</p>
+        <div className="text-center py-16 text-slate-400 font-bold text-xs">
+          Cargando colaboradores de {tenant.clientName}...
+        </div>
+      ) : filteredUsers.length === 0 ? (
+        <div className="text-center py-16 text-slate-500 font-bold text-xs bg-slate-900/60 rounded-3xl border border-slate-800 p-8">
+          No se encontraron usuarios que coincidan con la búsqueda.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7">
-          {users.map(user => (
-            <div
-              key={user.id}
-              className="panel-surface hover-lift overflow-hidden border border-slate-200 bg-white shadow-lg rounded-3xl"
-            >
-              {/* Hero */}
-              <div className="relative bg-[linear-gradient(180deg,rgba(248,250,252,1),rgba(241,245,249,1))] px-6 pt-6 pb-5 border-b border-slate-200">
-                <div className="absolute right-4 top-4">
-                  {user.active ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 text-emerald-700 px-3 py-1 text-xs font-semibold border border-emerald-200">
-                      <CheckCircle size={12} />
-                      Activo
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 text-rose-700 px-3 py-1 text-xs font-semibold border border-rose-200">
-                      <XCircle size={12} />
-                      Inactivo
-                    </span>
-                  )}
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredUsers.map(user => {
+            const badge = roleBadges[user.role] || { label: user.role, color: 'text-slate-300', bg: 'bg-slate-800 border-slate-700' }
+            const isSelf = user.id === currentUser?.id
 
-                <div className="flex flex-col items-center text-center gap-4">
-                  <div className="relative">
-                    {user.avatarUrl ? (
-                      <img
-                        src={user.avatarUrl}
-                        alt={`Foto de ${user.username}`}
-                        className="w-28 h-28 rounded-full object-cover border-4 border-white shadow-xl ring-1 ring-slate-200"
-                        loading="lazy"
-                      />
+            return (
+              <div
+                key={user.id}
+                className="bg-slate-900/90 backdrop-blur-md border border-slate-800 hover:border-teal-500/40 rounded-3xl overflow-hidden shadow-xl transition-all flex flex-col justify-between group"
+              >
+                {/* User Header */}
+                <div className="p-6 border-b border-slate-800/80 relative">
+                  <div className="absolute right-4 top-4">
+                    {user.active ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-wider">
+                        <CheckCircle2 size={12} />
+                        Activo
+                      </span>
                     ) : (
-                      <div className="w-28 h-28 rounded-full bg-slate-100 flex items-center justify-center border-4 border-white shadow-xl ring-1 ring-slate-200 text-slate-500">
-                        <UserCog size={44} />
-                      </div>
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[10px] font-black uppercase tracking-wider">
+                        <XCircle size={12} />
+                        Inactivo
+                      </span>
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <h3 className="font-black text-2xl text-slate-900 leading-tight">{user.username}</h3>
-                    <div className="inline-flex items-center gap-2 rounded-full bg-slate-900 text-white px-3 py-1.5 text-xs font-semibold tracking-wide">
-                      <BadgeCheck size={12} />
-                      {roleLabels[user.role]}
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      {user.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.username}
+                          className="w-16 h-16 rounded-2xl object-cover border-2 border-teal-500/40 shadow-lg"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-teal-400 font-black text-xl shadow-lg">
+                          {user.username.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+
+                      {canManageUsers && !isReadOnly && (
+                        <label className="absolute -bottom-1 -right-1 p-1.5 rounded-xl bg-slate-800 hover:bg-teal-600 text-slate-300 hover:text-white cursor-pointer shadow-md transition-colors">
+                          <Camera size={12} />
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            className="hidden"
+                            disabled={uploadingAvatarUserId === user.id}
+                            onChange={(event) => {
+                              const file = event.target.files?.[0]
+                              void handleAvatarUpload(user, file)
+                              event.currentTarget.value = ''
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <h3 className="font-black text-lg text-white group-hover:text-amber-400 transition-colors leading-tight">
+                        {user.username}
+                      </h3>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${badge.bg} ${badge.color}`}>
+                        <BadgeCheck size={11} />
+                        {badge.label}
+                      </span>
+                      {user.email && (
+                        <p className="text-[11px] text-slate-400 truncate max-w-[180px]">{user.email}</p>
+                      )}
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Body */}
-              <div className="space-y-4 p-6">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Dispositivos</p>
-                    <p className="mt-1 text-xl font-black text-slate-900">{user.devices?.length || 0}</p>
-                  </div>
-                  <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Rol</p>
-                    <p className="mt-1 text-xl font-black text-slate-900">{user.role}</p>
-                  </div>
-                </div>
-
-                {canManageUsers && !isReadOnly && (
-                  <div className="pt-3 border-t border-slate-200">
-                    <p className="text-xs text-slate-500 mb-2">
-                      La foto se recorta al centro en formato cuadrado antes de subirla.
-                    </p>
-                    <label className="inline-flex w-full items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold cursor-pointer transition-colors">
-                      <Camera size={16} />
-                      {uploadingAvatarUserId === user.id ? 'Subiendo foto...' : 'Cambiar foto'}
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp"
-                        className="hidden"
-                        disabled={uploadingAvatarUserId === user.id}
-                        onChange={(event) => {
-                          const file = event.target.files?.[0]
-                          void handleAvatarUpload(user, file)
-                          event.currentTarget.value = ''
-                        }}
-                      />
-                    </label>
-                  </div>
-                )}
-
-                {/* Actions */}
-                {canManageUsers && !isReadOnly && user.id !== currentUser?.id && (
-                  <div className="flex gap-2 pt-3 border-t border-slate-200">
-                    <button
-                      onClick={() => handleToggleActive(user)}
-                      className={`flex-1 px-4 py-3 rounded-2xl font-semibold transition-all ${
-                        user.active
-                          ? 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
-                          : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
-                      }`}
-                    >
-                      {user.active ? 'Desactivar' : 'Activar'}
-                    </button>
-
-                    <button
-                      onClick={() => setEditingUser(user)}
-                      className="p-3 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-2xl transition-all"
-                    >
-                      <Edit2 size={18} />
-                    </button>
-                  </div>
-                )}
-
-                {user.id === currentUser?.id && (
-                  <div className="pt-3 border-t border-slate-200">
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <Lock size={16} />
-                      <span>Este es tu usuario actual</span>
+                {/* User Stats & Devices */}
+                <div className="p-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-2 text-center text-xs">
+                    <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Dispositivos</p>
+                      <p className="text-base font-black text-teal-400 mt-0.5">{user.devices?.length || 0}</p>
+                    </div>
+                    <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Permisos</p>
+                      <p className="text-base font-black text-amber-400 mt-0.5">{user.role}</p>
                     </div>
                   </div>
-                )}
+
+                  {/* Actions Bar */}
+                  <div className="pt-2 border-t border-slate-800/80 flex items-center gap-2">
+                    {isSelf ? (
+                      <div className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-slate-400 bg-slate-950/40 rounded-xl border border-slate-800">
+                        <Lock size={14} className="text-amber-400" />
+                        <span>Sesión Activa</span>
+                      </div>
+                    ) : (
+                      canManageUsers && !isReadOnly && (
+                        <>
+                          <button
+                            onClick={() => handleToggleActive(user)}
+                            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${
+                              user.active
+                                ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            }`}
+                          >
+                            {user.active ? 'Desactivar' : 'Activar'}
+                          </button>
+
+                          <button
+                            onClick={() => setEditingUser(user)}
+                            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl transition-all"
+                            title="Editar usuario"
+                          >
+                            <Edit2 size={15} />
+                          </button>
+                        </>
+                      )
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -323,12 +403,10 @@ function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSucces
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
     setLoading(true)
     try {
-      // Crear usuario directamente en Supabase
       await supabaseService.createUser({
-        username: formData.username,
+        username: formData.username.trim(),
         email: formData.email.trim().toLowerCase(),
         role: formData.role,
         active: true,
@@ -350,74 +428,76 @@ function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSucces
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-scaleIn">
-        <h2 className="text-2xl font-bold mb-4">Crear Nuevo Usuario</h2>
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 text-white shadow-2xl space-y-4 animate-fadeIn">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-2 text-teal-400 font-black">
+            <UserCog size={20} />
+            <span className="text-base">Alta de Nuevo Colaborador</span>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white">
+            <X size={16} />
+          </button>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Nombre de usuario
-            </label>
+            <label className="block font-bold text-slate-300 mb-1">Nombre de Usuario *</label>
             <input
               type="text"
+              placeholder="Ej. JuanPerez, AnaGomez"
               value={formData.username}
               onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-              className="input-field"
+              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold focus:outline-none focus:border-teal-500"
               required
               autoFocus
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Correo Electrónico
-            </label>
+            <label className="block font-bold text-slate-300 mb-1">Correo Electrónico *</label>
             <input
               type="email"
               placeholder="usuario@localito.reisbloc.com"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="input-field"
+              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold focus:outline-none focus:border-teal-500"
               required
             />
           </div>
 
-
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Rol
-            </label>
+            <label className="block font-bold text-slate-300 mb-1">Rol & Nivel de Acceso *</label>
             <select
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
-              className="input-field"
+              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold focus:outline-none focus:border-teal-500"
             >
-              <option value="mesero">Mesero (Toma de Órdenes)</option>
-              <option value="capitan">Capitán (Ajustes & Cuentas)</option>
-              <option value="cocinero">Cocinero/a (Inventarios, Guisos & Recetas)</option>
-              <option value="cocina">Cocina (KDS Pantalla)</option>
-              <option value="bar">Bar</option>
-              <option value="supervisor">Supervisor (Auditoría)</option>
+              <option value="mesero">Mesero (Toma de Comandas & Salón)</option>
+              <option value="capitan">Capitán (Ajustes, Cuentas & Supervisión)</option>
+              <option value="cocinero">Cocinero/a (Guisos, Recetas & Materias Primas)</option>
+              <option value="cocina">Cocina (KDS Pantalla de Producción)</option>
+              <option value="bar">Bar (Bebidas & Barra Fría)</option>
+              <option value="supervisor">Supervisor (Auditoría & Turno)</option>
               <option value="admin">Administrador (Control Total)</option>
             </select>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2 pt-3 border-t border-slate-800">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 btn-secondary"
+              className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-bold"
               disabled={loading}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 btn-success"
+              className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-black shadow-lg"
               disabled={loading}
             >
-              {loading ? 'Creando...' : 'Crear Usuario'}
+              {loading ? 'Guardando...' : 'Crear Usuario'}
             </button>
           </div>
         </form>
@@ -444,79 +524,81 @@ function EditUserModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-
-    
     setLoading(true)
     try {
       await supabaseService.updateUser(user.id, {
-        username: formData.username,
+        username: formData.username.trim(),
         role: formData.role,
-      })
-      
+      } as any)
+
+      alert('✅ Usuario actualizado exitosamente')
       onSuccess()
       onClose()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating user:', error)
-      alert('Error al actualizar usuario')
+      alert('❌ Error al actualizar usuario: ' + (error.message || 'Error desconocido'))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-scaleIn">
-        <h2 className="text-2xl font-bold mb-4">Editar Usuario</h2>
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 text-white shadow-2xl space-y-4 animate-fadeIn">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-2 text-amber-400 font-black">
+            <Edit2 size={20} />
+            <span className="text-base">Modificar Colaborador</span>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white">
+            <X size={16} />
+          </button>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Nombre de usuario
-            </label>
+            <label className="block font-bold text-slate-300 mb-1">Nombre de Usuario *</label>
             <input
               type="text"
               value={formData.username}
               onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-              className="input-field"
+              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold focus:outline-none focus:border-amber-500"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Rol
-            </label>
+            <label className="block font-bold text-slate-300 mb-1">Rol & Nivel de Acceso *</label>
             <select
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
-              className="input-field"
+              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold focus:outline-none focus:border-amber-500"
             >
-              <option value="mesero">Mesero (Toma de Órdenes)</option>
-              <option value="capitan">Capitán (Ajustes & Cuentas)</option>
-              <option value="cocinero">Cocinero/a (Inventarios, Guisos & Recetas)</option>
-              <option value="cocina">Cocina (KDS Pantalla)</option>
-              <option value="bar">Bar</option>
-              <option value="supervisor">Supervisor (Auditoría)</option>
+              <option value="mesero">Mesero (Toma de Comandas & Salón)</option>
+              <option value="capitan">Capitán (Ajustes, Cuentas & Supervisión)</option>
+              <option value="cocinero">Cocinero/a (Guisos, Recetas & Materias Primas)</option>
+              <option value="cocina">Cocina (KDS Pantalla de Producción)</option>
+              <option value="bar">Bar (Bebidas & Barra Fría)</option>
+              <option value="supervisor">Supervisor (Auditoría & Turno)</option>
               <option value="admin">Administrador (Control Total)</option>
             </select>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2 pt-3 border-t border-slate-800">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 btn-secondary"
+              className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-bold"
               disabled={loading}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 btn-primary"
+              className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black shadow-lg"
               disabled={loading}
             >
-              {loading ? 'Guardando...' : 'Guardar Cambios'}
+              {loading ? 'Guardando...' : 'Actualizar Usuario'}
             </button>
           </div>
         </form>

@@ -5,12 +5,14 @@ import supabaseService from '@/services/supabaseService'
 import logger from '@/utils/logger'
 import { 
   FileText, 
-  Filter,
-  User,
-  Eye,
-  Search,
-  AlertCircle,
-  RefreshCw
+  Filter, 
+  User, 
+  Search, 
+  AlertCircle, 
+  RefreshCw,
+  Calendar,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -55,256 +57,217 @@ export default function AuditLogsPanel() {
     return true
   })
 
-  const actionLabels: Record<string, { label: string; color: string }> = {
-    LOGIN_SUCCESS: { label: 'Login exitoso', color: 'text-green-700 bg-green-100' },
-    LOGIN_FAILED: { label: 'Login fallido', color: 'text-red-700 bg-red-100' },
-    LOGOUT: { label: 'Cierre de sesión', color: 'text-gray-700 bg-gray-100' },
-    PRODUCT_CREATED: { label: 'Producto creado', color: 'text-blue-700 bg-blue-100' },
-    PRODUCT_UPDATED: { label: 'Producto actualizado', color: 'text-indigo-700 bg-indigo-100' },
-    PRODUCT_DELETED: { label: 'Producto archivado', color: 'text-red-700 bg-red-100' },
-    INVENTORY_CHANGE: { label: 'Cambio de inventario', color: 'text-purple-700 bg-purple-100' },
-    USER_CREATED: { label: 'Usuario creado', color: 'text-green-700 bg-green-100' },
-    USER_MODIFIED: { label: 'Usuario modificado', color: 'text-amber-700 bg-amber-100' },
-    USER_DELETED: { label: 'Usuario archivado', color: 'text-red-700 bg-red-100' },
-    INVITE_SENT: { label: 'Invitación enviada', color: 'text-teal-700 bg-teal-100' },
-    INVITE_BLOCKED: { label: 'Invitación bloqueada', color: 'text-rose-700 bg-rose-100' },
-    VIEW_REPORT: { label: 'Reporte visto', color: 'text-cyan-700 bg-cyan-100' },
-    SALE_COMPLETED: { label: 'Venta completada', color: 'text-emerald-700 bg-emerald-100' },
-    DELETE_PRODUCT_FROM_ORDER: { label: 'Producto eliminado de orden', color: 'text-orange-700 bg-orange-100' },
-  }
-
-  const entityTypeIcons: Record<string, any> = {
-    AUTH: User,
-    PRODUCT: FileText,
-    USER: User,
-    REPORT: FileText,
-    ORDER: FileText,
-    SALE: FileText,
+  const actionStyles: Record<string, { label: string; badge: string }> = {
+    LOGIN_SUCCESS: { label: 'Inicio de Sesión', badge: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
+    LOGIN_FAILED: { label: 'Login Fallido', badge: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
+    LOGOUT: { label: 'Cierre de Sesión', badge: 'text-slate-400 bg-slate-800 border-slate-700' },
+    PRODUCT_CREATED: { label: 'Platillo / Receta Creada', badge: 'text-teal-300 bg-teal-500/10 border-teal-500/30' },
+    PRODUCT_UPDATED: { label: 'Platillo / Receta Editada', badge: 'text-amber-400 bg-amber-500/10 border-amber-500/30' },
+    PRODUCT_DELETED: { label: 'Platillo / Receta Archivada', badge: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
+    INVENTORY_CHANGE: { label: 'Ajuste de Stock / Insumo', badge: 'text-purple-300 bg-purple-500/10 border-purple-500/30' },
+    USER_CREATED: { label: 'Nuevo Usuario Registrado', badge: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
+    USER_MODIFIED: { label: 'Usuario Modificado', badge: 'text-amber-400 bg-amber-500/10 border-amber-500/30' },
+    USER_DELETED: { label: 'Usuario Desactivado', badge: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
+    INVITE_SENT: { label: 'Invitación Enviada', badge: 'text-cyan-300 bg-cyan-500/10 border-cyan-500/30' },
+    INVITE_BLOCKED: { label: 'Invitación Bloqueada', badge: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
+    VIEW_REPORT: { label: 'Consulta de Reporte', badge: 'text-blue-300 bg-blue-500/10 border-blue-500/30' },
+    SALE_COMPLETED: { label: 'Comanda Cobrada', badge: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
+    DELETE_PRODUCT_FROM_ORDER: { label: 'Platillo Cancelado de Comanda', badge: 'text-orange-400 bg-orange-500/10 border-orange-500/30' },
   }
 
   if (!canViewLogs) {
     return (
-      <div className="card-gradient text-center py-12">
-        <AlertCircle size={48} className="mx-auto text-red-600 mb-4" />
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Acceso Denegado</h3>
-        <p className="text-gray-600">No tienes permisos para ver los logs de auditoría</p>
+      <div className="bg-slate-900/80 border border-slate-800 rounded-3xl text-center py-16 p-6">
+        <AlertCircle size={48} className="mx-auto text-rose-500 mb-4" />
+        <h3 className="text-xl font-bold text-white mb-2">Acceso Restringido</h3>
+        <p className="text-slate-400 text-xs">No cuentas con los permisos requeridos para auditar los registros del sistema.</p>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <p className="section-kicker bg-slate-900 text-white w-fit">System trace</p>
-        <h2 className="section-title mt-2">Logs de Auditoría</h2>
-        <p className="text-slate-600 mt-2">
-          Historial completo de acciones del sistema · {filteredLogs.length} registro{filteredLogs.length !== 1 ? 's' : ''}
-        </p>
-        <div className="mt-3">
-          <button
-            onClick={() => void loadLogs()}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-60"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            Recargar logs
-          </button>
+      {/* Header & Recargar */}
+      <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 p-6 rounded-3xl shadow-xl flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-black uppercase tracking-wider">
+            Trazabilidad & Seguridad
+          </span>
+          <h2 className="text-2xl font-black text-white mt-1">Logs de Auditoría Operativa</h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Registro de eventos, inicios de sesión y modificaciones del sistema · {filteredLogs.length} eventos listados
+          </p>
         </div>
+
+        <button
+          onClick={() => void loadLogs()}
+          disabled={loading}
+          className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold flex items-center gap-2 border border-slate-700 transition-all active:scale-95 disabled:opacity-50"
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin text-teal-400' : 'text-teal-400'} />
+          <span>{loading ? 'Actualizando...' : 'Recargar Logs'}</span>
+        </button>
       </div>
 
-      {/* Read-only info */}
-      {isReadOnly && (
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 flex items-center gap-3">
-          <Eye className="text-blue-600" size={24} />
-          <div>
-            <p className="font-bold text-blue-900">Acceso Solo Lectura</p>
-            <p className="text-sm text-blue-700">Puedes ver el historial pero no exportar o modificar</p>
-          </div>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="panel-surface p-5 md:p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter size={20} className="text-slate-600" />
-          <h3 className="font-bold text-slate-900">Filtros</h3>
+      {/* Barra de Filtros */}
+      <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 p-5 rounded-3xl shadow-xl space-y-3">
+        <div className="flex items-center gap-2 text-teal-400 font-extrabold text-xs uppercase tracking-wider">
+          <Filter size={16} />
+          <span>Filtros de Búsqueda</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Search */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Buscar
-            </label>
-            <div className="relative">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={filter.search}
-                onChange={(e) => setFilter({ ...filter, search: e.target.value })}
-                placeholder="ID, usuario, acción..."
-                className="input-field pl-10"
-              />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          {/* Búsqueda por texto */}
+          <div className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              value={filter.search}
+              onChange={(e) => setFilter({ ...filter, search: e.target.value })}
+              placeholder="Buscar por usuario, ID o acción..."
+              className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl text-white font-bold placeholder-slate-500 outline-none"
+            />
           </div>
 
-          {/* Action filter */}
+          {/* Filtro por Acción */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Acción
-            </label>
             <select
               value={filter.action}
               onChange={(e) => setFilter({ ...filter, action: e.target.value })}
-              className="input-field"
+              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl text-white font-bold outline-none"
             >
-              <option value="all">Todas</option>
-              {Object.keys(actionLabels).map(action => (
-                <option key={action} value={action}>
-                  {actionLabels[action].label}
+              <option value="all">Todas las Acciones</option>
+              {Object.keys(actionStyles).map(act => (
+                <option key={act} value={act}>
+                  {actionStyles[act].label}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Entity type filter */}
+          {/* Filtro por Entidad */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Tipo
-            </label>
             <select
               value={filter.entityType}
               onChange={(e) => setFilter({ ...filter, entityType: e.target.value })}
-              className="input-field"
+              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl text-white font-bold outline-none"
             >
-              <option value="all">Todos</option>
-              <option value="AUTH">Autenticación</option>
-              <option value="PRODUCT">Productos</option>
-              <option value="USER">Usuarios</option>
-              <option value="REPORT">Reportes</option>
-              <option value="ORDER">Órdenes</option>
-              <option value="SALE">Ventas</option>
+              <option value="all">Todos los Tipos</option>
+              <option value="AUTH">Autenticación / Sesiones</option>
+              <option value="PRODUCT">Platillos / Menú</option>
+              <option value="USER">Usuarios / Personal</option>
+              <option value="REPORT">Reportes & Cierres</option>
+              <option value="ORDER">Comandas & Mesas</option>
+              <option value="SALE">Ventas & Cobros</option>
             </select>
           </div>
 
-          {/* Date range */}
+          {/* Fecha desde */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Fecha
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="date"
-                value={filter.dateFrom}
-                onChange={(e) => setFilter({ ...filter, dateFrom: e.target.value })}
-                className="input-field flex-1"
-              />
-            </div>
+            <input
+              type="date"
+              value={filter.dateFrom}
+              onChange={(e) => setFilter({ ...filter, dateFrom: e.target.value })}
+              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl text-white font-bold outline-none"
+            />
           </div>
         </div>
 
-        <button
-          onClick={() => setFilter({ action: 'all', entityType: 'all', dateFrom: '', dateTo: '', search: '' })}
-          className="mt-4 text-sm text-blue-600 hover:text-blue-700 font-semibold"
-        >
-          Limpiar filtros
-        </button>
+        {(filter.search || filter.action !== 'all' || filter.entityType !== 'all' || filter.dateFrom) && (
+          <div className="pt-2">
+            <button
+              onClick={() => setFilter({ action: 'all', entityType: 'all', dateFrom: '', dateTo: '', search: '' })}
+              className="text-xs text-amber-400 hover:text-amber-300 font-bold underline"
+            >
+              Limpiar todos los filtros
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Logs Table */}
+      {/* Lista de Eventos */}
       {loadError ? (
-        <div className="panel-surface border border-red-200 bg-red-50 text-red-800 p-4">
-          <p className="font-semibold">No se pudieron cargar los logs de auditoría.</p>
-          <p className="text-sm mt-1">Detalle: {loadError}</p>
+        <div className="p-5 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-rose-300 text-xs">
+          <p className="font-bold">Error cargando logs de auditoría:</p>
+          <p className="mt-1 text-slate-400">{loadError}</p>
         </div>
       ) : loading ? (
-        <div className="text-center py-12">
-          <div className="spinner mx-auto mb-4" />
-          <p className="text-slate-600">Cargando logs...</p>
+        <div className="text-center py-16 text-slate-400 font-bold text-xs">
+          Consultando registros de auditoría...
         </div>
       ) : filteredLogs.length === 0 ? (
-        <div className="panel-surface text-center py-12">
-          <FileText size={48} className="mx-auto text-slate-400 mb-4" />
-          <p className="text-slate-600">No hay logs que coincidan con los filtros</p>
-          <p className="text-xs text-slate-500 mt-2">Tip: en Configuración también puedes ver el historial de invitaciones.</p>
+        <div className="text-center py-16 text-slate-500 font-bold text-xs bg-slate-900/60 rounded-3xl border border-slate-800 p-8 space-y-2">
+          <FileText size={36} className="mx-auto text-slate-600 mb-2" />
+          <p>No hay eventos registrados que coincidan con los criterios de búsqueda.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {filteredLogs.map(log => {
-            const actionInfo = actionLabels[log.action] || { label: log.action, color: 'text-gray-700 bg-gray-100' }
-            const EntityIcon = entityTypeIcons[log.entityType] || FileText
+            const style = actionStyles[log.action] || { label: log.action, badge: 'text-slate-300 bg-slate-800 border-slate-700' }
 
             return (
-              <div key={log.id} className="panel-surface p-4 md:p-5 hover-lift">
-                <div className="flex items-start gap-4">
-                  {/* Icon */}
-                  <div className={`p-3 rounded-2xl ${actionInfo.color}`}>
-                    <EntityIcon size={24} />
+              <div
+                key={log.id}
+                className="bg-slate-900/90 backdrop-blur-md border border-slate-800 hover:border-slate-700 p-5 rounded-3xl shadow-xl transition-all space-y-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className={`px-3 py-1 rounded-xl text-xs font-black border uppercase tracking-wider ${style.badge}`}>
+                      {style.label}
+                    </span>
+                    <span className="text-xs font-bold text-slate-300">
+                      por <strong className="text-white">{log.userId || 'Sistema'}</strong>
+                    </span>
                   </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4 mb-2">
-                      <div>
-                        <h4 className="font-bold text-slate-900">{actionInfo.label}</h4>
-                        <p className="text-sm text-slate-600">
-                          por <span className="font-semibold">{log.userId}</span>
-                        </p>
-                      </div>
-                      <div className="text-right text-sm text-slate-600">
-                        <div className="font-semibold">
-                          {format(new Date(log.timestamp), 'dd MMM yyyy', { locale: es })}
-                        </div>
-                        <div className="text-xs">
-                          {format(new Date(log.timestamp), 'HH:mm:ss')}
-                        </div>
-                      </div>
-                    </div>
+                  <div className="text-right text-xs">
+                    <span className="font-bold text-slate-300">
+                      {format(new Date(log.timestamp), 'dd MMM yyyy', { locale: es })}
+                    </span>
+                    <span className="text-slate-500 ml-2 font-mono text-[11px]">
+                      {format(new Date(log.timestamp), 'HH:mm:ss')}
+                    </span>
+                  </div>
+                </div>
 
-                    {/* Entity details */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-slate-500">Tipo:</span>{' '}
-                        <span className="font-semibold text-slate-900">{log.entityType}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">ID:</span>{' '}
-                        <span className="font-mono text-xs text-slate-900">{log.entityId}</span>
-                      </div>
-                      {log.deviceId && (
-                        <div className="col-span-2">
-                          <span className="text-slate-500">Dispositivo:</span>{' '}
-                          <span className="font-mono text-xs text-slate-900">{log.deviceId}</span>
-                        </div>
-                      )}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
+                  <div>
+                    <span className="text-slate-500 font-bold">Tipo: </span>
+                    <span className="font-bold text-teal-300">{log.entityType}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 font-bold">ID: </span>
+                    <span className="font-mono text-slate-400 text-[11px] truncate">{log.entityId}</span>
+                  </div>
+                  {log.deviceId && (
+                    <div>
+                      <span className="text-slate-500 font-bold">Dispositivo: </span>
+                      <span className="font-mono text-slate-400 text-[11px] truncate">{log.deviceId}</span>
                     </div>
+                  )}
+                </div>
 
-                    {/* Changes */}
-                    {(log.oldValue || log.newValue) && (
-                      <div className="mt-3 pt-3 border-t border-gray-200">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                          {log.oldValue && (
-                            <div>
-                              <p className="font-semibold text-gray-700 mb-1">Valor anterior:</p>
-                              <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
-                                {JSON.stringify(log.oldValue, null, 2)}
-                              </pre>
-                            </div>
-                          )}
-                          {log.newValue && (
-                            <div>
-                              <p className="font-semibold text-gray-700 mb-1">Valor nuevo:</p>
-                              <pre className="bg-green-50 p-2 rounded overflow-x-auto border border-green-200">
-                                {JSON.stringify(log.newValue, null, 2)}
-                              </pre>
-                            </div>
-                          )}
-                        </div>
+                {/* Desglose de cambios antes / después */}
+                {(log.oldValue || log.newValue) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-[11px]">
+                    {log.oldValue && (
+                      <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                        <p className="font-bold text-rose-400 mb-1">Estado Anterior:</p>
+                        <pre className="text-slate-300 font-mono overflow-x-auto whitespace-pre-wrap">
+                          {typeof log.oldValue === 'string' ? log.oldValue : JSON.stringify(log.oldValue, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                    {log.newValue && (
+                      <div className="bg-slate-950 p-3 rounded-2xl border border-emerald-500/20">
+                        <p className="font-bold text-emerald-400 mb-1">Nuevo Estado:</p>
+                        <pre className="text-slate-300 font-mono overflow-x-auto whitespace-pre-wrap">
+                          {typeof log.newValue === 'string' ? log.newValue : JSON.stringify(log.newValue, null, 2)}
+                        </pre>
                       </div>
                     )}
                   </div>
-                </div>
+                )}
               </div>
             )
           })}
