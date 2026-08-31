@@ -455,22 +455,22 @@ export default function POS() {
         </div>
       </div>
 
-      {/* Grid de Productos Interactivo */}
-      <main className="max-w-6xl mx-auto px-4 mt-6">
+      {/* Grid de Productos Interactivo (Optimizado para caber más en pantallas de escritorio) */}
+      <main className="max-w-7xl 2xl:max-w-[1720px] mx-auto px-3 sm:px-4 mt-4 md:mt-6">
         {loading ? (
           <div className="text-center py-16 text-slate-400 font-bold">Cargando menú de platillos...</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 md:gap-3 lg:gap-3.5">
             {filteredProducts.map((product) => {
               const qtyInCart = getItemQuantityInCart(product.id)
               return (
                 <div
                   key={product.id}
-                  className="low-perf-card bg-slate-900/80 backdrop-blur-md border border-slate-800 hover:border-teal-500/40 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all group flex flex-col justify-between"
+                  className="low-perf-card bg-slate-900/80 backdrop-blur-md border border-slate-800 hover:border-teal-500/40 rounded-2xl md:rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group flex flex-col justify-between"
                 >
                   <div>
                     {/* Image & Price */}
-                    <div className="relative h-44 w-full overflow-hidden bg-slate-800">
+                    <div className="relative h-36 sm:h-40 md:h-28 lg:h-32 xl:h-32 w-full overflow-hidden bg-slate-800">
                       <img
                         src={product.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop'}
                         alt={product.name}
@@ -479,21 +479,21 @@ export default function POS() {
                         decoding="async"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80" />
-                      <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-950/80 backdrop-blur border border-white/10 text-[10px] font-bold text-teal-300 uppercase">
+                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-slate-950/80 backdrop-blur border border-white/10 text-[9px] font-bold text-teal-300 uppercase">
                         {product.category}
                       </span>
-                      <span className="absolute bottom-3 right-3 text-lg font-black text-white px-3 py-1 rounded-xl bg-teal-600/90 backdrop-blur shadow-lg border border-teal-400/30">
-                        ${product.price} <span className="text-xs font-normal">MXN</span>
+                      <span className="absolute bottom-2 right-2 text-xs sm:text-sm font-black text-white px-2 py-0.5 rounded-lg bg-teal-600/90 backdrop-blur shadow-lg border border-teal-400/30">
+                        ${product.price} <span className="text-[10px] font-normal">MXN</span>
                       </span>
                     </div>
 
                     {/* Content */}
-                    <div className="p-4">
-                      <h3 className="text-base font-bold text-white group-hover:text-teal-300 transition-colors">
+                    <div className="p-3">
+                      <h3 className="text-xs sm:text-sm font-bold text-white group-hover:text-teal-300 transition-colors line-clamp-1" title={product.name}>
                         {product.name}
                       </h3>
                       {product.description && (
-                        <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                        <p className="text-[11px] md:text-[10px] text-slate-400 mt-0.5 line-clamp-1 leading-normal">
                           {product.description}
                         </p>
                       )}
@@ -501,25 +501,25 @@ export default function POS() {
                   </div>
 
                   {/* Actions Bar per Product */}
-                  <div className="p-4 pt-0 flex items-center justify-between gap-2">
+                  <div className="p-3 pt-0 flex items-center justify-between gap-1.5">
                     <button
                       onClick={() => setRecipeProduct(product)}
-                      className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-teal-400 border border-slate-700 text-xs font-bold flex items-center gap-1 transition-all"
+                      className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-teal-400 border border-slate-700 text-xs font-bold flex items-center gap-1 transition-all"
                       title="Ver receta y rendimiento"
                     >
-                      <ChefHat size={16} />
-                      <span className="hidden sm:inline">Receta</span>
+                      <ChefHat size={14} />
+                      <span className="hidden sm:inline text-[11px]">Receta</span>
                     </button>
 
                     <button
                       onClick={() => handleAddProduct(product)}
-                      className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                      className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
                         qtyInCart > 0
                           ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-lg'
                           : 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 hover:brightness-110 shadow-md'
                       }`}
                     >
-                      <Plus size={16} />
+                      <Plus size={14} />
                       <span>{qtyInCart > 0 ? `Agregar (${qtyInCart})` : 'Agregar'}</span>
                     </button>
                   </div>

@@ -114,7 +114,7 @@ export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGrid
           <p className="text-gray-500 text-lg font-medium">No hay productos disponibles</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5 sm:gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-2.5 md:gap-2.5">
           {filteredProducts.map(product => {
             const CategoryIcon = getCategoryIcon(product.category)
             const outOfStock = isOutOfStock(product)
@@ -125,14 +125,14 @@ export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGrid
               key={product.id}
               onClick={() => !disableAdd && onAdd(product)}
               disabled={disableAdd}
-              className={`group relative text-left rounded-2xl border p-2.5 sm:p-3 shadow-sm transition-all transform active:scale-95 hover:shadow-md ${
+              className={`group relative text-left rounded-2xl border p-2 sm:p-2.5 shadow-sm transition-all transform active:scale-95 hover:shadow-md ${
                 outOfStock || disableAdd
                   ? 'border-red-200 bg-red-50/40 opacity-60 cursor-not-allowed'
                   : 'border-slate-200/80 bg-white hover:border-amber-400 hover:-translate-y-0.5'
               }`}
             >
               {/* Product Image - Compact & Optimized */}
-              <div className="relative mb-2 h-24 sm:h-28 w-full overflow-hidden rounded-xl border border-slate-100 bg-slate-100 shadow-inner">
+              <div className="relative mb-1.5 h-20 sm:h-24 md:h-20 lg:h-22 w-full overflow-hidden rounded-xl border border-slate-100 bg-slate-100 shadow-inner">
                 {product.imageUrl && !brokenImages[product.id] ? (
                   <img
                     src={product.imageUrl}
