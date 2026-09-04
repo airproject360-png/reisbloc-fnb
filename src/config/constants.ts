@@ -8,11 +8,11 @@ export const CLIP_CONFIG = {
 
 // Configuración de aplicación y cliente
 export const APP_CONFIG = {
-  CLIENT_NAME: import.meta.env.VITE_CLIENT_NAME || 'LOCALITO',
-  CLIENT_TAGLINE: import.meta.env.VITE_CLIENT_TAGLINE || 'GUISOS & BARRA FRÍA',
-  CLIENT_SUBDOMAIN: import.meta.env.VITE_CLIENT_SUBDOMAIN || 'localito.reisbloc.com',
-  LOGO_URL: import.meta.env.VITE_LOGO_URL || '/logo_localito.jpg',
-  ORGANIZATION_ID: import.meta.env.VITE_EVENT_ORGANIZATION_ID,
+  CLIENT_NAME: import.meta.env.VITE_CLIENT_NAME || 'REISBLOC RESTAURANTE',
+  CLIENT_TAGLINE: import.meta.env.VITE_CLIENT_TAGLINE || 'SISTEMA POS',
+  CLIENT_SUBDOMAIN: import.meta.env.VITE_CLIENT_SUBDOMAIN || '',
+  LOGO_URL: import.meta.env.VITE_LOGO_URL || '/icon.svg',
+  ORGANIZATION_ID: import.meta.env.VITE_EVENT_ORGANIZATION_ID || 'cb86de9f-48b9-4680-b6bc-6da0a15a98fa',
   ADMIN_EMAILS: (import.meta.env.VITE_ADMIN_EMAILS || 'airproject360@gmail.com,hunab.arredondo@gmail.com,adminlocalito@gmail.com')
     .split(',')
     .map((e: string) => e.trim().toLowerCase())

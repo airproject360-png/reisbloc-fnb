@@ -8,6 +8,7 @@ import printService from '@/services/printService'
 import { Order, OrderItem } from '@/types'
 import { LayoutDashboard, ArrowLeftRight, XCircle, Timer, Edit, CheckCircle, CreditCard, Printer } from 'lucide-react'
 import EditOrderModal from '@/components/admin/EditOrderModal'
+import { getTenantSettings } from '@/config/tenantConfig'
 
 interface TransferState {
   [orderId: string]: number
@@ -46,6 +47,7 @@ const getTableColorStyles = (tableNum: number) => {
 
 export default function TableMonitor() {
   const { currentUser, tables } = useAppStore()
+  const tenant = getTenantSettings()
   const permissions = usePermissions()
   const canAccessTableMonitor = permissions.canAccessTableMonitor || currentUser?.role === 'capitan'
   const canManageTables = permissions.canManageTables || currentUser?.role === 'capitan'
@@ -108,9 +110,8 @@ export default function TableMonitor() {
       <div style="width:58mm;padding:6px;font-family:'Courier New', monospace;font-size:11px;line-height:1.25;color:#000;">
         <!-- Header Logo & Store Name -->
         <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
-          <div style="font-weight:900;font-size:16px;letter-spacing:1px;">LOCALITO</div>
-          <div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;">Guisos & Barra Fría</div>
-          <div style="font-size:9px;color:#333;margin-top:2px;">localito.reisbloc.com</div>
+          <div style="font-weight:900;font-size:16px;letter-spacing:1px;">${tenant.clientName}</div>
+          <div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;">${tenant.clientTagline}</div>
           <div style="font-size:10px;font-weight:bold;margin-top:4px;border:1px solid #000;padding:2px 0;">
             ${isPaymentTicket ? '*** TICKET DE VENTA ***' : '*** CUENTA DE CONSUMO ***'}
           </div>
@@ -123,7 +124,7 @@ export default function TableMonitor() {
             <span><strong>Folio:</strong> ${ticketFolio}</span>
           </div>
           <div style="margin-top:2px;">Fecha: ${dateStr}</div>
-          <div>Atendido por: ${currentUser?.username || currentUser?.name || 'Personal LOCALITO'}</div>
+          <div>Atendido por: ${currentUser?.username || currentUser?.name || `Personal ${tenant.clientName}`}</div>
         </div>
 
         ${customNotes ? `
@@ -455,7 +456,7 @@ export default function TableMonitor() {
               <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">Cuentas / Mesas Activas</h1>
             </div>
             <p className="text-xs md:text-sm text-slate-400">
-              Monitoreo de comensales, cobro rápido y cuentas pendientes de LOCALITO
+              Monitoreo de comensales, cobro rápido y cuentas pendientes de ${tenant.clientName}
             </p>
           </div>
 

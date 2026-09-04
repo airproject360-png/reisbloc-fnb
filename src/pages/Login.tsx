@@ -5,10 +5,11 @@ import { useAppStore } from '@/store/appStore'
 import { supabase } from '@/config/supabase'
 import { AlertCircle, ArrowRight, Database, CheckCircle2 } from 'lucide-react'
 import { APP_CONFIG } from '@/config/constants'
-
+import { getTenantSettings } from '@/config/tenantConfig'
 
 function Login() {
   const navigate = useNavigate()
+  const tenant = getTenantSettings()
   const { loginWithGoogle, loading, error } = useAuth()
   const { setCurrentUser, setAuthenticated } = useAppStore()
   const [searchParams] = useSearchParams()
@@ -83,15 +84,19 @@ function Login() {
         {/* Glow decorative background */}
         <div className="absolute -top-20 -right-20 w-48 h-48 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
 
-        {/* Header Branding - LOCALITO Guisos & Barra Fría */}
+        {/* Header Branding */}
         <div className="flex flex-col items-center text-center space-y-3">
-          <img 
-            src={APP_CONFIG.LOGO_URL} 
-            alt={APP_CONFIG.CLIENT_NAME} 
-            className="w-full max-w-[280px] h-auto object-contain rounded-2xl border border-amber-500/30 shadow-2xl shadow-amber-500/10"
-          />
+          {tenant.logoUrl ? (
+            <img 
+              src={tenant.logoUrl} 
+              alt={tenant.clientName} 
+              className="w-full max-w-[280px] h-auto object-contain rounded-2xl border border-amber-500/30 shadow-2xl shadow-amber-500/10"
+            />
+          ) : (
+            <h1 className="text-2xl font-black text-white">{tenant.clientName}</h1>
+          )}
           <p className="text-xs text-amber-400 font-extrabold tracking-widest uppercase">
-            Sistema POS, Guisos & Barra Fría
+            {tenant.isLocalito ? 'Sistema POS, Guisos & Barra Fría' : `${tenant.clientName} · ${tenant.clientTagline}`}
           </p>
         </div>
 

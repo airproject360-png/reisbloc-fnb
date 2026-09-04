@@ -17,6 +17,9 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { User, Device, Product, OrderItem } from '@/types'
 import { DEMO_PRODUCTS, DEMO_ADMIN_USER } from '@/services/demoSeedService'
+import { isLocalitoTenant } from '@/config/tenantConfig'
+
+const isLocalito = typeof window !== 'undefined' ? isLocalitoTenant() : false
 
 const generateId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -59,9 +62,11 @@ const initialState: AppState = {
   isAuthenticated: false,
   currentUser: null,
   currentDevice: null,
-  tables: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 99, 100],
-  currentTableNumber: 0,
-  products: DEMO_PRODUCTS,
+  tables: isLocalito
+    ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 99, 100]
+    : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+  currentTableNumber: isLocalito ? 0 : 1,
+  products: isLocalito ? DEMO_PRODUCTS : [],
   users: [DEMO_ADMIN_USER],
   draftOrders: {},
 }

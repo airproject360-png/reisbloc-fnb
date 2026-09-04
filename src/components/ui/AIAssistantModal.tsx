@@ -3,6 +3,7 @@ import { Sparkles, X, Bot, ChevronRight, TrendingUp, Lightbulb, ShieldAlert, Pac
 import { aiAssistantService } from '@/services/aiAssistantService'
 import { APP_CONFIG } from '@/config/constants'
 import { useAppStore } from '@/store/appStore'
+import { getTenantSettings } from '@/config/tenantConfig'
 
 interface AIAssistantModalProps {
   isOpen: boolean
@@ -25,6 +26,7 @@ export default function AIAssistantModal({
   currentCartItems = [],
   closingData
 }: AIAssistantModalProps) {
+  const tenant = getTenantSettings()
   const { products, draftOrders, currentTableNumber } = useAppStore()
   const [activeTab, setActiveTab] = useState<'all' | 'pos' | 'closing' | 'inventory'>('all')
 
@@ -113,7 +115,7 @@ export default function AIAssistantModal({
             </div>
             <div>
               <h2 className="text-xl font-black text-white flex items-center gap-2 tracking-tight">
-                Asistente IA POS · LOCALITO
+                Asistente IA POS · {tenant.clientName}
               </h2>
               <p className="text-xs text-slate-400">Inteligencia operativa en tiempo real con datos reales de la caja e inventario</p>
             </div>
@@ -258,10 +260,10 @@ export default function AIAssistantModal({
         <div className="pt-2 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between">
           <span className="flex items-center gap-1 text-slate-400">
             <Sparkles size={12} className="text-teal-400" />
-            Auditoría en tiempo real con datos de LOCALITO
+            Auditoría en tiempo real con datos de {tenant.clientName}
           </span>
           <span className="text-slate-500 font-bold">
-            LOCALITO POS AI v3.2.1
+            {tenant.clientName} POS AI v3.2.1
           </span>
         </div>
       </div>

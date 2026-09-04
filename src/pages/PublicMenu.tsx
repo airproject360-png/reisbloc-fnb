@@ -1,14 +1,17 @@
 import { useState, useMemo } from 'react'
-import { Search, Sparkles, MapPin, ChefHat } from 'lucide-react'
+import { Search, Sparkles, MapPin, ChefHat, Utensils } from 'lucide-react'
 import { DEMO_PRODUCTS, DemoProduct } from '@/services/demoSeedService'
 import { useAppStore } from '@/store/appStore'
 import DarkKitchenRecipeModal from '@/components/admin/DarkKitchenRecipeModal'
+import { getTenantSettings } from '@/config/tenantConfig'
 
 export default function PublicMenu() {
+  const tenant = getTenantSettings()
   const { products: storeProducts } = useAppStore()
   const displayProducts = useMemo(() => {
-    return storeProducts && storeProducts.length > 0 ? storeProducts : DEMO_PRODUCTS
-  }, [storeProducts])
+    if (storeProducts && storeProducts.length > 0) return storeProducts
+    return tenant.isLocalito ? DEMO_PRODUCTS : []
+  }, [storeProducts, tenant.isLocalito])
 
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos')
   const [searchTerm, setSearchTerm] = useState('')
@@ -35,17 +38,26 @@ export default function PublicMenu() {
           <div className="flex flex-col items-center md:items-start text-center md:text-left gap-2">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold mb-1">
               <Sparkles size={14} className="text-amber-400" />
-              <span>Menú Digital QR Informativo · localito.reisbloc.com</span>
+              <span>{tenant.isLocalito ? 'Menú Digital QR Informativo · localito.reisbloc.com' : `Menú Digital · ${tenant.clientName}`}</span>
             </div>
             
-            <img 
-              src="/logo_localito.jpg" 
-              alt="LOCALITO - Guisos & Barra Fría" 
-              className="h-16 md:h-20 w-auto object-contain rounded-2xl border border-amber-500/30 shadow-2xl shadow-amber-500/20"
-            />
+            {tenant.logoUrl ? (
+              <img 
+                src={tenant.logoUrl} 
+                alt={tenant.clientName} 
+                className="h-16 md:h-20 w-auto object-contain rounded-2xl border border-amber-500/30 shadow-2xl shadow-amber-500/20"
+              />
+            ) : (
+              <div className="flex items-center gap-3">
+                <Utensils className="text-amber-400" size={32} />
+                <h1 className="text-2xl md:text-3xl font-black text-white">{tenant.clientName}</h1>
+              </div>
+            )}
             
             <p className="text-slate-300 text-sm md:text-base mt-1 max-w-lg font-medium">
-              Especialidades en Guisos Caseros, Quesadillas de Maíz y Harina, Antojitos, Sopes, Gorditas, Frijoles Puercos y Bebidas.
+              {tenant.isLocalito 
+                ? 'Especialidades en Guisos Caseros, Quesadillas de Maíz y Harina, Antojitos, Sopes, Gorditas, Frijoles Puercos y Bebidas.'
+                : (tenant.clientTagline || 'Consulta nuestras especialidades y platillos del día.')}
             </p>
           </div>
 

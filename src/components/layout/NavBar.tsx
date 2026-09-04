@@ -6,6 +6,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { useNotifications } from '@/hooks/useNotifications'
 import NotificationCenter from '@/components/common/NotificationCenter'
 import { APP_CONFIG } from '@/config/constants'
+import { getTenantSettings } from '@/config/tenantConfig'
 import {
   ShoppingCart,
   BarChart3,
@@ -32,6 +33,7 @@ import { usePerformanceMode } from '@/hooks/usePerformanceMode'
 export default function NavBar() {
   const location = useLocation()
   const { currentUser } = useAppStore()
+  const tenant = getTenantSettings()
   const { logout } = useAuth()
   const { isReadOnly, currentRole } = usePermissions()
   const { isLowPerf, toggleLowPerf } = usePerformanceMode()
@@ -110,17 +112,23 @@ export default function NavBar() {
       <div className="flex items-center justify-between gap-3">
         {/* Logo / Brand - LOCALITO */}
         <Link to="/pos" className="flex items-center gap-2.5 shrink-0 active:scale-95 transition-transform">
-          <img 
-            src={APP_CONFIG.LOGO_URL} 
-            alt={APP_CONFIG.CLIENT_NAME}
-            className="h-11 sm:h-12 w-auto object-contain rounded-xl border border-amber-500/40 shadow-lg shadow-amber-500/20"
-          />
+          {tenant.logoUrl ? (
+            <img 
+              src={tenant.logoUrl} 
+              alt={tenant.clientName}
+              className="h-11 sm:h-12 w-auto object-contain rounded-xl border border-amber-500/40 shadow-lg shadow-amber-500/20"
+            />
+          ) : (
+            <div className="h-10 w-10 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-300">
+              <Utensils size={20} />
+            </div>
+          )}
           <div className="hidden sm:block">
             <h1 className="font-black text-sm sm:text-base tracking-tight text-white leading-tight">
-              {APP_CONFIG.CLIENT_NAME}
+              {tenant.clientName}
             </h1>
             <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest leading-none">
-              {APP_CONFIG.CLIENT_TAGLINE}
+              {tenant.clientTagline}
             </p>
           </div>
         </Link>

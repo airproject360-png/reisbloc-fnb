@@ -86,6 +86,7 @@ export default function Reports() {
   const [loading, setLoading] = useState(false)
   const [showAIInsights, setShowAIInsights] = useState(false)
   const [forceDemoData, setForceDemoData] = useState<boolean>(false)
+  const [isUsingDemoFallback, setIsUsingDemoFallback] = useState<boolean>(false)
 
   // Selector de fechas
   const [dateRange, setDateRange] = useState({
@@ -93,7 +94,7 @@ export default function Reports() {
     to: new Date().toLocaleDateString('en-CA'),
   })
 
-  const setPreset = (preset: 'today' | 'week' | 'month' | 'last_month' | 'last30') => {
+  const setPreset = (preset: 'today' | 'week' | 'month' | 'last_month' | 'last30' | 'year' | 'all') => {
     const now = new Date()
     if (preset === 'today') {
       const todayStr = now.toLocaleDateString('en-CA')
@@ -112,6 +113,11 @@ export default function Reports() {
     } else if (preset === 'last30') {
       const start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
       setDateRange({ from: start.toLocaleDateString('en-CA'), to: now.toLocaleDateString('en-CA') })
+    } else if (preset === 'year') {
+      const start = new Date(now.getFullYear(), 0, 1)
+      setDateRange({ from: start.toLocaleDateString('en-CA'), to: now.toLocaleDateString('en-CA') })
+    } else if (preset === 'all') {
+      setDateRange({ from: '2026-01-01', to: now.toLocaleDateString('en-CA') })
     }
   }
 
@@ -139,6 +145,7 @@ export default function Reports() {
 
   const loadReports = async () => {
     if (tenant.enableDemoMode && forceDemoData && demoGenerated) {
+      setIsUsingDemoFallback(true)
       applyDemoData(demoGenerated)
       return
     }
@@ -152,8 +159,10 @@ export default function Reports() {
 
       if (!sales || sales.length === 0) {
         if (tenant.enableDemoMode && demoGenerated) {
+          setIsUsingDemoFallback(true)
           applyDemoData(demoGenerated)
         } else {
+          setIsUsingDemoFallback(false)
           // Datos reales vacíos para Localito sin mock fake
           setSalesData([])
           setHourlyData([])
@@ -184,6 +193,8 @@ export default function Reports() {
         }
         return
       }
+
+      setIsUsingDemoFallback(false)
 
       // Agrupar ventas por día
       const byDay: Record<string, any[]> = {}
@@ -460,6 +471,18 @@ export default function Reports() {
               >
                 Últimos 30 Días
               </button>
+              <button
+                onClick={() => setPreset('year')}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all"
+              >
+                Este Año
+              </button>
+              <button
+                onClick={() => setPreset('all')}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all"
+              >
+                Histórico
+              </button>
             </div>
 
             {loading && (
@@ -470,6 +493,31 @@ export default function Reports() {
             )}
           </div>
         </div>
+
+        {/* Banner informativo de modo demostración cuando no hay ventas en el rango */}
+        {tenant.enableDemoMode && isUsingDemoFallback && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-3xl p-4 text-xs text-amber-300 flex items-center justify-between gap-3 shadow-xl">
+            <div className="flex items-center gap-2.5">
+              <Info size={18} className="shrink-0 text-amber-400" />
+              <span>
+                Mostrando <strong>datos de muestra demostrativos</strong> porque no se encontraron comandas en el período seleccionado ({dateRange.from} al {dateRange.to}). Puedes pulsar <strong>"Este Año"</strong> o <strong>"Histórico"</strong> para consultar ventas anteriores registradas.
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setForceDemoData(false)
+                setIsUsingDemoFallback(false)
+                setSalesData([])
+                setHourlyData([])
+                setTopProducts([])
+                setEmployeeMetrics([])
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-bold border border-amber-400/30 text-xs shrink-0 active:scale-95 transition-all"
+            >
+              Ver Pantalla en Cero
+            </button>
+          </div>
+        )}
 
         {/* Pestañas de Navegación del Reporte (Sin mención de propinas para Localito) */}
         <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">

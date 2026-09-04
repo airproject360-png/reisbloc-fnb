@@ -8,6 +8,7 @@ import { DEMO_PRODUCTS } from '@/services/demoSeedService'
 import printService from '@/services/printService'
 import OrderNoteModal from '@/components/pos/OrderNoteModal'
 import DarkKitchenRecipeModal from '@/components/admin/DarkKitchenRecipeModal'
+import { getTenantSettings } from '@/config/tenantConfig'
 import {
   Search,
   MapPin,
@@ -63,27 +64,51 @@ export default function POS() {
   const [posTicketNotes, setPosTicketNotes] = useState<string>('')
 
   const canAdjustSale = currentUser?.role === 'admin' || currentUser?.role === 'capitan'
+  const tenant = getTenantSettings()
 
-  // Lista oficial de ubicaciones / mesas de LOCALITO (Centro de Operaciones + 12 Mesas + Barra + Para Llevar)
-  const tableLocations = [
-    { id: 0, label: '🏪 Caja / Mostrador' },
-    { id: 1, label: 'Mesa 1' },
-    { id: 2, label: 'Mesa 2' },
-    { id: 3, label: 'Mesa 3' },
-    { id: 4, label: 'Mesa 4' },
-    { id: 5, label: 'Mesa 5' },
-    { id: 6, label: 'Mesa 6' },
-    { id: 7, label: 'Mesa 7' },
-    { id: 8, label: 'Mesa 8' },
-    { id: 9, label: 'Mesa 9' },
-    { id: 10, label: 'Mesa 10' },
-    { id: 11, label: 'Mesa 11' },
-    { id: 12, label: 'Mesa 12' },
-    { id: 99, label: 'Barra' },
-    { id: 100, label: 'Para Llevar / Delivery' },
-  ]
+  // Ubicaciones dinámicas según tenant: Localito tiene estación 0 (Caja/Mostrador), Barra y Para Llevar
+  const tableLocations = useMemo(() => {
+    if (tenant.isLocalito) {
+      return [
+        { id: 0, label: '🏪 Caja / Mostrador' },
+        { id: 1, label: 'Mesa 1' },
+        { id: 2, label: 'Mesa 2' },
+        { id: 3, label: 'Mesa 3' },
+        { id: 4, label: 'Mesa 4' },
+        { id: 5, label: 'Mesa 5' },
+        { id: 6, label: 'Mesa 6' },
+        { id: 7, label: 'Mesa 7' },
+        { id: 8, label: 'Mesa 8' },
+        { id: 9, label: 'Mesa 9' },
+        { id: 10, label: 'Mesa 10' },
+        { id: 11, label: 'Mesa 11' },
+        { id: 12, label: 'Mesa 12' },
+        { id: 99, label: 'Barra' },
+        { id: 100, label: 'Para Llevar / Delivery' },
+      ]
+    }
+    return [
+      { id: 1, label: 'Mesa 1' },
+      { id: 2, label: 'Mesa 2' },
+      { id: 3, label: 'Mesa 3' },
+      { id: 4, label: 'Mesa 4' },
+      { id: 5, label: 'Mesa 5' },
+      { id: 6, label: 'Mesa 6' },
+      { id: 7, label: 'Mesa 7' },
+      { id: 8, label: 'Mesa 8' },
+      { id: 9, label: 'Mesa 9' },
+      { id: 10, label: 'Mesa 10' },
+      { id: 11, label: 'Mesa 11' },
+      { id: 12, label: 'Mesa 12' },
+    ]
+  }, [tenant.isLocalito])
 
-  const currentLoc = currentTableNumber ?? 0
+  const currentLoc = useMemo(() => {
+    if (currentTableNumber !== null && tableLocations.some(l => l.id === currentTableNumber)) {
+      return currentTableNumber
+    }
+    return tableLocations[0]?.id ?? 1
+  }, [currentTableNumber, tableLocations])
   const cartItems = draftOrders[currentLoc] || []
   const cartSubtotal = cartItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
   const isReadOnly = currentUser?.role === 'supervisor'
@@ -177,7 +202,7 @@ export default function POS() {
           <div style="width:58mm;padding:4px;font-family:'Courier New', monospace;font-size:11px;line-height:1.2;color:#000;">
             <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:6px;">
               <div style="font-weight:900;font-size:15px;">*** COMANDA DE COCINA ***</div>
-              <div style="font-size:12px;font-weight:bold;margin-top:2px;">LOCALITO - ${locName.toUpperCase()}</div>
+              <div style="font-size:12px;font-weight:bold;margin-top:2px;">${tenant.clientName} - ${locName.toUpperCase()}</div>
               <div style="font-size:9px;margin-top:2px;">Fecha: ${dateStr}</div>
             </div>
             <div style="border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:6px;">
@@ -286,9 +311,8 @@ export default function POS() {
           <div style="width:58mm;padding:6px;font-family:'Courier New', monospace;font-size:11px;line-height:1.25;color:#000;">
             <!-- Header Logo & Store Name -->
             <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
-              <div style="font-weight:900;font-size:16px;letter-spacing:1px;">LOCALITO</div>
-              <div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;">Guisos & Barra Fría</div>
-              <div style="font-size:9px;color:#333;margin-top:2px;">localito.reisbloc.com</div>
+              <div style="font-weight:900;font-size:16px;letter-spacing:1px;">${tenant.clientName}</div>
+              <div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;">${tenant.clientTagline}</div>
               <div style="font-size:10px;font-weight:bold;margin-top:4px;border:1px solid #000;padding:2px 0;">
                 TICKET DE COMPRA
               </div>
@@ -301,7 +325,7 @@ export default function POS() {
                 <span><strong>Folio:</strong> ${ticketFolio}</span>
               </div>
               <div style="margin-top:2px;">Fecha: ${dateStr}</div>
-              <div>Atendido por: ${currentUser.username || currentUser.name || 'Personal LOCALITO'}</div>
+              <div>Atendido por: ${currentUser.username || currentUser.name || `Personal ${tenant.clientName}`}</div>
             </div>
 
             ${posTicketNotes.trim() ? `
@@ -397,11 +421,21 @@ export default function POS() {
       <header className="relative bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 border-b border-teal-500/20 px-4 py-4 overflow-hidden shadow-2xl">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 relative z-10">
           <div className="flex items-center gap-3">
-            <img 
-              src="/logo_localito.jpg" 
-              alt="LOCALITO" 
-              className="h-12 md:h-14 w-auto object-contain rounded-2xl border border-amber-500/30 shadow-xl shadow-amber-500/10"
-            />
+            {tenant.logoUrl ? (
+              <img 
+                src={tenant.logoUrl} 
+                alt={tenant.clientName} 
+                className="h-12 md:h-14 w-auto object-contain rounded-2xl border border-amber-500/30 shadow-xl shadow-amber-500/10"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
+                <Store size={26} />
+              </div>
+            )}
+            <div className="hidden sm:block">
+              <h2 className="font-black text-sm text-white tracking-tight">{tenant.clientName}</h2>
+              <p className="text-[10px] font-bold text-teal-300 uppercase tracking-wider">{tenant.clientTagline}</p>
+            </div>
           </div>
 
           {/* Selector Simplificado de Ubicación / Mesas */}
@@ -692,7 +726,7 @@ export default function POS() {
               <div>
                 <h3 className="text-xl font-black text-white">Cobrar Cuenta</h3>
                 <p className="text-xs text-amber-400 font-bold">
-                  {tableLocations.find(l => l.id === currentLoc)?.label} · LOCALITO
+                  {tableLocations.find(l => l.id === currentLoc)?.label} · {tenant.clientName}
                 </p>
               </div>
               <button

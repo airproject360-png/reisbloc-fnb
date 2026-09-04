@@ -20,6 +20,7 @@ import { getStoredToken } from './jwtService'
 import { useAppStore } from '@/store/appStore'
 import { getStoredOrganizationId } from './authService'
 import { APP_CONFIG } from '@/config/constants'
+import { isLocalitoTenant, LOCALITO_ORG_ID, DEFAULT_DEMO_ORG_ID } from '@/config/tenantConfig'
 import { DEMO_PRODUCTS } from './demoSeedService'
 import deviceService from './deviceService'
 import {
@@ -70,20 +71,24 @@ class SupabaseService {
 
   // Helper para obtener el ID de organización actual
   public getCurrentOrgId(): string {
+    if (isLocalitoTenant()) {
+      return LOCALITO_ORG_ID
+    }
+
     const token = getStoredToken()
-    if (token && token.organizationId) {
+    if (token && token.organizationId && token.organizationId !== LOCALITO_ORG_ID) {
       this.warnedMissingOrg = false
       return token.organizationId
     }
 
     const stateOrgId = useAppStore.getState().currentUser?.organizationId
-    if (stateOrgId) {
+    if (stateOrgId && stateOrgId !== LOCALITO_ORG_ID) {
       this.warnedMissingOrg = false
       return stateOrgId
     }
 
     const persistedOrgId = getStoredOrganizationId()
-    if (persistedOrgId) {
+    if (persistedOrgId && persistedOrgId !== LOCALITO_ORG_ID) {
       this.warnedMissingOrg = false
       return persistedOrgId
     }
@@ -93,7 +98,7 @@ class SupabaseService {
       if (persisted) {
         const parsed = JSON.parse(persisted)
         const persistedOrgId = parsed?.state?.currentUser?.organizationId
-        if (persistedOrgId) {
+        if (persistedOrgId && persistedOrgId !== LOCALITO_ORG_ID) {
           this.warnedMissingOrg = false
           return persistedOrgId
         }
@@ -103,13 +108,13 @@ class SupabaseService {
     }
 
     const envOrgId = import.meta.env.VITE_EVENT_ORGANIZATION_ID as string | undefined
-    if (envOrgId && envOrgId !== 'missing-key') {
+    if (envOrgId && envOrgId !== 'missing-key' && envOrgId !== LOCALITO_ORG_ID) {
       this.warnedMissingOrg = false
       return envOrgId
     }
 
-    // Default Fallback Oficial desde APP_CONFIG
-    return APP_CONFIG.ORGANIZATION_ID
+    // Default Fallback Oficial para otros restaurantes (Restaurante Demo)
+    return APP_CONFIG.ORGANIZATION_ID || DEFAULT_DEMO_ORG_ID
   }
 
   // ==================== USERS ====================
@@ -662,8 +667,10 @@ class SupabaseService {
   }
 
   private getLocalProductsBackup(): Product[] {
+    const orgId = this.getCurrentOrgId()
+    const storageKey = `reisbloc_products_backup_${orgId}`
     try {
-      const raw = localStorage.getItem('reisbloc_localito_products_backup')
+      const raw = localStorage.getItem(storageKey)
       if (raw) {
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed) && parsed.length > 0) return parsed
@@ -671,12 +678,19 @@ class SupabaseService {
     } catch (e) {
       console.warn('Error reading local products backup:', e)
     }
-    return (DEMO_PRODUCTS || []) as unknown as Product[]
+
+    // Solo devolver DEMO_PRODUCTS si es el tenant de LOCALITO
+    if (orgId === LOCALITO_ORG_ID || isLocalitoTenant()) {
+      return (DEMO_PRODUCTS || []) as unknown as Product[]
+    }
+    return []
   }
 
   private saveLocalProductsBackup(products: Product[]): void {
+    const orgId = this.getCurrentOrgId()
+    const storageKey = `reisbloc_products_backup_${orgId}`
     try {
-      localStorage.setItem('reisbloc_localito_products_backup', JSON.stringify(products))
+      localStorage.setItem(storageKey, JSON.stringify(products))
     } catch (e) {
       console.warn('Error saving local products backup:', e)
     }
@@ -737,17 +751,24 @@ class SupabaseService {
         return combined
       }
 
-      // Si Supabase no tiene productos para esta org, devolver respaldo local (DEMO_PRODUCTS + locales)
+      // Si Supabase no tiene productos para esta org, devolver respaldo local (si existe) o fallback
       if (localBackup.length > 0) {
         console.log('📦 [Supabase] Usando respaldo local de productos:', localBackup.length)
         return localBackup
       }
 
-      return (DEMO_PRODUCTS || []) as unknown as Product[]
+      if (orgId === LOCALITO_ORG_ID || isLocalitoTenant()) {
+        return (DEMO_PRODUCTS || []) as unknown as Product[]
+      }
+      return []
     }).catch(error => {
       logger.error('supabase', 'Error getting products, checking local backup', error as any)
       const backup = this.getLocalProductsBackup()
-      return backup.length > 0 ? backup : ((DEMO_PRODUCTS || []) as unknown as Product[])
+      if (backup.length > 0) return backup
+      if (this.getCurrentOrgId() === LOCALITO_ORG_ID || isLocalitoTenant()) {
+        return (DEMO_PRODUCTS || []) as unknown as Product[]
+      }
+      return []
     })
   }
 
@@ -937,11 +958,11 @@ class SupabaseService {
   private buildOrderPayload(order: Partial<Order> & Record<string, any>) {
     const payload: any = { ...order }
 
-    // Validar tableNumber si está presente (debe ser &gt; 0)
+    // Validar tableNumber si está presente (debe ser >= 0)
     if ('tableNumber' in order) {
       const tableNum = order.tableNumber
-      if (tableNum === null || tableNum === undefined || tableNum <= 0) {
-        throw new Error(`Invalid table number: ${tableNum}. Must be greater than 0.`)
+      if (tableNum === null || tableNum === undefined || tableNum < 0) {
+        throw new Error(`Invalid table number: ${tableNum}. Must be greater than or equal to 0.`)
       }
       payload.table_number = tableNum
     }
@@ -1199,9 +1220,9 @@ class SupabaseService {
 
   async createSale(sale: Omit<Sale, 'id'>): Promise<string> {
     try {
-      // Validar tableNumber
-      if (!sale.tableNumber || sale.tableNumber <= 0) {
-        throw new Error('Table number must be greater than 0')
+      // Validar tableNumber (>= 0 para permitir estación 0 Caja / Mostrador)
+      if (sale.tableNumber === undefined || sale.tableNumber === null || sale.tableNumber < 0) {
+        throw new Error('Table number must be greater than or equal to 0')
       }
 
       // Map TypeScript Sale to Supabase schema with type validation
@@ -1830,13 +1851,35 @@ class SupabaseService {
   async getTopProducts(startDate: Date, endDate: Date, limit: number = 5): Promise<any[]> {
     try {
       const sales = await this.getSalesByDateRange(startDate, endDate)
+      if (!sales || sales.length === 0) return []
 
-      const productMap: Record<string, { name: string; qty: number; total: number }> = {}
+      // Si las ventas no contienen items directamente, buscar los pedidos asociados
+      const orderIds = sales.map((s: any) => s.order_id).filter(Boolean)
+      const ordersMap: Record<string, any[]> = {}
+      if (orderIds.length > 0) {
+        try {
+          const { data: ordersData } = await supabase
+            .from('orders')
+            .select('id, items')
+            .in('id', orderIds)
+          if (ordersData) {
+            ordersData.forEach((ord: any) => {
+              ordersMap[ord.id] = ord.items || []
+            })
+          }
+        } catch (e) {
+          logger.warn('supabase', 'Error fetching orders for top products', e as any)
+        }
+      }
+
+      const productMap: Record<string, { name: string; qty: number; total: number; category?: string }> = {}
       sales.forEach((sale: any) => {
-        ;(sale.items || []).forEach((item: any) => {
+        const items = (sale.items && sale.items.length > 0) ? sale.items : (ordersMap[sale.order_id] || [])
+        items.forEach((item: any) => {
           const pid = item.productId || item.product_id || item.id
           const pname = item.productName || item.name || 'Producto'
-          if (!productMap[pid]) productMap[pid] = { name: pname, qty: 0, total: 0 }
+          const category = item.category || 'General'
+          if (!productMap[pid]) productMap[pid] = { name: pname, qty: 0, total: 0, category }
           productMap[pid].qty += Number(item.quantity || 0)
           productMap[pid].total += Number(item.unitPrice || item.price || 0) * Number(item.quantity || 0)
         })

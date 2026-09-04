@@ -8,6 +8,7 @@ import { Product } from '@/types/index'
 import { DEMO_INGREDIENTS, DemoIngredient, DemoProduct } from '@/services/demoSeedService'
 import DarkKitchenRecipeModal from '@/components/admin/DarkKitchenRecipeModal'
 import { optimizeImageFile } from '@/utils/imageOptimizationService'
+import { getTenantSettings } from '@/config/tenantConfig'
 import {
   Plus,
   Edit2,
@@ -46,6 +47,7 @@ interface ShoppingItem {
 
 export default function InventoryManagement() {
   const { products, setProducts, currentUser } = useAppStore()
+  const tenant = getTenantSettings()
   const { canManageInventory, isReadOnly } = usePermissions()
   const [loading, setLoading] = useState(false)
   const [filter, setFilter] = useState<'all' | 'active' | 'low-stock'>('all')
@@ -516,7 +518,7 @@ export default function InventoryManagement() {
     }
 
     const dateStr = new Date().toLocaleString('es-MX')
-    const operator = currentUser?.username || currentUser?.name || 'Cocina LOCALITO'
+    const operator = currentUser?.username || currentUser?.name || `Cocina ${tenant.clientName}`
     const role = currentUser?.role || 'cocinero'
 
     const itemsHtml = selectedList.map(item => `
@@ -534,9 +536,9 @@ export default function InventoryManagement() {
     const ticketHtml = `
       <div style="width:58mm;padding:6px;font-family:'Courier New', monospace;font-size:11px;line-height:1.25;color:#000;">
         <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:5px;margin-bottom:6px;">
-          <div style="font-weight:900;font-size:15px;letter-spacing:1px;">LOCALITO</div>
+          <div style="font-weight:900;font-size:15px;letter-spacing:1px;">${tenant.clientName}</div>
           <div style="font-size:10px;font-weight:bold;text-transform:uppercase;margin-top:2px;">LISTA DE COMPRAS & RESURTIDO</div>
-          <div style="font-size:8px;color:#444;margin-top:2px;">localito.reisbloc.com</div>
+          <div style="font-size:8px;color:#444;margin-top:2px;">${tenant.clientTagline}</div>
         </div>
 
         <div style="font-size:9px;border-bottom:1px dashed #000;padding-bottom:4px;margin-bottom:6px;">
@@ -1292,7 +1294,7 @@ export default function InventoryManagement() {
 
                 {/* Presets Rápidos de LOCALITO */}
                 <div className="pt-2 border-t border-slate-800/80">
-                  <p className="text-[11px] font-semibold text-slate-400 mb-2">⚡ Fotos rápidas auténticas de LOCALITO:</p>
+                  <p className="text-[11px] font-semibold text-slate-400 mb-2">⚡ Fotos rápidas auténticas sugeridas:</p>
                   <div className="flex flex-wrap gap-1.5">
                     {[
                       { name: '🌮 Tacos de Guisado', url: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop' },

@@ -15,6 +15,7 @@ import { clearAuthToken } from './jwtService'
 import logger from '@/utils/logger'
 import { User } from '@/types/index'
 import { APP_CONFIG } from '@/config/constants'
+import { isLocalitoTenant, LOCALITO_ORG_ID, DEFAULT_DEMO_ORG_ID } from '@/config/tenantConfig'
 
 const LOCAL_ORG_KEY = 'reisbloc_org_id'
 
@@ -46,6 +47,11 @@ const persistOrganizationId = (orgId?: string | null) => {
 }
 
 export async function resolveCurrentOrganizationId(authUser?: any): Promise<string | undefined> {
+  if (isLocalitoTenant()) {
+    persistOrganizationId(LOCALITO_ORG_ID)
+    return LOCALITO_ORG_ID
+  }
+
   const metadataOrg = authUser?.user_metadata?.organization_id || authUser?.app_metadata?.organization_id
   if (metadataOrg) {
     persistOrganizationId(metadataOrg)
@@ -63,7 +69,8 @@ export async function resolveCurrentOrganizationId(authUser?: any): Promise<stri
   }
 
   const cachedOrg = getStoredOrganizationId()
-  if (cachedOrg) return cachedOrg
+  // Si no estamos en el tenant de Localito, no usar cachedOrg si era de Localito
+  if (cachedOrg && cachedOrg !== LOCALITO_ORG_ID) return cachedOrg
 
   const { data, error } = await supabase.rpc('current_user_org_id')
   if (!error && data) {
@@ -85,11 +92,9 @@ export async function resolveCurrentOrganizationId(authUser?: any): Promise<stri
     logger.warn('auth', 'No se pudo resolver organization_id primario', primaryOrgError)
   }
 
-  if (FALLBACK_EVENT_ORG_ID) {
-    persistOrganizationId(FALLBACK_EVENT_ORG_ID)
-  }
-
-  return FALLBACK_EVENT_ORG_ID
+  const fallbackOrg = FALLBACK_EVENT_ORG_ID || APP_CONFIG.ORGANIZATION_ID || DEFAULT_DEMO_ORG_ID
+  persistOrganizationId(fallbackOrg)
+  return fallbackOrg
 }
 
 export const mapAuthUserToAppUser = (authUser: any): User => {
@@ -100,6 +105,9 @@ export const mapAuthUserToAppUser = (authUser: any): User => {
   const role = FORCED_ADMIN_EMAILS.has(email)
     ? 'admin'
     : normalizeEventRole(requestedRole)
+
+  const isLocalito = isLocalitoTenant()
+  const defaultOrgId = isLocalito ? LOCALITO_ORG_ID : (FALLBACK_EVENT_ORG_ID || APP_CONFIG.ORGANIZATION_ID || DEFAULT_DEMO_ORG_ID)
 
   return {
     id: authUser.id,
@@ -113,8 +121,8 @@ export const mapAuthUserToAppUser = (authUser: any): User => {
     organizationId:
       metadata?.organization_id ||
       appMetadata?.organization_id ||
-      getStoredOrganizationId() ||
-      FALLBACK_EVENT_ORG_ID,
+      (getStoredOrganizationId() !== LOCALITO_ORG_ID || isLocalito ? getStoredOrganizationId() : undefined) ||
+      defaultOrgId,
   }
 }
 
@@ -128,38 +136,49 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
       return null
     }
 
-    const targetOrgId = FALLBACK_EVENT_ORG_ID || APP_CONFIG.ORGANIZATION_ID
+    const isLocalito = isLocalitoTenant()
+    const defaultOrgId = isLocalito 
+      ? LOCALITO_ORG_ID 
+      : (FALLBACK_EVENT_ORG_ID || APP_CONFIG.ORGANIZATION_ID || DEFAULT_DEMO_ORG_ID)
 
-    const { data, error } = await supabase
+    // Consultar usuario en users por id o email (sin restringir previamente por org para no bloquear multi-tenancy)
+    let query = supabase
       .from('users')
       .select('id, name, username, email, role, active, organization_id, created_at')
       .or(`id.eq.${authId},email.eq.${email}`)
-      .eq('organization_id', targetOrgId)
       .eq('active', true)
-      .limit(1)
-      .maybeSingle()
+
+    if (isLocalito) {
+      query = query.eq('organization_id', LOCALITO_ORG_ID)
+    }
+
+    const { data, error } = await query.limit(1).maybeSingle()
 
     if (error) {
       logger.error('auth', 'Error validando usuario OAuth contra users', error)
       return null
     }
 
+    const targetOrgId = data?.organization_id || defaultOrgId
+
     // Asegurar que el usuario de Auth exista en la tabla users para evitar errores de clave foránea en ventas/órdenes
-    const username = data?.username || data?.name || authUser.user_metadata?.full_name || email.split('@')[0] || `Admin ${APP_CONFIG.CLIENT_NAME}`
+    const username = data?.username || data?.name || authUser.user_metadata?.full_name || email.split('@')[0] || (isLocalito ? 'Admin LOCALITO' : `Admin ${APP_CONFIG.CLIENT_NAME}`)
     const role = FORCED_ADMIN_EMAILS.has(email) ? 'admin' : (String(data?.role || 'admin') as User['role'])
 
-    try {
-      await supabase.from('users').upsert({
-        id: authId,
-        organization_id: targetOrgId,
-        name: username,
-        username: username,
-        email: email,
-        role: role,
-        active: true
-      })
-    } catch (err) {
-      logger.warn('auth', 'Upsert usuario auth en users omitido o fallido:', err)
+    if (!data) {
+      try {
+        await supabase.from('users').upsert({
+          id: authId,
+          organization_id: targetOrgId,
+          name: username,
+          username: username,
+          email: email,
+          role: role,
+          active: true
+        })
+      } catch (err) {
+        logger.warn('auth', 'Upsert usuario auth en users omitido o fallido:', err)
+      }
     }
 
     persistOrganizationId(targetOrgId)
@@ -172,11 +191,10 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
       email,
       active: true,
       createdAt: data?.created_at ? new Date(data.created_at) : new Date(),
-      businessName: `${APP_CONFIG.CLIENT_NAME} - ${APP_CONFIG.CLIENT_TAGLINE}`,
+      businessName: isLocalito ? 'LOCALITO - GUISOS & BARRA FRÍA' : `${APP_CONFIG.CLIENT_NAME} - ${APP_CONFIG.CLIENT_TAGLINE}`,
       organizationId: targetOrgId
     }
   } catch (error) {
-
     logger.error('auth', 'Error resolviendo usuario OAuth autorizado', error as any)
     return null
   }
