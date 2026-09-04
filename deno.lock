@@ -29,7 +29,6 @@
     "packageJson": {
       "dependencies": [
         "npm:@capacitor/android@^8.0.1",
-        "npm:@capacitor/assets@^3.0.5",
         "npm:@capacitor/cli@^8.0.2",
         "npm:@capacitor/core@^8.0.2",
         "npm:@mercadopago/sdk-react@^1.0.7",
@@ -54,21 +53,27 @@
         "npm:react-chartjs-2@^5.2.0",
         "npm:react-dom@^18.2.0",
         "npm:react-error-boundary@^6.1.0",
-        "npm:react-router-dom@^6.20.1",
+        "npm:react-router-dom@^7.18.3",
         "npm:react@^18.2.0",
         "npm:recharts@^3.7.0",
         "npm:supabase@^2.76.14",
         "npm:tailwindcss@^3.3.6",
         "npm:tar@^7.5.7",
         "npm:typescript@^5.3.3",
-        "npm:vercel@^58.1.0",
         "npm:vite-plugin-pwa@~0.21.1",
         "npm:vite@^6.4.1",
         "npm:web-push@^3.6.7",
         "npm:zustand@^4.4.5"
       ],
       "overrides": {
-        "tar": "^7.5.7"
+        "tar": "^7.5.7",
+        "uuid": "^11.1.1",
+        "path-to-regexp": "^8.3.0",
+        "minimatch": "^10.2.3",
+        "js-yaml": "^4.3.1",
+        "undici": "^6.28.0",
+        "esbuild": "^0.28.1",
+        "smol-toml": "^1.6.1"
       }
     }
   }

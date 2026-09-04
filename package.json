@@ -66,5 +66,20 @@
   },
   "optionalDependencies": {
     "@rollup/wasm-node": "^4.62.3"
-  }
+  },
+  "main": "tailwind.config.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/airproject360-png/reisbloc-fnb.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/airproject360-png/reisbloc-fnb/issues"
+  },
+  "homepage": "https://github.com/airproject360-png/reisbloc-fnb#readme"
 }

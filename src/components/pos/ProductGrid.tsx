@@ -133,9 +133,9 @@ export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGrid
             >
               {/* Product Image - Compact & Optimized */}
               <div className="relative mb-1.5 h-20 sm:h-24 md:h-20 lg:h-22 w-full overflow-hidden rounded-xl border border-slate-100 bg-slate-100 shadow-inner">
-                {product.imageUrl && !brokenImages[product.id] ? (
+                {(product.imageUrl || product.imagePath) && !brokenImages[product.id] ? (
                   <img
-                    src={product.imageUrl}
+                    src={product.imageUrl || product.imagePath}
                     alt={product.name}
                     loading="lazy"
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"

@@ -35,7 +35,7 @@ export default function AIAssistantModal({
   // Obtener items del carrito actual de la mesa
   const activeCart = useMemo(() => {
     if (currentCartItems.length > 0) return currentCartItems
-    const tableNum = currentTableNumber || 1
+    const tableNum = currentTableNumber ?? 0
     const items = draftOrders[tableNum] || []
     return items.map((i: any) => ({ productName: i.productName, category: i.category || 'general' }))
   }, [currentCartItems, draftOrders, currentTableNumber])

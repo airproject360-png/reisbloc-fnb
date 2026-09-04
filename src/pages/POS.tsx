@@ -65,19 +65,26 @@ export default function POS() {
 
   const canAdjustSale = currentUser?.role === 'admin' || currentUser?.role === 'capitan'
 
-  // Lista simplificada de ubicaciones / mesas
+  // Lista oficial de ubicaciones / mesas de LOCALITO (Centro de Operaciones + 12 Mesas + Barra + Para Llevar)
   const tableLocations = [
+    { id: 0, label: '🏪 Caja Central / Mostrador' },
     { id: 1, label: 'Mesa 1' },
     { id: 2, label: 'Mesa 2' },
     { id: 3, label: 'Mesa 3' },
     { id: 4, label: 'Mesa 4' },
     { id: 5, label: 'Mesa 5' },
     { id: 6, label: 'Mesa 6' },
+    { id: 7, label: 'Mesa 7' },
+    { id: 8, label: 'Mesa 8' },
+    { id: 9, label: 'Mesa 9' },
+    { id: 10, label: 'Mesa 10' },
+    { id: 11, label: 'Mesa 11' },
+    { id: 12, label: 'Mesa 12' },
     { id: 99, label: 'Barra' },
-    { id: 100, label: 'Para Llevar' },
+    { id: 100, label: 'Para Llevar / Delivery' },
   ]
 
-  const currentLoc = currentTableNumber || 1
+  const currentLoc = currentTableNumber ?? 0
   const cartItems = draftOrders[currentLoc] || []
   const cartSubtotal = cartItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
   const isReadOnly = currentUser?.role === 'supervisor'
@@ -472,7 +479,7 @@ export default function POS() {
                     {/* Image & Price */}
                     <div className="relative h-36 sm:h-40 md:h-28 lg:h-32 xl:h-32 w-full overflow-hidden bg-slate-800">
                       <img
-                        src={product.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop'}
+                        src={product.imageUrl || product.imagePath || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop'}
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"

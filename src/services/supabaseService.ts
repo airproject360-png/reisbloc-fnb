@@ -20,6 +20,7 @@ import { getStoredToken } from './jwtService'
 import { useAppStore } from '@/store/appStore'
 import { getStoredOrganizationId } from './authService'
 import { APP_CONFIG } from '@/config/constants'
+import { DEMO_PRODUCTS } from './demoSeedService'
 import deviceService from './deviceService'
 import {
   User,
@@ -660,11 +661,32 @@ class SupabaseService {
     return data.signedUrl
   }
 
+  private getLocalProductsBackup(): Product[] {
+    try {
+      const raw = localStorage.getItem('reisbloc_localito_products_backup')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch (e) {
+      console.warn('Error reading local products backup:', e)
+    }
+    return (DEMO_PRODUCTS || []) as unknown as Product[]
+  }
+
+  private saveLocalProductsBackup(products: Product[]): void {
+    try {
+      localStorage.setItem('reisbloc_localito_products_backup', JSON.stringify(products))
+    } catch (e) {
+      console.warn('Error saving local products backup:', e)
+    }
+  }
+
   async getAllProducts(): Promise<Product[]> {
     return this.withRetry(async () => {
       const orgId = this.getCurrentOrgId()
       if (!orgId) {
-        return []
+        return this.getLocalProductsBackup()
       }
 
       console.log('🔍 [Supabase] Obteniendo productos...')
@@ -672,36 +694,60 @@ class SupabaseService {
         .from('products')
         .select('*')
         .eq('organization_id', orgId)
-        // Temporarily remove .eq('available', true) to see all products
+        .is('deleted_at', null)
         .order('category', { ascending: true })
         .order('name', { ascending: true })
 
       console.log('🔍 [Supabase] Productos data:', data)
       console.log('🔍 [Supabase] Productos error:', error)
       
-      if (error) throw error
-      const rawProducts = (data || []).map((p: any) => ({
-        ...p,
-        active: p.available, // Map available -> active
-        currentStock: p.current_stock, // Map snake_case -> camelCase
-        minimumStock: p.minimum_stock,
-        hasInventory: p.has_inventory,
-        imagePath: p.image_path,
-        deletedAt: p.deleted_at,
-      })) as Product[]
+      if (error) {
+        const backup = this.getLocalProductsBackup()
+        if (backup.length > 0) return backup
+        throw error
+      }
+
+      const rawProducts = (data || [])
+        .filter((p: any) => !p.deleted_at)
+        .map((p: any) => ({
+          ...p,
+          active: p.available !== undefined ? p.available : true,
+          currentStock: p.current_stock,
+          minimumStock: p.minimum_stock,
+          hasInventory: p.has_inventory,
+          imagePath: p.image_path,
+          imageUrl: p.image_path,
+          deletedAt: p.deleted_at,
+        })) as Product[]
 
       const products = await Promise.all(
         rawProducts.map(async product => ({
           ...product,
-          imageUrl: await this.getProductImageUrl(product.imagePath),
+          imageUrl: (await this.getProductImageUrl(product.imagePath)) || product.imageUrl || product.imagePath || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop',
         }))
       )
       
-      console.log('🔍 [Supabase] Total productos:', products.length)
-      return products
+      const localBackup = this.getLocalProductsBackup()
+      if (products.length > 0) {
+        // Unir productos de base de datos con cualquier producto local pendiente
+        const remoteIds = new Set(products.map(p => p.id))
+        const unsyncedLocals = localBackup.filter(lp => !remoteIds.has(lp.id) && !lp.deletedAt)
+        const combined = [...products, ...unsyncedLocals]
+        this.saveLocalProductsBackup(combined)
+        return combined
+      }
+
+      // Si Supabase no tiene productos para esta org, devolver respaldo local (DEMO_PRODUCTS + locales)
+      if (localBackup.length > 0) {
+        console.log('📦 [Supabase] Usando respaldo local de productos:', localBackup.length)
+        return localBackup
+      }
+
+      return (DEMO_PRODUCTS || []) as unknown as Product[]
     }).catch(error => {
-      logger.error('supabase', 'Error getting products', error as any)
-      return []
+      logger.error('supabase', 'Error getting products, checking local backup', error as any)
+      const backup = this.getLocalProductsBackup()
+      return backup.length > 0 ? backup : ((DEMO_PRODUCTS || []) as unknown as Product[])
     })
   }
 
@@ -717,108 +763,121 @@ class SupabaseService {
       return data as Product
     } catch (error) {
       logger.error('supabase', 'Error getting product', error as any)
-      return null
+      const backup = this.getLocalProductsBackup()
+      return backup.find(p => p.id === productId) || null
     }
   }
 
   async createProduct(product: Omit<Product, 'id'>): Promise<string> {
-    try {
-      const orgId = this.getCurrentOrgId()
-      if (!orgId) {
-        throw new Error('No se pudo resolver organization_id para crear producto')
-      }
-
-      const payload: any = { ...product }
-      // Map active to available for Supabase schema
-      if ('active' in product) {
-        payload.available = product.active
-        delete payload.active
-      }
-      // Map inventory fields to snake_case
-      if ('currentStock' in product) {
-        payload.current_stock = product.currentStock
-        delete payload.currentStock
-      }
-      if ('hasInventory' in product) {
-        payload.has_inventory = product.hasInventory
-        delete payload.hasInventory
-      }
-      if ('minimumStock' in product) {
-        payload.minimum_stock = product.minimumStock
-        delete payload.minimumStock
-      }
-      if ('imagePath' in product) {
-        payload.image_path = product.imagePath
-        delete payload.imagePath
-      }
-      if ('imageUrl' in payload) delete payload.imageUrl
-      if ('deletedAt' in product) {
-        payload.deleted_at = product.deletedAt
-        delete payload.deletedAt
-      }
-      // Remove timestamp fields (Supabase handles with triggers)
-      if ('createdAt' in payload) delete payload.createdAt
-      if ('updatedAt' in payload) delete payload.updatedAt
-      
-      payload.organization_id = orgId
-      
-      const { data, error } = await supabase
-        .from('products')
-        .insert([payload])
-        .select('id')
-        .single()
-
-      if (error) throw error
-      return data.id
-    } catch (error) {
-      logger.error('supabase', 'Error creating product', error as any)
-      throw error
+    const orgId = this.getCurrentOrgId()
+    const localId = `prod-loc-${Date.now()}`
+    const finalImage = (product as any).imageUrl || product.imagePath || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop'
+    
+    // Crear objeto completo con fallback local
+    const newProduct: Product = {
+      ...product,
+      id: localId,
+      imageUrl: finalImage,
+      imagePath: finalImage,
+      hasInventory: product.hasInventory !== undefined ? product.hasInventory : true,
+      currentStock: product.currentStock || 100,
+      minimumStock: product.minimumStock || 10,
+      active: product.active !== undefined ? product.active : true,
+      createdAt: new Date(),
     }
+
+    // 1. Persistir inmediatamente en caché local
+    const currentBackup = this.getLocalProductsBackup()
+    this.saveLocalProductsBackup([newProduct, ...currentBackup.filter(p => p.name !== product.name)])
+
+    // 2. Sanitizar payload para Supabase PostgREST (solo columnas existentes en la tabla)
+    if (orgId) {
+      try {
+        const payload: any = {
+          organization_id: orgId,
+          name: product.name.trim(),
+          category: product.category || 'General',
+          price: product.price || 0,
+          available: product.active !== undefined ? product.active : true,
+          has_inventory: product.hasInventory !== undefined ? product.hasInventory : true,
+          current_stock: product.currentStock || 0,
+          minimum_stock: product.minimumStock || 0,
+          image_path: finalImage,
+        }
+        if (product.deletedAt) {
+          payload.deleted_at = product.deletedAt
+        }
+
+        const { data, error } = await supabase
+          .from('products')
+          .insert([payload])
+          .select('id')
+          .single()
+
+        if (!error && data?.id) {
+          newProduct.id = data.id
+          // Actualizar ID en caché local
+          const updatedBackup = this.getLocalProductsBackup().map(p => p.id === localId ? { ...p, id: data.id } : p)
+          this.saveLocalProductsBackup(updatedBackup)
+          return data.id
+        }
+
+        if (error) {
+          logger.warn('supabase', 'Advertencia al insertar en Supabase (usando respaldo local):', error.message)
+        }
+      } catch (cloudErr) {
+        logger.warn('supabase', 'Excepción guardando en Supabase (activo en modo local):', cloudErr as any)
+      }
+    }
+
+    return localId
   }
 
   async updateProduct(productId: string, updates: Partial<Product>): Promise<void> {
-    try {
-      const payload: any = { ...updates }
-      // Map active to available for Supabase schema
-      if ('active' in updates) {
-        payload.available = updates.active
-        delete payload.active
-      }
-      // Map inventory fields to snake_case
-      if ('currentStock' in updates) {
-        payload.current_stock = updates.currentStock
-        delete payload.currentStock
-      }
-      if ('hasInventory' in updates) {
-        payload.has_inventory = updates.hasInventory
-        delete payload.hasInventory
-      }
-      if ('minimumStock' in updates) {
-        payload.minimum_stock = updates.minimumStock
-        delete payload.minimumStock
-      }
-      if ('imagePath' in updates) {
-        payload.image_path = updates.imagePath
-        delete payload.imagePath
-      }
-      if ('deletedAt' in updates) {
-        payload.deleted_at = updates.deletedAt
-        delete payload.deletedAt
-      }
-      if ('imageUrl' in payload) delete payload.imageUrl
-      // Remove timestamp fields (Supabase handles with triggers)
-      if ('createdAt' in payload) delete payload.createdAt
-      if ('updatedAt' in payload) delete payload.updatedAt
-      
-      const { error } = await supabase
-        .from('products')
-        .update(payload)
-        .eq('id', productId)
+    const finalImg = updates.imageUrl !== undefined ? updates.imageUrl : updates.imagePath
 
-      if (error) throw error
+    // 1. Actualizar inmediatamente en respaldo local
+    const currentBackup = this.getLocalProductsBackup()
+    const updatedBackup = currentBackup.map(p => {
+      if (p.id === productId) {
+        const updated = { ...p, ...updates }
+        if (finalImg !== undefined) {
+          updated.imageUrl = finalImg
+          updated.imagePath = finalImg
+        }
+        return updated
+      }
+      return p
+    })
+    this.saveLocalProductsBackup(updatedBackup)
+
+    // 2. Sanitizar payload para Supabase PostgREST (omitir columnas inexistentes como description)
+    try {
+      const payload: any = {}
+      if (updates.name !== undefined) payload.name = updates.name.trim()
+      if (updates.category !== undefined) payload.category = updates.category
+      if (updates.price !== undefined) payload.price = updates.price
+      if (updates.active !== undefined) payload.available = updates.active
+      if (updates.hasInventory !== undefined) payload.has_inventory = updates.hasInventory
+      if (updates.currentStock !== undefined) payload.current_stock = updates.currentStock
+      if (updates.minimumStock !== undefined) payload.minimum_stock = updates.minimumStock
+      if (finalImg !== undefined) {
+        payload.image_path = finalImg
+      }
+      if (updates.deletedAt !== undefined) payload.deleted_at = updates.deletedAt
+
+      if (Object.keys(payload).length > 0) {
+        const { error } = await supabase
+          .from('products')
+          .update(payload)
+          .eq('id', productId)
+
+        if (error) {
+          logger.warn('supabase', 'Advertencia actualizando producto en Supabase:', error.message)
+        }
+      }
     } catch (error) {
-      logger.error('supabase', 'Error updating product', error as any)
-      throw error
+      logger.warn('supabase', 'Error actualizando producto en nube (persiste en local):', error as any)
     }
   }
 
@@ -836,8 +895,12 @@ class SupabaseService {
   }
 
   async deleteProduct(productId: string): Promise<void> {
+    // 1. Remover de respaldo local
+    const currentBackup = this.getLocalProductsBackup()
+    this.saveLocalProductsBackup(currentBackup.filter(p => p.id !== productId))
+
+    // 2. Soft delete en Supabase
     try {
-      // Soft delete - marcar como no disponible
       const { error } = await supabase
         .from('products')
         .update({
@@ -846,10 +909,11 @@ class SupabaseService {
         })
         .eq('id', productId)
 
-      if (error) throw error
+      if (error) {
+        logger.warn('supabase', 'Advertencia soft delete en Supabase:', error.message)
+      }
     } catch (error) {
-      logger.error('supabase', 'Error deleting product', error as any)
-      throw error
+      logger.warn('supabase', 'Error eliminando en nube (removido localmente):', error as any)
     }
   }
 

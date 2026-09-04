@@ -8,3 +8,4 @@ dist/
 docs/*.tmp
 
 .vercel
+.npmrc

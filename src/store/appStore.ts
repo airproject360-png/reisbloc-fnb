@@ -59,8 +59,8 @@ const initialState: AppState = {
   isAuthenticated: false,
   currentUser: null,
   currentDevice: null,
-  tables: Array.from({ length: 12 }, (_, i) => i + 1),
-  currentTableNumber: 1,
+  tables: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 99, 100],
+  currentTableNumber: 0,
   products: DEMO_PRODUCTS,
   users: [DEMO_ADMIN_USER],
   draftOrders: {},
@@ -95,7 +95,7 @@ export const useAppStore = create<AppStore>()(
   // Draft orders by table
   addItemToDraft: (tableNumber: number, product: Product, addedBy: string) =>
     set(state => {
-      const tableKey = tableNumber || 1
+      const tableKey = tableNumber ?? 0
       const currentItems = state.draftOrders[tableKey] || []
       const existing = currentItems.find(item => item.productId === product.id)
 
@@ -133,7 +133,7 @@ export const useAppStore = create<AppStore>()(
 
   incrementDraftItem: (tableNumber: number, itemId: string) =>
     set(state => {
-      const tableKey = tableNumber || 1
+      const tableKey = tableNumber ?? 0
       const currentItems = state.draftOrders[tableKey] || []
       return {
         draftOrders: {
@@ -147,7 +147,7 @@ export const useAppStore = create<AppStore>()(
 
   decrementDraftItem: (tableNumber: number, itemId: string) =>
     set(state => {
-      const tableKey = tableNumber || 1
+      const tableKey = tableNumber ?? 0
       const currentItems = state.draftOrders[tableKey] || []
       return {
         draftOrders: {
@@ -165,7 +165,7 @@ export const useAppStore = create<AppStore>()(
 
   removeDraftItem: (tableNumber: number, itemId: string) =>
     set(state => {
-      const tableKey = tableNumber || 1
+      const tableKey = tableNumber ?? 0
       const currentItems = state.draftOrders[tableKey] || []
       return {
         draftOrders: {
@@ -179,7 +179,7 @@ export const useAppStore = create<AppStore>()(
     set(state => ({
       draftOrders: {
         ...state.draftOrders,
-        [tableNumber || 1]: [],
+        [tableNumber ?? 0]: [],
       },
     })),
     }),

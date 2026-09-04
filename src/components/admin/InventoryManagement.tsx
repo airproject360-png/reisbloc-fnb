@@ -621,7 +621,7 @@ export default function InventoryManagement() {
       setProductCategory(product.category || categoriesList[0] || 'Quesadillas Maíz')
       setProductPrice(product.price.toString())
       setProductDescription(product.description || '')
-      setProductImageUrl(product.imageUrl || '')
+      setProductImageUrl(product.imageUrl || product.imagePath || '')
       setImageSizeKb(null)
       setRecipeItems((product as DemoProduct).recipeIngredients || [{ ingredientId: 'ing-26', quantityRequired: 1 }])
     } else {
@@ -664,14 +664,16 @@ export default function InventoryManagement() {
 
     setLoading(true)
     try {
+      const finalImage = productImageUrl.trim() || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop'
+
       if (editingProduct) {
         await supabaseService.updateProduct(editingProduct.id, {
           name: productName.trim(),
           category: productCategory,
           price: priceNum,
           description: productDescription.trim(),
-          imageUrl: productImageUrl,
-          imagePath: productImageUrl,
+          imageUrl: finalImage,
+          imagePath: finalImage,
           active: true,
           hasInventory: true,
           currentStock: editingProduct.currentStock || 100,
@@ -704,8 +706,8 @@ export default function InventoryManagement() {
           category: productCategory,
           price: priceNum,
           description: productDescription.trim(),
-          imageUrl: productImageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop',
-          imagePath: productImageUrl || '',
+          imageUrl: finalImage,
+          imagePath: finalImage,
           active: true,
           hasInventory: true,
           currentStock: 100,
@@ -1052,7 +1054,12 @@ export default function InventoryManagement() {
             <div key={product.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg hover:-translate-y-1 hover:shadow-xl transition-all flex flex-col justify-between">
               <div>
                 <div className="relative h-44 overflow-hidden bg-slate-900">
-                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+                  <img
+                    src={product.imageUrl || product.imagePath || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop'}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                   <div className="absolute left-4 right-4 bottom-3 text-white flex items-end justify-between gap-3">
                     <div>
@@ -1211,13 +1218,25 @@ export default function InventoryManagement() {
               {/* Subida & Compresión Automática de Foto (<80 KB) */}
               <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
                 <label className="block font-bold text-teal-300">
-                  📸 Foto del Platillo (Compresión Automática Ligera WebP):
+                  📸 Foto del Platillo (Archivo, Cámara, Enlace Web o Presets):
                 </label>
 
-                <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   {productImageUrl ? (
-                    <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-800 shrink-0 bg-slate-900">
+                    <div className="relative group w-24 h-24 rounded-xl overflow-hidden border border-slate-700 shrink-0 bg-slate-900 shadow-md">
                       <img src={productImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProductImageUrl('')
+                          setImageSizeKb(null)
+                        }}
+                        className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-red-400 font-bold text-[10px] transition-opacity"
+                        title="Quitar foto"
+                      >
+                        <Trash2 size={18} />
+                        <span>Quitar</span>
+                      </button>
                     </div>
                   ) : (
                     <div className="w-24 h-24 rounded-xl border border-dashed border-slate-800 bg-slate-900 flex flex-col items-center justify-center text-slate-500 shrink-0">
@@ -1226,21 +1245,75 @@ export default function InventoryManagement() {
                     </div>
                   )}
 
-                  <div className="flex-1 space-y-2 w-full">
+                  <div className="flex-1 space-y-2.5 w-full">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageFileChange}
+                        className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-teal-600 file:text-white hover:file:bg-teal-500 cursor-pointer"
+                      />
+                      {productImageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProductImageUrl('')
+                            setImageSizeKb(null)
+                          }}
+                          className="px-2 py-1.5 rounded-xl border border-red-800/60 bg-red-950/40 text-red-400 hover:bg-red-900/40 text-xs font-bold shrink-0 flex items-center gap-1"
+                        >
+                          <Trash2 size={13} />
+                          <span>Borrar</span>
+                        </button>
+                      )}
+                    </div>
+
                     <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageFileChange}
-                      className="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-teal-600 file:text-white hover:file:bg-teal-500 cursor-pointer"
+                      type="url"
+                      placeholder="O pega una URL web directa: https://... (Unsplash, CDN, etc.)"
+                      value={productImageUrl.startsWith('data:') ? '' : productImageUrl}
+                      onChange={e => {
+                        setProductImageUrl(e.target.value)
+                        setImageSizeKb(null)
+                      }}
+                      className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-teal-500"
                     />
+
                     {isCompressing && (
-                      <p className="text-amber-400 font-bold animate-pulse">Optimizando y reduciendo tamaño de foto...</p>
+                      <p className="text-amber-400 text-xs font-bold animate-pulse">Optimizando y reduciendo tamaño de foto...</p>
                     )}
                     {imageSizeKb !== null && (
-                      <p className="text-emerald-400 font-bold">
+                      <p className="text-emerald-400 text-xs font-bold">
                         ⚡ Foto Optimizada: {imageSizeKb} KB (WebP Ultra-Ligero, listo para BD)
                       </p>
                     )}
+                  </div>
+                </div>
+
+                {/* Presets Rápidos de LOCALITO */}
+                <div className="pt-2 border-t border-slate-800/80">
+                  <p className="text-[11px] font-semibold text-slate-400 mb-2">⚡ Fotos rápidas auténticas de LOCALITO:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { name: '🌮 Tacos de Guisado', url: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop' },
+                      { name: '🧀 Quesadilla Maíz', url: 'https://images.unsplash.com/photo-1618040996337-56904b7850b9?w=800&auto=format&fit=crop' },
+                      { name: '🥣 Cazuela Guisado', url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop' },
+                      { name: '🐟 Barra Fría / Ceviche', url: 'https://images.unsplash.com/photo-1535399831218-d5bd36d1a6b3?w=800&auto=format&fit=crop' },
+                      { name: '🥤 Agua Fresca', url: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=800&auto=format&fit=crop' },
+                      { name: '🍺 Refresco / Cerveza', url: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?w=800&auto=format&fit=crop' },
+                    ].map(preset => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        onClick={() => {
+                          setProductImageUrl(preset.url)
+                          setImageSizeKb(null)
+                        }}
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-800/80 hover:bg-teal-900/60 hover:border-teal-500/50 border border-slate-700 text-slate-300 transition-colors"
+                      >
+                        {preset.name}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
