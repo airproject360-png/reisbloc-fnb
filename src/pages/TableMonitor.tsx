@@ -6,7 +6,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import supabaseService from '@/services/supabaseService'
 import printService from '@/services/printService'
 import { Order, OrderItem } from '@/types'
-import { LayoutDashboard, ArrowLeftRight, XCircle, Timer, Edit, CheckCircle, CreditCard, Printer } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, XCircle, Timer, Edit, CheckCircle, CreditCard, Printer, RefreshCw } from 'lucide-react'
 import EditOrderModal from '@/components/admin/EditOrderModal'
 import { getTenantSettings } from '@/config/tenantConfig'
 
@@ -188,6 +188,26 @@ export default function TableMonitor() {
   const calculateOrderTotal = (order?: Order | null) => {
     if (!order?.items?.length) return 0
     return order.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+  }
+
+  const loadActiveOrders = async () => {
+    try {
+      setLoading(true)
+      const data = await supabaseService.getActiveOrders()
+      const normalized = data.map(order => ({
+        ...order,
+        createdAt: normalizeDate((order as any).createdAt),
+        updatedAt: normalizeDate((order as any).updatedAt),
+        sentToKitchenAt: normalizeDate((order as any).sentToKitchenAt),
+        closedAt: normalizeDate((order as any).closedAt),
+      }))
+      setOrders(normalized)
+      setError(null)
+    } catch (err: any) {
+      setError(err?.message || 'Error al cargar órdenes activas')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -461,6 +481,15 @@ export default function TableMonitor() {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => loadActiveOrders()}
+              disabled={loading}
+              className="px-3.5 py-2 bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl border border-slate-700 text-xs font-bold flex items-center gap-2 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+              title="Recargar órdenes activas"
+            >
+              <RefreshCw size={15} className={loading ? 'animate-spin text-teal-400' : 'text-slate-400'} />
+              <span className="hidden sm:inline">Actualizar</span>
+            </button>
             <div className="px-4 py-2 bg-slate-950 rounded-2xl border border-slate-800 text-center">
               <span className="text-[10px] font-extrabold text-teal-400 uppercase tracking-wider block">Mesas Abiertas:</span>
               <span className="text-xl font-black text-white">{groupedByTable.length}</span>

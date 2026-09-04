@@ -11,18 +11,19 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-const DEFAULT_SUPABASE_URL = 'https://htjhzdtlvdbtlfdhsydq.supabase.co'
-const DEFAULT_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0amh6ZHRsdmRidGxmZGhzeWRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MDQ0MTAsImV4cCI6MjA4NzQ4MDQxMH0.j5v9FHF-MzFzxWU06aMBMMP6KB6ywkphdlMz3pPdJhw'
+const DEFAULT_SUPABASE_URL = 'https://placeholder.supabase.co'
+const DEFAULT_ANON_KEY = 'placeholder-anon-key'
 
-// Clave pública del cliente
+// Clave pública del cliente (cargada estrictamente desde variables de entorno)
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || DEFAULT_ANON_KEY
 
 export const isSupabaseConfigured = Boolean(
-  supabaseUrl && 
-  supabaseAnonKey && 
-  !supabaseUrl.includes('YOUR_PROJECT_REF') && 
-  !supabaseUrl.includes('missing-env-vars')
+  import.meta.env.VITE_SUPABASE_URL && 
+  import.meta.env.VITE_SUPABASE_ANON_KEY && 
+  !import.meta.env.VITE_SUPABASE_URL.includes('YOUR_PROJECT_REF') && 
+  !import.meta.env.VITE_SUPABASE_URL.includes('placeholder') &&
+  !import.meta.env.VITE_SUPABASE_URL.includes('missing-env-vars')
 )
 
 // Cliente seguro público (Anon Key)

@@ -5,8 +5,8 @@
 
 import { APP_CONFIG } from './constants'
 
-export const LOCALITO_ORG_ID = '1a70643e-23a3-4224-939e-d7daf381c083'
-export const DEFAULT_DEMO_ORG_ID = 'cb86de9f-48b9-4680-b6bc-6da0a15a98fa'
+export const LOCALITO_ORG_ID = import.meta.env.VITE_LOCALITO_ORGANIZATION_ID || import.meta.env.VITE_LOCALITO_ORG_ID || '1a70643e-23a3-4224-939e-d7daf381c083'
+export const DEFAULT_DEMO_ORG_ID = import.meta.env.VITE_DEMO_ORGANIZATION_ID || import.meta.env.VITE_DEFAULT_DEMO_ORG_ID || ''
 
 export interface TenantSettings {
   isLocalito: boolean

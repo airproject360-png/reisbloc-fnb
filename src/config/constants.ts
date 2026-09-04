@@ -1,8 +1,7 @@
 // Configuración de Clip
 export const CLIP_CONFIG = {
-  // Cambiar por tus credenciales reales
-  apiKey: import.meta.env.VITE_CLIP_API_KEY || 'test_key',
-  merchantId: import.meta.env.VITE_CLIP_MERCHANT_ID || 'test_merchant',
+  apiKey: import.meta.env.VITE_CLIP_API_KEY || '',
+  merchantId: import.meta.env.VITE_CLIP_MERCHANT_ID || '',
   baseUrl: import.meta.env.VITE_CLIP_BASE_URL || 'https://api.clip.mx/v1',
 };
 
@@ -12,8 +11,8 @@ export const APP_CONFIG = {
   CLIENT_TAGLINE: import.meta.env.VITE_CLIENT_TAGLINE || 'SISTEMA POS',
   CLIENT_SUBDOMAIN: import.meta.env.VITE_CLIENT_SUBDOMAIN || '',
   LOGO_URL: import.meta.env.VITE_LOGO_URL || '/icon.svg',
-  ORGANIZATION_ID: import.meta.env.VITE_EVENT_ORGANIZATION_ID || 'cb86de9f-48b9-4680-b6bc-6da0a15a98fa',
-  ADMIN_EMAILS: (import.meta.env.VITE_ADMIN_EMAILS || 'airproject360@gmail.com,hunab.arredondo@gmail.com,adminlocalito@gmail.com')
+  ORGANIZATION_ID: import.meta.env.VITE_EVENT_ORGANIZATION_ID || import.meta.env.VITE_ORGANIZATION_ID || '',
+  ADMIN_EMAILS: (import.meta.env.VITE_ADMIN_EMAILS || '')
     .split(',')
     .map((e: string) => e.trim().toLowerCase())
     .filter(Boolean),

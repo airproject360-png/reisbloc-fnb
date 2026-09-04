@@ -9,8 +9,8 @@
     <meta name="description" content="Reisbloc POS: Punto de Venta profesional, offline-first, open source, con integración MercadoPago. Hecho en México." />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
-    <!-- Content Security Policy para prevenir XSS (OWASP & Google Fonts) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https:; font-src 'self' https://fonts.gstatic.com https: data:; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https: wss:; frame-src 'self'; base-uri 'self'; form-action 'self';">
+    <!-- Content Security Policy para prevenir XSS y alinear seguridad (OWASP, Supabase, Fonts & Workers) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https:; img-src 'self' https: data: blob:; font-src 'self' https://fonts.gstatic.com https: data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https: wss:; worker-src 'self' blob:; frame-src 'self' blob: data:; base-uri 'self'; form-action 'self'; object-src 'none';">
     
     <!-- Etiquetas Open Graph para compartir en redes -->
     <meta property="og:title" content="Reisbloc POS - Restaurante" />
