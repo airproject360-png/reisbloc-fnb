@@ -10,7 +10,6 @@ import OrderNoteModal from '@/components/pos/OrderNoteModal'
 import DarkKitchenRecipeModal from '@/components/admin/DarkKitchenRecipeModal'
 import {
   Search,
-  Sparkles,
   MapPin,
   ChefHat,
   Plus,
@@ -67,7 +66,7 @@ export default function POS() {
 
   // Lista oficial de ubicaciones / mesas de LOCALITO (Centro de Operaciones + 12 Mesas + Barra + Para Llevar)
   const tableLocations = [
-    { id: 0, label: '🏪 Caja Central / Mostrador' },
+    { id: 0, label: '🏪 Caja / Mostrador' },
     { id: 1, label: 'Mesa 1' },
     { id: 2, label: 'Mesa 2' },
     { id: 3, label: 'Mesa 3' },
@@ -104,6 +103,7 @@ export default function POS() {
   }, [products])
 
   useEffect(() => {
+    setCurrentTable(0)
     loadProducts()
   }, [])
 
@@ -202,6 +202,7 @@ export default function POS() {
 
       alert(`✅ Comanda enviada a cocina (${tableLocations.find(l => l.id === currentLoc)?.label})`)
       clearDraftForTable(currentLoc)
+      setCurrentTable(0)
       setShowCartDrawer(false)
     } catch (err: any) {
       alert(`❌ Error enviando comanda: ${err?.message || err}`)
@@ -371,8 +372,9 @@ export default function POS() {
         logger.warn('pos', 'Error imprimiendo ticket de venta:', printErr as any)
       }
 
-      // 3. Limpiar borrador de la mesa
+      // 3. Limpiar borrador de la mesa y resetear a Caja / Mostrador
       clearDraftForTable(currentLoc)
+      setCurrentTable(0)
       setShowPaymentModal(false)
       setShowCartDrawer(false)
       setCashReceived('')
@@ -391,18 +393,14 @@ export default function POS() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-28 select-none">
-      {/* Header Banner - Menú & Caja Unificada */}
-      <header className="relative bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 border-b border-teal-500/20 px-4 py-6 overflow-hidden shadow-2xl">
+      {/* Header Banner */}
+      <header className="relative bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 border-b border-teal-500/20 px-4 py-4 overflow-hidden shadow-2xl">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 relative z-10">
-          <div className="flex flex-col items-center md:items-start text-center md:text-left gap-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold mb-1">
-              <Sparkles size={14} className="text-amber-400" />
-              <span>Menú Interactivo & Caja Unificada · LOCALITO</span>
-            </div>
+          <div className="flex items-center gap-3">
             <img 
               src="/logo_localito.jpg" 
               alt="LOCALITO" 
-              className="h-14 md:h-16 w-auto object-contain rounded-2xl border border-amber-500/30 shadow-xl shadow-amber-500/10"
+              className="h-12 md:h-14 w-auto object-contain rounded-2xl border border-amber-500/30 shadow-xl shadow-amber-500/10"
             />
           </div>
 

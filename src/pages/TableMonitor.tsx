@@ -119,7 +119,7 @@ export default function TableMonitor() {
         <!-- Ticket Metadata -->
         <div style="font-size:9px;border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:6px;">
           <div style="display:flex;justify-content:space-between;">
-            <span><strong>Cuenta:</strong> ${tableNumber === 0 ? '🏪 Caja Central / Mostrador' : tableNumber === 99 ? 'Barra' : tableNumber === 100 ? 'Para Llevar' : `Mesa #${tableNumber}`}</span>
+            <span><strong>Cuenta:</strong> ${tableNumber === 0 ? '🏪 Caja / Mostrador' : tableNumber === 99 ? 'Barra' : tableNumber === 100 ? 'Para Llevar' : `Mesa #${tableNumber}`}</span>
             <span><strong>Folio:</strong> ${ticketFolio}</span>
           </div>
           <div style="margin-top:2px;">Fecha: ${dateStr}</div>
@@ -424,7 +424,7 @@ export default function TableMonitor() {
 
       // 5. Limpiar de la lista local
       setOrders(prev => prev.filter(o => !orderIds.includes(o.id)))
-      const tableDisplayName = tableNumber === 0 ? '🏪 Caja Central / Mostrador' : `Mesa #${tableNumber}`
+      const tableDisplayName = tableNumber === 0 ? '🏪 Caja / Mostrador' : `Mesa #${tableNumber}`
       alert(`✅ Pago registrado exitosamente (${tableDisplayName} · $${finalTotal.toFixed(2)} MXN)`)
       setFastPaymentData(null)
       await loadActiveOrders()
@@ -493,7 +493,7 @@ export default function TableMonitor() {
               const allItems = tableOrders.flatMap(o => o.items || [])
               const groupTotal = allItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
               const firstOrderDate = tableOrders[tableOrders.length - 1]?.createdAt || new Date()
-              const tableLabel = tableNumber === 0 ? '🏪 Caja Central / Mostrador' : tableNumber === 99 ? 'Barra' : tableNumber === 100 ? 'Para Llevar' : `Mesa #${tableNumber}`
+              const tableLabel = tableNumber === 0 ? '🏪 Caja / Mostrador' : tableNumber === 99 ? 'Barra' : tableNumber === 100 ? 'Para Llevar' : `Mesa #${tableNumber}`
 
               return (
                 <div
@@ -583,7 +583,7 @@ export default function TableMonitor() {
                             <option value="">Transferir a...</option>
                             {availableTables.filter(t => t !== tableNumber).map(num => (
                               <option key={num} value={num}>
-                                {num === 0 ? '🏪 Caja Central / Mostrador' : num === 99 ? 'Barra' : num === 100 ? 'Para Llevar / Delivery' : `Mesa #${num}`}
+                                {num === 0 ? '🏪 Caja / Mostrador' : num === 99 ? 'Barra' : num === 100 ? 'Para Llevar / Delivery' : `Mesa #${num}`}
                               </option>
                             ))}
                           </select>
@@ -613,7 +613,7 @@ export default function TableMonitor() {
                 <div className="flex items-center gap-2 text-emerald-400 font-black">
                   <CheckCircle size={22} />
                   <span className="text-lg">
-                    Cobrar · {fastPaymentData.tableNumber === 0 ? '🏪 Caja Central / Mostrador' : fastPaymentData.tableNumber === 99 ? 'Barra' : fastPaymentData.tableNumber === 100 ? 'Para Llevar' : `Mesa #${fastPaymentData.tableNumber}`}
+                    Cobrar · {fastPaymentData.tableNumber === 0 ? '🏪 Caja / Mostrador' : fastPaymentData.tableNumber === 99 ? 'Barra' : fastPaymentData.tableNumber === 100 ? 'Para Llevar' : `Mesa #${fastPaymentData.tableNumber}`}
                   </span>
                 </div>
                 <button

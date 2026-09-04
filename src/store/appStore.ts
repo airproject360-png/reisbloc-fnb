@@ -190,7 +190,6 @@ export const useAppStore = create<AppStore>()(
         isAuthenticated: state.isAuthenticated,
         currentUser: state.currentUser,
         currentDevice: state.currentDevice,
-        currentTableNumber: state.currentTableNumber,
         draftOrders: state.draftOrders, // CRÍTICO: órdenes en progreso
       }),
     }
