@@ -2,7 +2,7 @@
 export const CLIP_CONFIG = {
   apiKey: import.meta.env.VITE_CLIP_API_KEY || '',
   merchantId: import.meta.env.VITE_CLIP_MERCHANT_ID || '',
-  baseUrl: import.meta.env.VITE_CLIP_BASE_URL || 'https://api.clip.mx/v1',
+  baseUrl: import.meta.env.VITE_CLIP_BASE_URL || 'https://api.payclip.com/v1',
 };
 
 // Configuración de aplicación y cliente
