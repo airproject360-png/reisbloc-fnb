@@ -9,6 +9,7 @@ import { DEMO_PRODUCTS } from '@/services/demoSeedService'
 import printService from '@/services/printService'
 import OrderNoteModal from '@/components/pos/OrderNoteModal'
 import DarkKitchenRecipeModal from '@/components/admin/DarkKitchenRecipeModal'
+import clipPinpadService from '@/services/clipPinpadService'
 import { getTenantSettings } from '@/config/tenantConfig'
 import {
   Search,
@@ -66,6 +67,8 @@ export default function POS() {
   const [adjustedTotal, setAdjustedTotal] = useState<string>('')
   const [adjustmentReason, setAdjustmentReason] = useState<string>('')
   const [posTicketNotes, setPosTicketNotes] = useState<string>('')
+  const [isPinpadLoading, setIsPinpadLoading] = useState(false)
+  const [pinpadStatusMsg, setPinpadStatusMsg] = useState<string | null>(null)
 
   const canAdjustSale = currentUser?.role === 'admin' || currentUser?.role === 'capitan'
   const tenant = getTenantSettings()
@@ -305,6 +308,63 @@ export default function POS() {
     })
     return () => unsub()
   }, [showPaymentModal, cartItems, currentLoc, cartSubtotal, stationId])
+
+  // ⚡ Disparar Cobro Directo a la Terminal Clip Total 3 vía PinPad Cloud API
+  const handleTriggerClipPinpad = async () => {
+    if (cartItems.length === 0 || isPinpadLoading || isProcessingPayment) return
+
+    const originalTotal = cartSubtotal
+    const isAdjusted = canAdjustSale && enablePriceAdjustment && parseFloat(adjustedTotal) >= 0 && parseFloat(adjustedTotal) !== originalTotal
+    const finalTotal = isAdjusted ? parseFloat(adjustedTotal) : originalTotal
+
+    setIsPinpadLoading(true)
+    setPinpadStatusMsg('Conectando con la nube de Clip PinPad...')
+
+    try {
+      const saleId = `LOC-${Date.now().toString().slice(-6)}`
+      const res = await clipPinpadService.createPayment(finalTotal, saleId)
+
+      if (res.code || res.message) {
+        if (res.code === 'ERR10_03') {
+          alert(`⚠️ Clip PinPad API: La terminal física con S/N ${clipPinpadService.getSerialNumber()} aún no está activa en modo PinPad por Soporte de Clip.\n\n` +
+                `Pide al soporte de Clip que activen este número de serie en modo PinPad. Mientras tanto, puedes cobrar directamente ingresando los $${finalTotal.toFixed(2)} en la app de Clip y confirmar el cobro abajo.`)
+          setPinpadStatusMsg('Terminal pendiente de activar por Soporte de Clip')
+        } else {
+          alert(`⚠️ Error Clip PinPad: ${res.message || res.name || 'Error en comunicación con Clip'}`)
+          setPinpadStatusMsg(null)
+        }
+        return
+      }
+
+      if (res.pinpad_request_id) {
+        setPinpadStatusMsg(`💳 ¡Orden enviada a Clip Total! Folio: ${res.pinpad_request_id.slice(-6).toUpperCase()}`)
+
+        try {
+          const statusRes = await clipPinpadService.pollPayment(res.pinpad_request_id, (st) => {
+            if (st === 'PENDING') {
+              setPinpadStatusMsg('💳 Esperando tarjeta en Clip Total 3...')
+            }
+          }, 60)
+
+          if (statusRes.status === 'PAID' || statusRes.status === 'APPROVED') {
+            setPinpadStatusMsg('✅ ¡Pago aprobado con éxito en Clip Total 3!')
+            await handleConfirmPayment({
+              authCode: statusRes.detail?.authorization_code || 'CLIP-APROBADO',
+              cardLast4: statusRes.detail?.last4 || '••••',
+              terminalApproved: true,
+            })
+          }
+        } catch (pollErr: any) {
+          setPinpadStatusMsg(`⚠️ ${pollErr.message}`)
+        }
+      }
+    } catch (err: any) {
+      alert(`❌ Error al conectar con Clip PinPad: ${err?.message || err}`)
+      setPinpadStatusMsg(null)
+    } finally {
+      setIsPinpadLoading(false)
+    }
+  }
 
   // 💰 COBRAR CUENTA (REGISTRA VENTA + DEDUCCIÓN DE INVENTARIO + IMPRIME TICKET 58mm FANCY)
   const handleConfirmPayment = async (terminalDetails?: { authCode?: string; cardLast4?: string; terminalApproved?: boolean }) => {
@@ -938,11 +998,39 @@ export default function POS() {
             )}
 
             {paymentMethod === 'card' && (
-              <div className="bg-teal-950/40 p-3.5 rounded-2xl border border-teal-500/30 text-xs text-teal-200 space-y-1 text-center">
-                <p className="font-bold text-sm">💳 Cobro Manual con Tarjeta</p>
-                <p className="text-slate-300">
-                  Cobrar en tu terminal bancaria física / Clip y confirma cuando apruebe la transacción.
-                </p>
+              <div className="bg-gradient-to-b from-teal-950/60 to-slate-900 border border-teal-500/40 p-3.5 rounded-2xl text-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <p className="font-black text-sm text-white">Clip Total 3 (PinPad)</p>
+                  </div>
+                  <span className="text-[10px] font-mono text-teal-300 bg-teal-950 px-2 py-0.5 rounded border border-teal-800">
+                    S/N: {clipPinpadService.getSerialNumber()}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={handleTriggerClipPinpad}
+                    disabled={isPinpadLoading || isProcessingPayment}
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-xl shadow-amber-500/20 active:scale-98 transition-all disabled:opacity-50"
+                  >
+                    <Smartphone size={16} />
+                    <span>{isPinpadLoading ? 'Enviando a Terminal Clip...' : '⚡ Disparar Cobro en Clip Total 3'}</span>
+                  </button>
+
+                  {pinpadStatusMsg && (
+                    <div className="bg-slate-950/90 p-2.5 rounded-xl border border-amber-500/40 text-center text-amber-300 font-bold text-xs animate-pulse">
+                      {pinpadStatusMsg}
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-[11px] text-slate-400 text-center border-t border-slate-800/80 pt-2 space-y-1">
+                  <p>También puedes ingresar el monto manualmente en la app de Clip.</p>
+                  <p className="text-[10px] text-slate-500">Al aprobar la transacción en Clip, presiona el botón verde inferior.</p>
+                </div>
               </div>
             )}
 
