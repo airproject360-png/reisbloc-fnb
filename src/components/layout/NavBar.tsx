@@ -73,7 +73,7 @@ export default function NavBar() {
   }, [])
 
   // El return condicional debe ir DESPUÉS de todos los hooks
-  if (location.pathname === '/login' || !currentUser) {
+  if (location.pathname === '/login' || location.pathname === '/terminal' || location.pathname === '/display' || !currentUser) {
     return null
   }
 

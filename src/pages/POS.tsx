@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import logger from '@/utils/logger'
 import { useAppStore } from '@/store/appStore'
 import supabaseService from '@/services/supabaseService'
+import terminalSyncService from '@/services/terminalSyncService'
 import { Product, OrderItem } from '@/types/index'
 import { DEMO_PRODUCTS } from '@/services/demoSeedService'
 import printService from '@/services/printService'
@@ -25,7 +26,8 @@ import {
   FileText,
   Utensils,
   ShoppingBag,
-  Store
+  Store,
+  Smartphone
 } from 'lucide-react'
 
 export default function POS() {
@@ -236,8 +238,36 @@ export default function POS() {
     }
   }
 
+  // Sincronización en vivo con Terminal Clip Total 3
+  useEffect(() => {
+    terminalSyncService.sendCartUpdate(cartItems, cartSubtotal, currentLoc)
+  }, [cartItems, cartSubtotal, currentLoc])
+
+  // Disparo de cobro a Clip Total cuando se elige Tarjeta en el modal de cobro
+  useEffect(() => {
+    if (showPaymentModal && paymentMethod === 'card' && cartItems.length > 0) {
+      const saleId = `LOC-${Date.now().toString().slice(-6)}`
+      terminalSyncService.requestPayment(saleId, cartSubtotal, currentLoc, cartItems, 'card')
+    }
+  }, [showPaymentModal, paymentMethod, cartSubtotal, currentLoc, cartItems])
+
+  // Escuchar cuando la Clip Total aprueba el pago automáticamente
+  useEffect(() => {
+    const unsub = terminalSyncService.on('payment_completed', async (payload) => {
+      logger.info('pos', '✅ Pago recibido desde Terminal Clip Total:', payload)
+      if (payload.status === 'approved') {
+        await handleConfirmPayment({
+          authCode: payload.authCode,
+          cardLast4: payload.cardLast4,
+          terminalApproved: true,
+        })
+      }
+    })
+    return () => unsub()
+  }, [showPaymentModal, cartItems, currentLoc, cartSubtotal])
+
   // 💰 COBRAR CUENTA (REGISTRA VENTA + DEDUCCIÓN DE INVENTARIO + IMPRIME TICKET 58mm FANCY)
-  const handleConfirmPayment = async () => {
+  const handleConfirmPayment = async (terminalDetails?: { authCode?: string; cardLast4?: string; terminalApproved?: boolean }) => {
     if (!currentUser || cartItems.length === 0 || isProcessingPayment) return
 
     const originalTotal = cartSubtotal
@@ -407,7 +437,12 @@ export default function POS() {
       setPosTicketNotes('')
       setEnablePriceAdjustment(false)
       setShowChangeCalculator(false)
-      alert('✅ Pago cobrado exitosamente y ticket generado')
+      await terminalSyncService.resetTerminal()
+      if (terminalDetails?.terminalApproved) {
+        alert(`✅ ¡Pago aprobado con éxito en Clip Total 3! (Auth: ${terminalDetails.authCode || 'APROBADA'})`)
+      } else {
+        alert('✅ Pago cobrado exitosamente y ticket generado')
+      }
     } catch (err: any) {
       alert(`❌ Error al procesar el cobro: ${err?.message || err}`)
     } finally {
@@ -432,6 +467,17 @@ export default function POS() {
                 <Store size={26} />
               </div>
             )}
+            <Link
+              to="/terminal"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 text-teal-300 rounded-xl border border-teal-500/30 text-xs font-black shadow-sm transition-all hover:scale-105"
+              title="Abrir pantalla cliente / Clip Total 3"
+            >
+              <Smartphone size={15} className="text-amber-400" />
+              <span>Clip Total 3</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
+            </Link>
           </div>
 
           {/* Selector Simplificado de Ubicación / Mesas */}
@@ -913,7 +959,7 @@ export default function POS() {
 
             {/* Confirmar Cobro */}
             <button
-              onClick={handleConfirmPayment}
+              onClick={() => handleConfirmPayment()}
               disabled={isProcessingPayment}
               className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-2xl active:scale-98 transition-all disabled:opacity-50"
             >

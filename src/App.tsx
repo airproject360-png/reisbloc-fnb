@@ -40,6 +40,7 @@ const Kitchen = lazy(() => import('@/pages/Kitchen'))
 const Bar = lazy(() => import('@/pages/Bar'))
 const Customers = lazy(() => import('@/pages/Customers'))
 const PublicMenu = lazy(() => import('@/pages/PublicMenu'))
+const TerminalDisplay = lazy(() => import('@/pages/TerminalDisplay'))
 const AuthCallback = lazy(() => import('@/pages/AuthCallback').then(module => ({ default: module.AuthCallback })))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
@@ -219,6 +220,8 @@ function App() {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/menu" element={<PublicMenu />} />
             <Route path="/order" element={<PublicMenu />} />
+            <Route path="/terminal" element={<TerminalDisplay />} />
+            <Route path="/display" element={<TerminalDisplay />} />
 
             {!isAuthenticated ? (
               <>
