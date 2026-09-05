@@ -181,7 +181,7 @@ export default function TerminalDisplay() {
     setAuthCode(generatedAuth)
     setCardLast4(generatedLast4)
 
-    // Notificar al iPad POS en tiempo real
+    // Notificar al POS (Computadora o iPad) en tiempo real
     await terminalSyncService.confirmPayment({
       saleId: paymentReq.saleId,
       status: 'approved',
@@ -190,6 +190,7 @@ export default function TerminalDisplay() {
       cardLast4: generatedLast4,
       paymentType: 'CONTACTLESS / CHIP',
       timestamp: new Date().toISOString(),
+      originStation: paymentReq.originStation,
     })
 
     setIsProcessingLocal(false)

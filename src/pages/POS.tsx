@@ -27,7 +27,9 @@ import {
   Utensils,
   ShoppingBag,
   Store,
-  Smartphone
+  Smartphone,
+  Monitor,
+  Eye
 } from 'lucide-react'
 
 export default function POS() {
@@ -238,33 +240,71 @@ export default function POS() {
     }
   }
 
+  // Identificador único de estación (Computadora de Caja o iPad)
+  const [stationId] = useState(() => {
+    let id = localStorage.getItem('reisbloc_station_id')
+    if (!id) {
+      id = `pos-${Math.random().toString(36).substring(2, 8)}`
+      localStorage.setItem('reisbloc_station_id', id)
+    }
+    return id
+  })
+
+  // ¿Esta estación es la Caja Principal que espejea su carrito en la Clip Total 3?
+  const [isPrimaryCaja, setIsPrimaryCaja] = useState<boolean>(() => {
+    const saved = localStorage.getItem('reisbloc_is_primary_caja')
+    if (saved !== null) return saved === 'true'
+    // Detectar si es computadora de escritorio (no iPad/móvil)
+    const isMobile = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent)
+    return !isMobile
+  })
+
+  const activeSaleRef = useRef<string | null>(null)
+
   // Sincronización en vivo con Terminal Clip Total 3
   useEffect(() => {
-    terminalSyncService.sendCartUpdate(cartItems, cartSubtotal, currentLoc)
-  }, [cartItems, cartSubtotal, currentLoc])
+    // Solo la Caja Principal (Computadora fija) transmite continuamente su carrito a la Clip Total
+    if (isPrimaryCaja) {
+      terminalSyncService.sendCartUpdate(cartItems, cartSubtotal, currentLoc, stationId)
+    }
+  }, [cartItems, cartSubtotal, currentLoc, isPrimaryCaja, stationId])
 
-  // Disparo de cobro a Clip Total cuando se elige Tarjeta en el modal de cobro
+  // Disparo de cobro a Clip Total cuando se elige Tarjeta en el modal de cobro (desde PC o iPad)
   useEffect(() => {
     if (showPaymentModal && paymentMethod === 'card' && cartItems.length > 0) {
       const saleId = `LOC-${Date.now().toString().slice(-6)}`
-      terminalSyncService.requestPayment(saleId, cartSubtotal, currentLoc, cartItems, 'card')
+      activeSaleRef.current = saleId
+      terminalSyncService.requestPayment(saleId, cartSubtotal, currentLoc, cartItems, 'card', stationId)
+    } else if (!showPaymentModal) {
+      activeSaleRef.current = null
     }
-  }, [showPaymentModal, paymentMethod, cartSubtotal, currentLoc, cartItems])
+  }, [showPaymentModal, paymentMethod, cartSubtotal, currentLoc, cartItems, stationId])
 
   // Escuchar cuando la Clip Total aprueba el pago automáticamente
   useEffect(() => {
     const unsub = terminalSyncService.on('payment_completed', async (payload) => {
       logger.info('pos', '✅ Pago recibido desde Terminal Clip Total:', payload)
+      // Si el pago vino con origen y fue para otra estación diferente, ignorar
+      if (payload.originStation && payload.originStation !== stationId) {
+        logger.info('pos', 'Pago pertenece a otra estación:', payload.originStation)
+        return
+      }
+      // Si tenemos una venta activa y no coincide el saleId, ignorar
+      if (activeSaleRef.current && payload.saleId !== activeSaleRef.current) {
+        logger.info('pos', 'Venta activa no coincide con folio:', payload.saleId)
+        return
+      }
       if (payload.status === 'approved') {
         await handleConfirmPayment({
           authCode: payload.authCode,
           cardLast4: payload.cardLast4,
           terminalApproved: true,
         })
+        activeSaleRef.current = null
       }
     })
     return () => unsub()
-  }, [showPaymentModal, cartItems, currentLoc, cartSubtotal])
+  }, [showPaymentModal, cartItems, currentLoc, cartSubtotal, stationId])
 
   // 💰 COBRAR CUENTA (REGISTRA VENTA + DEDUCCIÓN DE INVENTARIO + IMPRIME TICKET 58mm FANCY)
   const handleConfirmPayment = async (terminalDetails?: { authCode?: string; cardLast4?: string; terminalApproved?: boolean }) => {
@@ -467,17 +507,38 @@ export default function POS() {
                 <Store size={26} />
               </div>
             )}
-            <Link
-              to="/terminal"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 text-teal-300 rounded-xl border border-teal-500/30 text-xs font-black shadow-sm transition-all hover:scale-105"
-              title="Abrir pantalla cliente / Clip Total 3"
-            >
-              <Smartphone size={15} className="text-amber-400" />
-              <span>Clip Total 3</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
-            </Link>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !isPrimaryCaja
+                  setIsPrimaryCaja(next)
+                  localStorage.setItem('reisbloc_is_primary_caja', String(next))
+                  if (!next) {
+                    terminalSyncService.resetTerminal()
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-black shadow-sm transition-all hover:scale-105 ${
+                  isPrimaryCaja 
+                    ? 'bg-slate-900/90 text-teal-300 border-teal-500/40 hover:bg-slate-800' 
+                    : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:bg-slate-800'
+                }`}
+                title={isPrimaryCaja ? "Esta estación transmite en tiempo real a Clip Total 3. Haz clic para pausar." : "Modo auxiliar (iPad). Haz clic para marcar esta estación como Caja Principal."}
+              >
+                {isPrimaryCaja ? <Monitor size={15} className="text-amber-400" /> : <Smartphone size={15} className="text-slate-400" />}
+                <span>{isPrimaryCaja ? 'Caja PC ➔ Clip Total' : 'Clip Total (Auxiliar)'}</span>
+                <span className={`w-2 h-2 rounded-full ml-0.5 ${isPrimaryCaja ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+              </button>
+              <Link
+                to="/terminal"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden md:flex items-center p-2 bg-slate-900/90 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl border border-slate-800 text-xs transition-all"
+                title="Abrir vista de Terminal en nueva pestaña"
+              >
+                <Eye size={14} />
+              </Link>
+            </div>
           </div>
 
           {/* Selector Simplificado de Ubicación / Mesas */}

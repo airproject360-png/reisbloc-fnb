@@ -21,6 +21,7 @@ export interface TerminalCartPayload {
   total: number
   tableNumber: number
   clientName?: string
+  originStation?: string
 }
 
 export interface TerminalPaymentRequestPayload {
@@ -30,6 +31,7 @@ export interface TerminalPaymentRequestPayload {
   items: TerminalCartItem[]
   method: 'card' | 'transfer' | 'cash'
   clientName?: string
+  originStation?: string
 }
 
 export interface TerminalPaymentCompletedPayload {
@@ -40,6 +42,7 @@ export interface TerminalPaymentCompletedPayload {
   cardLast4?: string
   paymentType?: string
   timestamp: string
+  originStation?: string
 }
 
 type EventCallback<T = any> = (payload: T) => void
@@ -128,7 +131,7 @@ class TerminalSyncService {
   /**
    * Envía la actualización de platillos en el carrito del POS a la pantalla del Clip
    */
-  public async sendCartUpdate(items: any[], total: number, tableNumber: number) {
+  public async sendCartUpdate(items: any[], total: number, tableNumber: number, originStation?: string) {
     const tenant = getTenantSettings()
     const formattedItems: TerminalCartItem[] = items.map(item => ({
       id: item.id || item.productId || String(Math.random()),
@@ -143,6 +146,7 @@ class TerminalSyncService {
       total,
       tableNumber,
       clientName: tenant.clientName,
+      originStation,
     }
 
     await this.broadcast('cart_update', payload)
@@ -151,7 +155,14 @@ class TerminalSyncService {
   /**
    * Solicita cobro en la terminal Clip
    */
-  public async requestPayment(saleId: string, amount: number, tableNumber: number, items: any[], method: 'card' | 'transfer' | 'cash' = 'card') {
+  public async requestPayment(
+    saleId: string,
+    amount: number,
+    tableNumber: number,
+    items: any[],
+    method: 'card' | 'transfer' | 'cash' = 'card',
+    originStation?: string
+  ) {
     const tenant = getTenantSettings()
     const formattedItems: TerminalCartItem[] = items.map(item => ({
       id: item.id || item.productId || String(Math.random()),
@@ -168,6 +179,7 @@ class TerminalSyncService {
       items: formattedItems,
       method,
       clientName: tenant.clientName,
+      originStation,
     }
 
     await this.broadcast('payment_request', payload)
