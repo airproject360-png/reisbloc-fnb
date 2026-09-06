@@ -16,6 +16,9 @@ export interface TenantSettings {
   clientTagline: string
   logoUrl: string
   organizationId: string
+  enableCardFee: boolean        // Si cobra comisión por pago con tarjeta
+  cardFeePercentage: number     // Porcentaje de comisión (0.03 = 3%)
+  cardFeeFixed: number          // Monto fijo en pesos ($1.00 MXN)
 }
 
 /**
@@ -73,6 +76,9 @@ export function getTenantSettings(): TenantSettings {
       clientTagline: 'GUISOS & BARRA FRÍA',
       logoUrl: '/logo_localito.jpg',
       organizationId: LOCALITO_ORG_ID,
+      enableCardFee: true,      // 💳 3% + $1.00 MXN explícito para Localito
+      cardFeePercentage: 0.03,  // 3%
+      cardFeeFixed: 1.00,       // $1.00 MXN
     }
   }
 
@@ -85,5 +91,27 @@ export function getTenantSettings(): TenantSettings {
     clientTagline: APP_CONFIG.CLIENT_TAGLINE || 'SISTEMA POS',
     logoUrl: APP_CONFIG.LOGO_URL || '/icon.svg',
     organizationId: APP_CONFIG.ORGANIZATION_ID || DEFAULT_DEMO_ORG_ID,
+    enableCardFee: false,
+    cardFeePercentage: 0,
+    cardFeeFixed: 0,
   }
 }
+
+/**
+ * Calcula la comisión por pago con tarjeta si el tenant lo tiene activado.
+ * Retorna la comisión calculada (fee) y el total acumulado a cobrar en la terminal (totalWithFee).
+ */
+export function calculateCardFee(
+  baseAmount: number,
+  tenant: TenantSettings = getTenantSettings()
+): { fee: number; totalWithFee: number } {
+  if (!tenant.enableCardFee || baseAmount <= 0) {
+    return { fee: 0, totalWithFee: baseAmount }
+  }
+
+  const fee = Math.round((baseAmount * tenant.cardFeePercentage + tenant.cardFeeFixed) * 100) / 100
+  const totalWithFee = Math.round((baseAmount + fee) * 100) / 100
+
+  return { fee, totalWithFee }
+}
+

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Order, Product } from '@/types/index'
-import { getTenantSettings } from '@/config/tenantConfig'
+import { getTenantSettings, calculateCardFee } from '@/config/tenantConfig'
 
 interface ReceiptTicketProps {
   order: Order
@@ -29,12 +29,16 @@ export default function ReceiptTicket({
   const tenant = getTenantSettings()
   const displayBusinessName = businessName || tenant.clientName
 
-  // Calcular subtotal (total sin propina sugerida)
-  const subtotal = saleTotal - (tenant.enableTips ? tip : 0)
+  // Calcular subtotal consumo base
+  const baseSubtotal = saleTotal - (tenant.enableTips ? tip : 0)
+
+  // Comisión por pago con tarjeta (3% + $1 MXN para Localito)
+  const isCard = paymentMethod.toLowerCase().includes('clip') || paymentMethod.toLowerCase().includes('card') || paymentMethod.toLowerCase().includes('tarjeta')
+  const { fee: cardFee, totalWithFee } = isCard ? calculateCardFee(baseSubtotal, tenant) : { fee: 0, totalWithFee: baseSubtotal }
 
   // Propina sugerida (15% por default si no hay tip)
-  const suggestedTip = tenant.enableTips ? (tip > 0 ? tip : Math.round(subtotal * 0.15)) : 0
-  const finalTotal = tenant.enableTips ? (subtotal + suggestedTip) : subtotal
+  const suggestedTip = tenant.enableTips ? (tip > 0 ? tip : Math.round(baseSubtotal * 0.15)) : 0
+  const finalTotal = tenant.enableTips ? (totalWithFee + suggestedTip) : totalWithFee
 
   // Agrupar items por categoría
   const itemsByCategory = order.items.reduce((acc, item) => {
@@ -117,9 +121,17 @@ export default function ReceiptTicket({
       {/* Totales */}
       <div style={{ marginBottom: '8px', borderBottom: '1px solid #000', paddingBottom: '8px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-          <span>Subtotal:</span>
-          <span>${subtotal.toFixed(2)}</span>
+          <span>Subtotal Consumo:</span>
+          <span>${baseSubtotal.toFixed(2)}</span>
         </div>
+
+        {cardFee > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px', fontSize: '10px', color: '#000' }}>
+            <span>Cargo Tarjeta (3% + $1):</span>
+            <span>+${cardFee.toFixed(2)}</span>
+          </div>
+        )}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
           <span>Impuesto (0%):</span>
           <span>$0.00</span>
@@ -130,8 +142,8 @@ export default function ReceiptTicket({
             <span>${suggestedTip.toFixed(2)}</span>
           </div>
         )}
-        <div style={{ fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-          <span>TOTAL:</span>
+        <div style={{ fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginTop: '4px', borderTop: '1px solid #000', paddingTop: '4px' }}>
+          <span>TOTAL A PAGAR:</span>
           <span>${finalTotal.toFixed(2)}</span>
         </div>
       </div>
@@ -140,6 +152,11 @@ export default function ReceiptTicket({
       <div style={{ marginBottom: '8px', fontSize: '10px', textAlign: 'center' }}>
         <div>Pagado: {paymentMethod.toUpperCase()}</div>
         {tenant.enableTips && tip > 0 && <div>Propina recibida: ${tip.toFixed(2)}</div>}
+        {cardFee > 0 && (
+          <div style={{ fontSize: '8px', marginTop: '4px', fontStyle: 'italic' }}>
+            * Incluye cargo por servicio de cobro con tarjeta.
+          </div>
+        )}
       </div>
 
       {/* Footer */}

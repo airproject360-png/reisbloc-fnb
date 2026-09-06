@@ -8,7 +8,7 @@ import printService from '@/services/printService'
 import { Order, OrderItem } from '@/types'
 import { LayoutDashboard, ArrowLeftRight, XCircle, Timer, Edit, CheckCircle, CreditCard, Printer, RefreshCw } from 'lucide-react'
 import EditOrderModal from '@/components/admin/EditOrderModal'
-import { getTenantSettings } from '@/config/tenantConfig'
+import { getTenantSettings, calculateCardFee } from '@/config/tenantConfig'
 
 interface TransferState {
   [orderId: string]: number
@@ -86,10 +86,16 @@ export default function TableMonitor() {
     customNotes?: string
   ): string => {
     const allItems = ordersList.flatMap(o => o.items || [])
-    const total = paymentDetails?.total ?? allItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+    const baseItemsTotal = allItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+    const isPaymentTicket = Boolean(paymentDetails)
+
+    // Si la forma de pago es con tarjeta/clip, calcular comisión de tarjeta
+    const isCard = paymentDetails ? (paymentDetails.method.includes('card') || paymentDetails.method.includes('clip') || paymentDetails.method.includes('tarjeta')) : false
+    const { fee: cardFee, totalWithFee } = isCard ? calculateCardFee(baseItemsTotal, tenant) : { fee: 0, totalWithFee: baseItemsTotal }
+    const finalTotalToDisplay = paymentDetails?.total ?? totalWithFee
+
     const dateStr = new Date().toLocaleString('es-MX')
     const ticketFolio = ordersList[0]?.id ? ordersList[0].id.slice(-8).toUpperCase() : `LOC-${Date.now().toString().slice(-6)}`
-    const isPaymentTicket = Boolean(paymentDetails)
 
     const lines = allItems
       .map(item => `
@@ -146,14 +152,29 @@ export default function TableMonitor() {
 
         <!-- Totals -->
         <div style="border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
-          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:900;">
+          <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px;">
+            <span>Subtotal Consumo:</span>
+            <span>$${baseItemsTotal.toFixed(2)} MXN</span>
+          </div>
+          ${cardFee > 0 ? `
+          <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px;font-weight:bold;">
+            <span>Cargo Servicio Tarjeta (3% + $1):</span>
+            <span>+$${cardFee.toFixed(2)} MXN</span>
+          </div>
+          ` : ''}
+          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:900;margin-top:4px;border-top:1px solid #000;padding-top:4px;">
             <span>${isPaymentTicket ? 'TOTAL PAGADO:' : 'TOTAL A PAGAR:'}</span>
-            <span>$${total.toFixed(2)} MXN</span>
+            <span>$${finalTotalToDisplay.toFixed(2)} MXN</span>
           </div>
           ${paymentDetails ? `
           <div style="display:flex;justify-content:space-between;font-size:10px;margin-top:4px;">
             <span>FORMA DE PAGO:</span>
             <span><strong>${paymentDetails.method.toUpperCase()}</strong></span>
+          </div>
+          ` : ''}
+          ${cardFee > 0 ? `
+          <div style="font-size:8px;color:#333;margin-top:4px;text-align:center;font-style:italic;">
+            * Incluye cargo por servicio de cobro con tarjeta.
           </div>
           ` : ''}
           ${paymentDetails?.adjustmentNote ? `

@@ -1,183 +1,132 @@
-// Servicio para integración con Clip (Terminal de pagos)
-import { ClipPayment, Sale } from '@/types';
 import logger from '@/utils/logger'
 
-interface ClipConfig {
-  apiKey: string;
-  merchantId: string;
-  baseUrl: string;
+export interface ClipPaymentRequest {
+  amount: number
+  description: string
+  orderId: string
+  tableNumber: number
+  email?: string
 }
 
-interface ClipTransactionRequest {
-  amount: number;
-  saleId: string;
-  tip?: number;
-  currency?: string;
+export interface ClipPaymentResponse {
+  paymentId: string
+  status: 'PENDING' | 'APPROVED' | 'CANCELLED' | 'ERROR'
+  reference: string
+  amount: number
+  paymentUrl?: string
+  receiptUrl?: string
+  createdAt: string
 }
 
-interface ClipTransactionResponse {
-  id: string;
-  status: 'approved' | 'declined' | 'pending';
-  amount: number;
-  tip?: number;
-  timestamp: string;
-  reference: string;
-}
+class ClipService {
+  private apiKey: string
+  private merchantId: string
+  private isSandbox: boolean
+  private baseUrl: string
 
-class ClipPaymentService {
-  private config: ClipConfig | null = null;
-
-  /**
-   * Inicializa la configuración de Clip
-   */
-  initialize(config: ClipConfig) {
-    this.config = config;
+  constructor() {
+    this.apiKey = import.meta.env.VITE_CLIP_API_KEY || ''
+    this.merchantId = import.meta.env.VITE_CLIP_MERCHANT_ID || ''
+    this.isSandbox = import.meta.env.VITE_CLIP_SANDBOX_MODE === 'true' || !this.apiKey
+    this.baseUrl = this.isSandbox
+      ? 'https://api-sandbox.clip.mx/v2'
+      : 'https://api.clip.mx/v2'
   }
 
   /**
-   * Procesa un pago a través de terminal Clip
+   * Inicia una transacción para enviar cobro a la Terminal Clip
    */
-  async processPayment(request: ClipTransactionRequest): Promise<ClipPayment> {
-    // MODO TRANSFERENCIA: Registro manual de SPEI
-    logger.info('transfer', '🏦 Registrando Transferencia/SPEI', request)
-
-    // Simular delay
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    return {
-      id: `transfer_${Date.now()}`,
-      saleId: request.saleId,
+  async initiateTerminalPayment(request: ClipPaymentRequest): Promise<ClipPaymentResponse> {
+    const reference = `REF-${request.orderId}-${Date.now().toString().slice(-4)}`
+    logger.info('clip', 'Iniciando solicitud de cobro en Terminal Clip', {
       amount: request.amount,
-      transactionId: `spei_${Date.now().toString().slice(-6)}`,
-      status: 'completed',
-      tip: request.tip,
-      createdAt: new Date(),
-      completedAt: new Date(),
-    };
-  }
+      reference,
+      isSandbox: this.isSandbox,
+    })
 
-  /**
-   * Verifica el estado de una transacción
-   */
-  async checkTransactionStatus(transactionId: string): Promise<ClipPayment['status']> {
-    if (!this.config) {
-      throw new Error('Clip service not initialized');
+    // Si estamos en modo de desarrollo / sandbox sin API key real, simulamos la llamada a la terminal
+    if (this.isSandbox) {
+      await new Promise(resolve => setTimeout(resolve, 800))
+
+      return {
+        paymentId: `clip_tx_${Math.random().toString(36).substring(2, 10)}`,
+        status: 'PENDING',
+        reference,
+        amount: request.amount,
+        paymentUrl: `https://clip.mx/pay/${reference}`,
+        createdAt: new Date().toISOString(),
+      }
     }
 
     try {
-      const response = await fetch(
-        `${this.config.baseUrl}/transactions/${transactionId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.config.apiKey}`,
+      const response = await fetch(`${this.baseUrl}/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${btoa(`${this.apiKey}:`)}`,
+          'x-clip-merchant-id': this.merchantId,
+        },
+        body: JSON.stringify({
+          amount: request.amount,
+          currency: 'MXN',
+          purchase_description: request.description,
+          redirection_url_success: `${window.location.origin}/pos?status=clip_success&orderId=${request.orderId}`,
+          redirection_url_failure: `${window.location.origin}/pos?status=clip_failed&orderId=${request.orderId}`,
+          metadata: {
+            order_id: request.orderId,
+            table_number: request.tableNumber,
+            client_subdomain: import.meta.env.VITE_CLIENT_SUBDOMAIN || 'localito',
           },
-        }
-      );
+        }),
+      })
 
       if (!response.ok) {
-        throw new Error(`Clip API error: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `Error en servidor Clip API (${response.status})`)
       }
 
-      const data = await response.json();
-
-      if (data.status === 'approved') return 'completed';
-      if (data.status === 'declined') return 'failed';
-      return 'pending';
-    } catch (error) {
-      logger.error('clip', 'Error checking transaction status', error as any);
-      return 'pending';
+      const data = await response.json()
+      return {
+        paymentId: data.id || data.payment_id,
+        status: data.status === 'PAID' ? 'APPROVED' : 'PENDING',
+        reference: data.reference || reference,
+        amount: data.amount || request.amount,
+        paymentUrl: data.payment_url,
+        createdAt: new Date().toISOString(),
+      }
+    } catch (err: any) {
+      logger.error('clip', 'Error al conectar con API de Clip', err)
+      throw err
     }
   }
 
   /**
-   * Procesa un reembolso
+   * Consulta el estado actual de un cobro de Clip por su ID o referencia
    */
-  async refundTransaction(transactionId: string, amount?: number): Promise<boolean> {
-    if (!this.config) {
-      throw new Error('Clip service not initialized');
+  async checkPaymentStatus(paymentId: string): Promise<'PENDING' | 'APPROVED' | 'CANCELLED' | 'ERROR'> {
+    if (this.isSandbox) {
+      // En sandbox, simulamos que el pago se aprueba tras la consulta
+      return 'APPROVED'
     }
 
     try {
-      const response = await fetch(
-        `${this.config.baseUrl}/transactions/${transactionId}/refund`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${this.config.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            amount: amount ? amount * 100 : undefined,
-          }),
-        }
-      );
+      const response = await fetch(`${this.baseUrl}/checkout/${paymentId}`, {
+        headers: {
+          Authorization: `Basic ${btoa(`${this.apiKey}:`)}`,
+        },
+      })
 
-      return response.ok;
-    } catch (error) {
-      logger.error('clip', 'Refund error', error as any);
-      return false;
-    }
-  }
+      if (!response.ok) return 'PENDING'
 
-  /**
-   * Obtiene el balance de la terminal
-   */
-  async getBalance(): Promise<number> {
-    if (!this.config) {
-      throw new Error('Clip service not initialized');
-    }
-
-    try {
-      const response = await fetch(
-        `${this.config.baseUrl}/balance`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.config.apiKey}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Clip API error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data.balance / 100; // Convertir de centavos
-    } catch (error) {
-      logger.error('clip', 'Error getting balance', error as any);
-      return 0;
-    }
-  }
-
-  /**
-   * Obtiene historial de transacciones
-   */
-  async getTransactionHistory(limit: number = 50): Promise<any[]> {
-    if (!this.config) {
-      throw new Error('Clip service not initialized');
-    }
-
-    try {
-      const response = await fetch(
-        `${this.config.baseUrl}/transactions?limit=${limit}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.config.apiKey}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Clip API error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data.transactions || [];
-    } catch (error) {
-      logger.error('clip', 'Error getting transaction history', error as any);
-      return [];
+      const data = await response.json()
+      if (data.status === 'PAID' || data.status === 'APPROVED') return 'APPROVED'
+      if (data.status === 'CANCELLED' || data.status === 'REFUNDED') return 'CANCELLED'
+      return 'PENDING'
+    } catch {
+      return 'PENDING'
     }
   }
 }
 
-export default new ClipPaymentService();
+export const clipService = new ClipService()
+export default clipService
