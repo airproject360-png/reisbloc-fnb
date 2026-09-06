@@ -567,38 +567,6 @@ export default function POS() {
                 <Store size={26} />
               </div>
             )}
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !isPrimaryCaja
-                  setIsPrimaryCaja(next)
-                  localStorage.setItem('reisbloc_is_primary_caja', String(next))
-                  if (!next) {
-                    terminalSyncService.resetTerminal()
-                  }
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-black shadow-sm transition-all hover:scale-105 ${
-                  isPrimaryCaja 
-                    ? 'bg-slate-900/90 text-teal-300 border-teal-500/40 hover:bg-slate-800' 
-                    : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:bg-slate-800'
-                }`}
-                title={isPrimaryCaja ? "Esta estación transmite en tiempo real a Clip Total 3. Haz clic para pausar." : "Modo auxiliar (iPad). Haz clic para marcar esta estación como Caja Principal."}
-              >
-                {isPrimaryCaja ? <Monitor size={15} className="text-amber-400" /> : <Smartphone size={15} className="text-slate-400" />}
-                <span>{isPrimaryCaja ? 'Caja PC ➔ Clip Total' : 'Clip Total (Auxiliar)'}</span>
-                <span className={`w-2 h-2 rounded-full ml-0.5 ${isPrimaryCaja ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
-              </button>
-              <Link
-                to="/terminal"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hidden md:flex items-center p-2 bg-slate-900/90 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl border border-slate-800 text-xs transition-all"
-                title="Abrir vista de Terminal en nueva pestaña"
-              >
-                <Eye size={14} />
-              </Link>
-            </div>
           </div>
 
           {/* Selector Simplificado de Ubicación / Mesas */}
