@@ -15,7 +15,10 @@ import {
   Lock,
   Send,
   Building,
-  Check
+  Check,
+  Play,
+  Film,
+  X
 } from 'lucide-react'
 import { getTenantSettings } from '@/config/tenantConfig'
 
@@ -24,6 +27,7 @@ export default function LandingPage() {
   const tenant = getTenantSettings()
   
   const [showContactModal, setShowContactModal] = useState(false)
+  const [showVideoModal, setShowVideoModal] = useState(false)
   const [contactSubmitted, setContactSubmitted] = useState(false)
   const [formData, setFormData] = useState({
     businessName: '',
@@ -33,6 +37,10 @@ export default function LandingPage() {
     needs: 'POS Multicaja + Terminal Clip',
     notes: '',
   })
+
+  // URL del video (configurable vía env VITE_DEMO_VIDEO_URL o video mp4 en public/)
+  const videoUrl = import.meta.env.VITE_DEMO_VIDEO_URL || '/demo_video.mp4'
+  const isEmbedVideo = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') || videoUrl.includes('vimeo.com')
 
   const handleSubmitContact = (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,7 +75,7 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <span className="text-xl font-black tracking-tight text-white block leading-none">REISBLOC</span>
-                  <span className="text-[10px] font-extrabold tracking-widest text-amber-400 uppercase">F&B Software · reisbloc.store</span>
+                  <span className="text-[10px] font-extrabold tracking-widest text-amber-400 uppercase">F&B Software · reisbloc.com & reisbloc.store</span>
                 </div>
               </div>
             )}
@@ -77,7 +85,10 @@ export default function LandingPage() {
             <a href="#soluciones" className="hover:text-teal-400 transition-colors">Soluciones</a>
             <a href="#clip" className="hover:text-teal-400 transition-colors">Terminal Clip Total 3</a>
             <a href="#personalizado" className="hover:text-teal-400 transition-colors">100% Personalizado</a>
-            <a href="#seguridad" className="hover:text-teal-400 transition-colors">PCI & OWASP</a>
+            <button onClick={() => setShowVideoModal(true)} className="hover:text-amber-400 transition-colors flex items-center gap-1.5 text-amber-300 font-bold">
+              <Play size={14} className="fill-amber-400" />
+              <span>Ver Video Demo</span>
+            </button>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -105,7 +116,7 @@ export default function LandingPage() {
           <div className="md:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-bold">
               <Sparkles size={14} className="text-amber-400" />
-              <span>Plataforma Oficial · reisbloc.com & reisbloc.store</span>
+              <span>Espejo Oficial · reisbloc.com & reisbloc.store</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tight">
@@ -128,12 +139,15 @@ export default function LandingPage() {
                 <span>Diseñar Mi Solución a la Medida</span>
               </button>
 
-              <Link
-                to="/menu"
-                className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 font-extrabold text-sm transition-all text-center"
+              <button
+                onClick={() => setShowVideoModal(true)}
+                className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-500/40 font-extrabold text-sm transition-all flex items-center justify-center gap-2.5 shadow-lg shadow-amber-500/10 hover:scale-105"
               >
-                Ver Demo Menú Digital QR
-              </Link>
+                <div className="w-7 h-7 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/40">
+                  <Play size={14} className="fill-amber-400 text-amber-400 ml-0.5" />
+                </div>
+                <span>Ver Video de Demostración</span>
+              </button>
             </div>
 
             {/* Quick Badges */}
@@ -430,6 +444,88 @@ export default function LandingPage() {
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Video Modal Explicativo */}
+      {showVideoModal && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-4 sm:p-6 animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full overflow-hidden shadow-2xl relative text-white space-y-4 p-4 sm:p-6">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center">
+                  <Film size={22} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-white">Demostración en Video · Reisbloc F&B</h3>
+                  <p className="text-xs text-slate-400">Infraestructura tecnológica y cobros con Terminal Clip Total 3</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowVideoModal(false)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Container del Video */}
+            <div className="relative aspect-video w-full rounded-2xl bg-black overflow-hidden border border-slate-800 shadow-inner flex items-center justify-center">
+              {isEmbedVideo ? (
+                <iframe
+                  src={videoUrl}
+                  title="Demostración Reisbloc F&B"
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <video
+                  controls
+                  autoPlay
+                  playsInline
+                  src={videoUrl}
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // Fallback visual si el mp4 aún no está colocado en public/
+                    const target = e.target as HTMLElement
+                    target.style.display = 'none'
+                  }}
+                >
+                  Tu navegador no soporta reproducción de video HTML5.
+                </video>
+              )}
+
+              {/* Mensaje de espera si el archivo mp4 aún se está cargando/generando */}
+              <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center space-y-4 pointer-events-none">
+                <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center animate-pulse">
+                  <Film size={32} />
+                </div>
+                <div>
+                  <h4 className="text-base font-extrabold text-white">📺 Video de Presentación en Producción</h4>
+                  <p className="text-xs text-slate-400 max-w-md mt-1 leading-relaxed">
+                    Estamos finalizando el video promocional. Puedes colocar tu archivo MP4 en <code className="text-amber-300 font-mono">public/demo_video.mp4</code> o definir la variable <code className="text-teal-300 font-mono">VITE_DEMO_VIDEO_URL</code> en tu servidor Vercel.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs">
+              <span className="text-slate-400 font-medium">
+                ¿Tienes dudas sobre la integración en tu negocio?
+              </span>
+              <button
+                onClick={() => {
+                  setShowVideoModal(false)
+                  setShowContactModal(true)
+                }}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-slate-950 font-black"
+              >
+                Solicitar Cotización a la Medida
+              </button>
+            </div>
           </div>
         </div>
       )}
