@@ -29,6 +29,7 @@ import { authLogout, resolveAuthorizedAppUser } from '@/services/authService'
 import { APP_CONFIG } from '@/config/constants'
 
 const Login = lazy(() => import('@/pages/Login'))
+const LandingPage = lazy(() => import('@/pages/LandingPage'))
 const POS = lazy(() => import('@/pages/POS'))
 const Admin = lazy(() => import('@/pages/Admin'))
 const Inventory = lazy(() => import('@/pages/Inventory'))
@@ -218,6 +219,8 @@ function App() {
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/landing" element={<LandingPage />} />
+            <Route path="/store" element={<LandingPage />} />
             <Route path="/menu" element={<PublicMenu />} />
             <Route path="/order" element={<PublicMenu />} />
             <Route path="/terminal" element={<TerminalDisplay />} />
@@ -225,8 +228,9 @@ function App() {
 
             {!isAuthenticated ? (
               <>
+                <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
-                <Route path="*" element={<Navigate to="/login" replace />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </>
             ) : needsDeviceApproval ? (
               <>
