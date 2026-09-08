@@ -112,7 +112,8 @@ class ClipPinpadService {
         }
       }
 
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Sondeo ultra-rápido cada 800ms para respuesta inmediata al pasar tarjeta
+      await new Promise(resolve => setTimeout(resolve, 800))
     }
 
     throw new Error('Tiempo de espera agotado en la terminal Clip. Por favor reintenta.')
