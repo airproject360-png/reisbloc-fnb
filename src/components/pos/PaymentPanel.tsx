@@ -2,7 +2,7 @@ import { useState } from 'react'
 import logger from '@/utils/logger'
 import { X, DollarSign, Loader2, CheckCircle, CreditCard, Smartphone } from 'lucide-react'
 import mercadopagoService from '@/services/mercadopagoService'
-import clipService from '@/services/clipService'
+import clipPinpadService from '@/services/clipPinpadService'
 import { getTenantSettings, calculateCardFee } from '@/config/tenantConfig'
 
 export interface PaymentResult {
@@ -85,22 +85,37 @@ export default function PaymentPanel({
           cardFee: 0,
         })
       } else if (paymentMethod === 'clip') {
-        setClipStatusMessage(`Enviando $${totalToCharge.toFixed(2)} MXN a la Terminal Clip...`)
-        const response = await clipService.initiateTerminalPayment({
-          amount: totalToCharge,
-          description: `Cuenta ${tableNumber} - ${ids.length} orden${ids.length > 1 ? 'es' : ''}`,
-          orderId: ids[0] || `order-${Date.now()}`,
-          tableNumber,
-        })
+        setClipStatusMessage(`Enviando $${totalToCharge.toFixed(2)} MXN a Clip Total 3...`)
+        const shortOrderId = ids[0] ? ids[0].slice(-4) : Date.now().toString().slice(-4)
+        const reference = `LOC-MESA${tableNumber}-${shortOrderId}`
+
+        const pinpadResp = await clipPinpadService.createPayment(totalToCharge, reference)
+
+        if (!pinpadResp || !pinpadResp.pinpad_request_id) {
+          throw new Error(pinpadResp?.message || 'No se pudo comunicar con Clip Total 3. Verifica que esté en Modo PinPad.')
+        }
 
         setClipStatusMessage('Esperando tarjeta en la terminal Clip...')
-        logger.info('payment', 'Terminal Clip solicitada', response.reference)
+        logger.info('payment', 'Terminal Clip solicitada', { reference, pinpadRequestId: pinpadResp.pinpad_request_id })
 
-        // Consultar confirmación de la terminal o webhook
-        const status = await clipService.checkPaymentStatus(response.paymentId)
-        if (status === 'APPROVED') {
+        const result = await clipPinpadService.pollPayment(
+          pinpadResp.pinpad_request_id,
+          (status) => {
+            if (status === 'PENDING') {
+              setClipStatusMessage('💳 Inserte, deslice o acerque tarjeta en Clip Total 3...')
+            } else if (status === 'PROCESSING') {
+              setClipStatusMessage('⏳ Procesando cobro con el banco...')
+            } else {
+              setClipStatusMessage(`Terminal Clip: ${status}...`)
+            }
+          },
+          90
+        )
+
+        if (result.status === 'PAID' || result.status === 'APPROVED') {
+          setClipStatusMessage('✅ ¡Pago aprobado! Imprimiendo voucher...')
           await completePayment({
-            transactionId: response.paymentId,
+            transactionId: result.pinpad_request_id,
             paymentMethod: 'clip',
             currency: 'MXN',
             tip: 0,
@@ -109,7 +124,7 @@ export default function PaymentPanel({
             cardFee: cardFeeInfo.fee,
           })
         } else {
-          throw new Error('El pago en la Terminal Clip no fue completado o fue rechazado')
+          throw new Error(`El pago en la Terminal Clip no fue aprobado (Estado: ${result.status})`)
         }
       } else if (paymentMethod === 'transfer' || paymentMethod === 'mercadopago') {
         try {

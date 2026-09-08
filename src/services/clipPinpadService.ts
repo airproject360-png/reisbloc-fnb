@@ -117,6 +117,21 @@ class ClipPinpadService {
 
     throw new Error('Tiempo de espera agotado en la terminal Clip. Por favor reintenta.')
   }
+
+  /**
+   * Consulta el estado en línea del lector Clip Total 3
+   */
+  public async getDeviceStatus(serial?: string): Promise<any> {
+    const s = serial || this.getSerialNumber()
+    try {
+      const res = await fetch(`/api/clip-pinpad?action=devices_status&serialNumber=${encodeURIComponent(s)}`)
+      if (!res.ok) return null
+      return await res.json()
+    } catch (err: any) {
+      logger.error('clip-pinpad', 'Error consultando estado del lector Clip:', err)
+      return null
+    }
+  }
 }
 
 export const clipPinpadService = new ClipPinpadService()

@@ -46,9 +46,14 @@ export default async function handler(req: any, res: any) {
       return res.status(response.status).json(data)
     }
 
-    // 2. Consultar lista de terminales
+    // 2. Consultar estado de terminales
     if (action === 'devices_status') {
-      const response = await fetch('https://api.payclip.io/f2f/pinpad/v1/devices/status', {
+      const serial = req.query.serialNumber || req.body?.serialNumber || defaultSerial
+      const endpoint = serial
+        ? `https://api.payclip.io/f2f/pinpad/v1/devices/status?serialNumber=${encodeURIComponent(serial)}`
+        : 'https://api.payclip.io/f2f/pinpad/v1/devices/status'
+
+      const response = await fetch(endpoint, {
         headers: {
           'Authorization': authHeader,
           'Content-Type': 'application/json',
@@ -66,12 +71,16 @@ export default async function handler(req: any, res: any) {
       const payload = {
         amount: Number(amount || 10).toFixed(2),
         tip_amount: tipAmount ? Number(tipAmount).toFixed(2) : undefined,
-        reference: reference || `LOC-${Date.now()}`,
+        reference: reference || `LOC-${Date.now().toString().slice(-6)}`,
         serial_number_pos: serialNumber || defaultSerial,
+        webhook_url: process.env.CLIP_WEBHOOK_URL || 'https://htjhzdtlvdbtlfdhsydq.supabase.co/functions/v1/clip-webhook',
         preferences: {
           is_auto_return_enabled: true,
+          is_retry_enabled: true,
+          is_share_enabled: true,
           is_tip_enabled: false,
           is_msi_enabled: false,
+          is_dcc_enabled: false,
           is_auto_print_receipt_enabled: true,
         },
       }
