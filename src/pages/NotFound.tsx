@@ -14,7 +14,7 @@ export default function NotFound() {
       <div 
         className="absolute inset-0 z-0 opacity-70 pointer-events-none bg-repeat"
         style={{
-          backgroundImage: 'url("/doodle_ceviche.png?v=2")',
+          backgroundImage: 'url("/doodle_ceviche.webp")',
           backgroundSize: '300px',
           filter: 'grayscale(100%)'
         }}

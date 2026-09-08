@@ -33,6 +33,45 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
+    // ------------------------------------------------------------
+    // ZERO-TRUST AUTHORIZATION: Ensure caller is authorized admin
+    // ------------------------------------------------------------
+    const authHeader = req.headers.get('Authorization') || (token ? `Bearer ${token}` : null);
+    const internalSeedSecret = Deno.env.get('SEED_DATA_SECRET');
+    const providedSecret = req.headers.get('x-seed-secret');
+
+    let isAuthorized = false;
+
+    if (internalSeedSecret && providedSecret === internalSeedSecret) {
+      isAuthorized = true;
+    } else if (authHeader) {
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || supabaseServiceKey;
+      const callerClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user: caller }, error: callerAuthErr } = await callerClient.auth.getUser();
+      if (!callerAuthErr && caller) {
+        const { data: callerUser } = await supabaseAdmin
+          .from('users')
+          .select('id, role, organization_id')
+          .eq('id', caller.id)
+          .eq('active', true)
+          .maybeSingle();
+
+        if (callerUser && callerUser.role === 'admin' && (callerUser.organization_id === data?.org_id || !data?.org_id)) {
+          isAuthorized = true;
+        }
+      }
+    }
+
+    if (!isAuthorized) {
+      console.warn('🛑 Unauthorized attempt to trigger seed-data');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Admin privileges required for target organization' }),
+        { status: 401, headers: corsHeaders }
+      );
+    }
+
     // ============================================================
     // ACTION: seed-event-menu
     // Crear productos, ingredientes y recetas para un menú de evento.

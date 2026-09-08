@@ -121,11 +121,13 @@ class SupabaseService {
 
   async getUserByUsername(username: string): Promise<User | null> {
     try {
+      const orgId = this.getCurrentOrgId()
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('name', username) // Supabase uses 'name' column
-        .single()
+        .eq('organization_id', orgId)
+        .maybeSingle()
 
       if (error) throw error
       // Map Supabase fields to TypeScript User type
@@ -139,11 +141,13 @@ class SupabaseService {
 
   async getUserById(userId: string): Promise<User | null> {
     try {
+      const orgId = this.getCurrentOrgId()
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
-        .single()
+        .eq('organization_id', orgId)
+        .maybeSingle()
 
       if (error) throw error
       // Map Supabase fields to TypeScript User type
@@ -222,6 +226,7 @@ class SupabaseService {
             active: active !== undefined ? active : true,
           })
           .eq('id', existingUser.id)
+          .eq('organization_id', orgId)
 
         return existingUser.id
       }
@@ -257,6 +262,7 @@ class SupabaseService {
 
   async updateUser(userId: string, updates: Partial<User>): Promise<void> {
     try {
+      const orgId = this.getCurrentOrgId()
       // Map TypeScript User fields to Supabase schema
       const { username, createdAt, avatarPath, ...rest } = updates as any
       const supabaseUpdates = username ? { ...rest, name: username, username: username } : rest
@@ -268,6 +274,7 @@ class SupabaseService {
         .from('users')
         .update(supabaseUpdates)
         .eq('id', userId)
+        .eq('organization_id', orgId)
 
       if (error) throw error
     } catch (error) {
@@ -1081,11 +1088,13 @@ class SupabaseService {
 
   async getOrderById(orderId: string): Promise<Order | null> {
     try {
+      const orgId = this.getCurrentOrgId()
       const { data, error } = await supabase
         .from('orders')
         .select('*')
         .eq('id', orderId)
-        .single()
+        .eq('organization_id', orgId)
+        .maybeSingle()
 
       if (error) throw error
       return data as Order
@@ -1129,9 +1138,14 @@ class SupabaseService {
 
   async updateOrder(orderId: string, updates: Partial<Order>): Promise<void> {
     try {
+      const orgId = this.getCurrentOrgId()
       const payload = this.buildOrderPayload(updates)
 
-      const { error } = await supabase.from('orders').update(payload).eq('id', orderId)
+      const { error } = await supabase
+        .from('orders')
+        .update(payload)
+        .eq('id', orderId)
+        .eq('organization_id', orgId)
 
       if (error) throw error
     } catch (error) {
@@ -1147,6 +1161,7 @@ class SupabaseService {
 
   async deleteOrder(orderId: string): Promise<void> {
     try {
+      const orgId = this.getCurrentOrgId()
       const { error } = await supabase
         .from('orders')
         .update({
@@ -1154,6 +1169,7 @@ class SupabaseService {
           cancelled_at: new Date().toISOString(),
         })
         .eq('id', orderId)
+        .eq('organization_id', orgId)
 
       if (error) throw error
     } catch (error) {

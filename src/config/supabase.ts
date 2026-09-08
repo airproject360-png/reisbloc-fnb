@@ -26,6 +26,38 @@ export const isSupabaseConfigured = Boolean(
   !import.meta.env.VITE_SUPABASE_URL.includes('missing-env-vars')
 )
 
+// Función para resolver dinámicamente la organización activa para PostgREST RLS
+function getActiveOrganizationId(): string | null {
+  if (typeof window !== 'undefined') {
+    try {
+      const storedOrg = window.localStorage.getItem('reisbloc_org_id')
+      if (storedOrg) return storedOrg
+
+      const persisted = window.localStorage.getItem('app-store')
+      if (persisted) {
+        const parsed = JSON.parse(persisted)
+        if (parsed?.state?.currentUser?.organizationId) {
+          return parsed.state.currentUser.organizationId
+        }
+      }
+
+      if ((window.location.hostname || '').toLowerCase().includes('localito')) {
+        return '1a70643e-23a3-4224-939e-d7daf381c083'
+      }
+    } catch {
+      // Ignorar errores de acceso a localStorage
+    }
+  }
+
+  return (
+    (import.meta.env.VITE_EVENT_ORGANIZATION_ID as string) ||
+    (import.meta.env.VITE_ORGANIZATION_ID as string) ||
+    (typeof window !== 'undefined' && (window.location.hostname || '').toLowerCase().includes('localito')
+      ? '1a70643e-23a3-4224-939e-d7daf381c083'
+      : null)
+  )
+}
+
 // Cliente seguro público (Anon Key)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -33,6 +65,16 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
+  },
+  global: {
+    fetch: (url, options = {}) => {
+      const headers = new Headers(options?.headers)
+      const orgId = getActiveOrganizationId()
+      if (orgId && !headers.has('x-organization-id')) {
+        headers.set('x-organization-id', orgId)
+      }
+      return fetch(url, { ...options, headers })
+    }
   }
 })
 

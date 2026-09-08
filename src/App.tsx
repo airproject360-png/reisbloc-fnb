@@ -152,7 +152,7 @@ function App() {
         <div 
           className="fixed inset-0 z-[-1] opacity-5 pointer-events-none bg-repeat"
           style={{
-            backgroundImage: 'url("/doodle_ceviche.png")',
+            backgroundImage: 'url("/doodle_ceviche.webp")',
             backgroundSize: '300px', // Ajusta el tamaño del patrón
             filter: 'grayscale(100%)' // Opcional: para que no compita con los colores de la UI
           }}

@@ -131,12 +131,12 @@ serve(async (req) => {
     // Get environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const jwtSecret = Deno.env.get('JWT_SECRET') || 'dev-secret-key-change-in-production';
+    const jwtSecret = Deno.env.get('JWT_SECRET');
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('❌ Missing env vars');
+    if (!supabaseUrl || !supabaseServiceKey || !jwtSecret) {
+      console.error('❌ CRITICAL: Missing server environment variables (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or JWT_SECRET)');
       return new Response(
-        JSON.stringify({ error: 'Config error' }),
+        JSON.stringify({ error: 'Server configuration error: missing credentials or JWT_SECRET' }),
         { status: 500, headers: corsHeaders }
       );
     }
@@ -147,8 +147,9 @@ serve(async (req) => {
     // Get client IP and fingerprint
     const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
     const fingerprint = deviceInfo?.fingerprint || 'unknown';
+    const targetOrgId = body.orgId || body.organizationId || body.organization_id;
 
-    console.log('🔍 Request context: IP=', ipAddress, 'Fingerprint=', fingerprint.substring(0, 8) + '***');
+    console.log('🔍 Request context: IP=', ipAddress, 'Fingerprint=', fingerprint.substring(0, 8) + '***', 'OrgId=', targetOrgId || 'unspecified');
 
     // ============================================================
     // 1. VALIDATE PIN FORMAT
@@ -162,26 +163,39 @@ serve(async (req) => {
     }
 
     // ============================================================
-    // 2. FIND USER BY PIN
+    // 2. FIND USER BY PIN (SCOPED TO TENANT)
     // ============================================================
-    console.log('🔎 Looking for user with PIN...');
-    const { data: users, error: userError } = await supabaseAdmin
+    console.log('🔎 Looking for user with PIN within organization...');
+    let userQuery = supabaseAdmin
       .from('users')
       .select('id, name, role, active, organization_id')
       .eq('pin', pin)
-      .eq('active', true)
-      .limit(1);
+      .eq('active', true);
+
+    if (targetOrgId) {
+      userQuery = userQuery.eq('organization_id', targetOrgId);
+    }
+
+    const { data: users, error: userError } = await userQuery.limit(2);
 
     if (userError || !users || users.length === 0) {
-      console.log('❌ PIN not found');
+      console.log('❌ PIN not found in target organization');
       return new Response(
-        JSON.stringify({ error: 'Invalid PIN' }),
+        JSON.stringify({ error: 'Invalid PIN or unauthorized organization' }),
         { status: 401, headers: corsHeaders }
       );
     }
 
+    if (!targetOrgId && users.length > 1) {
+      console.warn('⚠️ PIN ambiguity: multiple active users match this PIN across tenants');
+      return new Response(
+        JSON.stringify({ error: 'Ambiguous PIN. Organization ID must be provided to authenticate.' }),
+        { status: 409, headers: corsHeaders }
+      );
+    }
+
     const user = users[0];
-    console.log('✅ User found:', user.id, 'Role:', user.role);
+    console.log('✅ User found:', user.id, 'Role:', user.role, 'Org:', user.organization_id);
 
     // ============================================================
     // 3. GET GEOLOCATION

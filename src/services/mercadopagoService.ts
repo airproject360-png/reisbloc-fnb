@@ -13,19 +13,19 @@
  * GNU Affero General Public License for more details.
  */
 
-import axios from 'axios'
 import logger from '@/utils/logger'
 
-// Tipos para MercadoPago
 export interface MercadoPagoPayment {
   id: string
-  status: 'approved' | 'pending' | 'rejected' | 'in_process'
+  status: 'pending' | 'approved' | 'authorized' | 'in_process' | 'in_mediation' | 'rejected' | 'cancelled' | 'refunded' | 'charged_back'
   status_detail: string
   transaction_amount: number
   payment_method_id: string
   payment_type_id: string
   date_created: string
-  description: string
+  date_approved?: string
+  description?: string
+  external_reference?: string
 }
 
 export interface CreatePaymentRequest {
@@ -43,24 +43,26 @@ export interface PaymentPreference {
 }
 
 class MercadoPagoService {
-  private accessToken: string
   private apiUrl: string
+  private accessToken: string
 
   constructor() {
-    // Configura el access token desde las variables de entorno
     this.accessToken = import.meta.env.VITE_MERCADOPAGO_ACCESS_TOKEN || ''
     this.apiUrl = 'https://api.mercadopago.com'
   }
 
   /**
    * Crea una preferencia de pago para MercadoPago
-   * Esto genera un link de pago que el usuario puede usar
    */
   async createPaymentPreference(data: CreatePaymentRequest): Promise<PaymentPreference> {
     try {
-      const response = await axios.post(
-        `${this.apiUrl}/checkout/preferences`,
-        {
+      const res = await fetch(`${this.apiUrl}/checkout/preferences`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+        body: JSON.stringify({
           items: [
             {
               title: data.description,
@@ -74,32 +76,28 @@ class MercadoPagoService {
           payer: {
             email: data.email || 'customer@email.com',
           },
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.accessToken}`,
-          },
-        }
-      )
+        }),
+      })
 
-      return response.data
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData?.message || `HTTP ${res.status}`)
+      }
+
+      return await res.json()
     } catch (error: any) {
-      logger.error('mercadopago', 'Error creating MercadoPago preference', error.response?.data || error.message)
-      throw new Error(error.response?.data?.message || 'Error al crear preferencia de pago')
+      logger.error('mercadopago', 'Error creating MercadoPago preference', error?.message)
+      throw new Error(error?.message || 'Error al crear preferencia de pago')
     }
   }
 
   /**
    * Procesa un pago directo (POS integration)
-   * Requiere que el terminal esté configurado
    */
   async processDirectPayment(data: CreatePaymentRequest): Promise<MercadoPagoPayment> {
-    // MODO REGISTRO MANUAL: No contactar API real, solo registrar
     const method = data.paymentMethodId || 'card'
     logger.info('mercadopago', `💳 Registrando pago manual (${method})`, data)
     
-    // Simular pequeño delay para sensación de proceso
     await new Promise(resolve => setTimeout(resolve, 800))
 
     return {
@@ -119,19 +117,21 @@ class MercadoPagoService {
    */
   async getPaymentStatus(paymentId: string): Promise<MercadoPagoPayment> {
     try {
-      const response = await axios.get(
-        `${this.apiUrl}/v1/payments/${paymentId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${this.accessToken}`,
-          },
-        }
-      )
+      const res = await fetch(`${this.apiUrl}/v1/payments/${paymentId}`, {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+      })
 
-      return response.data
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData?.message || `HTTP ${res.status}`)
+      }
+
+      return await res.json()
     } catch (error: any) {
-      logger.error('mercadopago', 'Error getting payment status', error.response?.data || error.message)
-      throw new Error(error.response?.data?.message || 'Error al obtener estado del pago')
+      logger.error('mercadopago', 'Error getting payment status', error?.message)
+      throw new Error(error?.message || 'Error al obtener estado del pago')
     }
   }
 
@@ -140,20 +140,18 @@ class MercadoPagoService {
    */
   async cancelPayment(paymentId: string): Promise<boolean> {
     try {
-      await axios.put(
-        `${this.apiUrl}/v1/payments/${paymentId}`,
-        { status: 'cancelled' },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.accessToken}`,
-          },
-        }
-      )
+      const res = await fetch(`${this.apiUrl}/v1/payments/${paymentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+        body: JSON.stringify({ status: 'cancelled' }),
+      })
 
-      return true
+      return res.ok
     } catch (error: any) {
-      logger.error('mercadopago', 'Error cancelling payment', error.response?.data || error.message)
+      logger.error('mercadopago', 'Error cancelling payment', error?.message)
       return false
     }
   }

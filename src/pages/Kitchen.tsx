@@ -131,7 +131,7 @@ export default function Kitchen() {
       <div 
         className="fixed inset-0 z-0 opacity-30 pointer-events-none bg-repeat"
         style={{
-          backgroundImage: 'url("/doodle_ceviche.png?v=2")',
+          backgroundImage: 'url("/doodle_ceviche.webp")',
           backgroundSize: '300px',
           filter: 'grayscale(100%)'
         }}
