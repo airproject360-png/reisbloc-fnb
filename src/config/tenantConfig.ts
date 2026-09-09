@@ -8,6 +8,44 @@ import { APP_CONFIG } from './constants'
 export const LOCALITO_ORG_ID = import.meta.env.VITE_LOCALITO_ORGANIZATION_ID || import.meta.env.VITE_LOCALITO_ORG_ID || '1a70643e-23a3-4224-939e-d7daf381c083'
 export const DEFAULT_DEMO_ORG_ID = import.meta.env.VITE_DEMO_ORGANIZATION_ID || import.meta.env.VITE_DEFAULT_DEMO_ORG_ID || ''
 
+export interface TableLocation {
+  id: number
+  label: string
+  shortLabel?: string
+}
+
+export const LOCALITO_TABLE_LOCATIONS: TableLocation[] = [
+  { id: 0, label: '🏪 Caja / Mostrador', shortLabel: 'Caja' },
+  { id: 1, label: 'Mesa 1', shortLabel: 'Mesa 1' },
+  { id: 2, label: 'Mesa 2', shortLabel: 'Mesa 2' },
+  { id: 3, label: 'Mesa 3', shortLabel: 'Mesa 3' },
+  { id: 4, label: 'Mesa 4', shortLabel: 'Mesa 4' },
+  { id: 5, label: 'Mesa 5', shortLabel: 'Mesa 5' },
+  { id: 6, label: 'Mesa 6', shortLabel: 'Mesa 6' },
+  { id: 7, label: 'Mesa 7', shortLabel: 'Mesa 7' },
+  { id: 8, label: 'Mesa 8', shortLabel: 'Mesa 8' },
+  { id: 9, label: 'Mesa 9', shortLabel: 'Mesa 9' },
+  { id: 10, label: 'Mesa 10', shortLabel: 'Mesa 10' },
+  { id: 11, label: 'Mesa 11', shortLabel: 'Mesa 11' },
+  { id: 12, label: 'Mesa 12', shortLabel: 'Mesa 12' },
+  { id: 21, label: 'Periquera 1', shortLabel: 'P-1' },
+  { id: 22, label: 'Periquera 2', shortLabel: 'P-2' },
+  { id: 23, label: 'Periquera 3', shortLabel: 'P-3' },
+  { id: 24, label: 'Periquera 4', shortLabel: 'P-4' },
+  { id: 99, label: 'Barra', shortLabel: 'Barra' },
+  { id: 100, label: 'Para Llevar / Delivery', shortLabel: 'Llevar' },
+]
+
+export function getTableDisplayName(tableNum: number): string {
+  const found = LOCALITO_TABLE_LOCATIONS.find(t => t.id === tableNum)
+  if (found) return found.label
+  if (tableNum >= 21 && tableNum <= 29) return `Periquera ${tableNum - 20}`
+  if (tableNum === 0) return '🏪 Caja / Mostrador'
+  if (tableNum === 99) return 'Barra'
+  if (tableNum === 100) return 'Para Llevar / Delivery'
+  return `Mesa #${tableNum}`
+}
+
 export interface TenantSettings {
   isLocalito: boolean
   enableTips: boolean

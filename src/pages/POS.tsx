@@ -10,9 +10,8 @@ import printService from '@/services/printService'
 import OrderNoteModal from '@/components/pos/OrderNoteModal'
 import DarkKitchenRecipeModal from '@/components/admin/DarkKitchenRecipeModal'
 import clipPinpadService from '@/services/clipPinpadService'
-import { getTenantSettings } from '@/config/tenantConfig'
+import { getTenantSettings, LOCALITO_TABLE_LOCATIONS } from '@/config/tenantConfig'
 import {
-  Search,
   MapPin,
   ChefHat,
   Plus,
@@ -52,7 +51,6 @@ export default function POS() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos')
-  const [searchTerm, setSearchTerm] = useState('')
   const [editingItem, setEditingItem] = useState<OrderItem | null>(null)
   const [recipeProduct, setRecipeProduct] = useState<Product | null>(null)
   const [showCartDrawer, setShowCartDrawer] = useState(false)
@@ -73,26 +71,10 @@ export default function POS() {
   const canAdjustSale = currentUser?.role === 'admin' || currentUser?.role === 'capitan'
   const tenant = getTenantSettings()
 
-  // Ubicaciones dinámicas según tenant: Localito tiene estación 0 (Caja/Mostrador), Barra y Para Llevar
+  // Ubicaciones dinámicas según tenant: Localito incluye Caja, Mesas 1-12, Periqueras 1-4, Barra y Para Llevar
   const tableLocations = useMemo(() => {
     if (tenant.isLocalito) {
-      return [
-        { id: 0, label: '🏪 Caja / Mostrador' },
-        { id: 1, label: 'Mesa 1' },
-        { id: 2, label: 'Mesa 2' },
-        { id: 3, label: 'Mesa 3' },
-        { id: 4, label: 'Mesa 4' },
-        { id: 5, label: 'Mesa 5' },
-        { id: 6, label: 'Mesa 6' },
-        { id: 7, label: 'Mesa 7' },
-        { id: 8, label: 'Mesa 8' },
-        { id: 9, label: 'Mesa 9' },
-        { id: 10, label: 'Mesa 10' },
-        { id: 11, label: 'Mesa 11' },
-        { id: 12, label: 'Mesa 12' },
-        { id: 99, label: 'Barra' },
-        { id: 100, label: 'Para Llevar / Delivery' },
-      ]
+      return LOCALITO_TABLE_LOCATIONS
     }
     return [
       { id: 1, label: 'Mesa 1' },
@@ -159,12 +141,9 @@ export default function POS() {
   const filteredProducts = useMemo(() => {
     return (products || []).filter((p) => {
       const matchCat = selectedCategory === 'Todos' || p.category.toLowerCase() === selectedCategory.toLowerCase()
-      const matchSearch =
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()))
-      return matchCat && matchSearch
+      return matchCat
     })
-  }, [products, selectedCategory, searchTerm])
+  }, [products, selectedCategory])
 
   const getItemQuantityInCart = (productId: string) => {
     const found = cartItems.find(i => i.productId === productId)
@@ -593,20 +572,9 @@ export default function POS() {
         </div>
       </header>
 
-      {/* Bar de Búsqueda y Categorías */}
-      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 py-3.5 px-4 shadow-xl">
-        <div className="max-w-6xl mx-auto space-y-3">
-          <div className="relative">
-            <Search className="absolute left-4 top-3 text-slate-500" size={18} />
-            <input
-              type="text"
-              placeholder="Buscar platillo, quesadilla, gordita, sope, bebida..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:border-teal-500 transition-colors"
-            />
-          </div>
-
+      {/* Categorías de Menú */}
+      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 py-3 px-4 shadow-xl">
+        <div className="max-w-6xl mx-auto">
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
             {categories.map((cat) => (
               <button
