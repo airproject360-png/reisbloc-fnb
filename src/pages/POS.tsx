@@ -531,33 +531,34 @@ export default function POS() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-28 select-none">
       {/* Header Banner Centrado */}
-      <header className="relative bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 border-b border-teal-500/20 px-3 sm:px-4 py-3 overflow-hidden shadow-2xl">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-4 relative z-10">
-          <div className="flex items-center gap-3 shrink-0">
+      <header className="relative bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 border-b border-teal-500/20 px-2 sm:px-4 py-2 sm:py-2.5 overflow-hidden shadow-2xl">
+        <div className="w-full flex flex-col md:flex-row items-center justify-center gap-2 sm:gap-3 relative z-10">
+          <div className="flex items-center gap-2 shrink-0">
             {tenant.logoUrl ? (
               <img 
                 src={tenant.logoUrl} 
                 alt={tenant.clientName} 
-                className="h-10 sm:h-12 md:h-13 w-auto object-contain rounded-2xl border border-amber-500/30 shadow-xl shadow-amber-500/10"
+                className="h-9 sm:h-11 w-auto object-contain rounded-xl border border-amber-500/30 shadow-md"
               />
             ) : (
-              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
-                <Store size={24} />
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
+                <Store size={20} />
               </div>
             )}
           </div>
 
-          {/* Selector Centrado de Ubicación / Mesas */}
-          <div className="w-full max-w-4xl bg-slate-900/90 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl border border-slate-800 shadow-xl flex flex-col items-center text-center">
-            <div className="flex items-center justify-center gap-2 mb-1.5">
-              <span className="text-[10px] sm:text-[11px] uppercase font-black tracking-wider text-teal-400">
-                Ubicación del Pedido:
+          {/* Selector de Ubicación en Una Sola Fila Compacta */}
+          <div className="w-full max-w-5xl bg-slate-900/90 backdrop-blur-md px-2.5 py-1.5 sm:py-2 rounded-2xl border border-slate-800 shadow-xl flex flex-col items-center text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <span className="text-[10px] uppercase font-black tracking-wider text-teal-400">
+                Ubicación:
               </span>
-              <span className="text-xs font-black text-amber-300 bg-amber-500/15 px-2.5 py-0.5 rounded-lg border border-amber-500/30">
+              <span className="text-xs font-black text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-lg border border-amber-500/30">
                 {getTableDisplayName(currentLoc)}
               </span>
             </div>
-            <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-wrap">
+            {/* Todas las ubicaciones en una sola fila (flex-nowrap) */}
+            <div className="w-full flex items-center justify-start md:justify-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-nowrap">
               {tableLocations.map((loc) => {
                 const isSelected = currentLoc === loc.id
                 const isPeriquera = loc.id >= 21 && loc.id <= 29
@@ -605,7 +606,7 @@ export default function POS() {
                     key={loc.id}
                     onClick={() => setCurrentTable(loc.id)}
                     title={loc.label}
-                    className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${styleClasses}`}
+                    className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all ${styleClasses}`}
                   >
                     {displayBadge}
                   </button>
@@ -616,25 +617,23 @@ export default function POS() {
         </div>
       </header>
 
-      {/* Categorías de Menú Centradas */}
-      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 py-2.5 px-3 sm:px-4 shadow-xl">
-        <div className="max-w-7xl mx-auto flex items-center justify-center">
-          <div className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto no-scrollbar pb-1 max-w-full">
-            <div className="flex items-center justify-center gap-2 mx-auto">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                    selectedCategory.toLowerCase() === cat.toLowerCase()
-                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-900/40 scale-105'
-                      : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
+      {/* Categorías de Menú Centradas Full-Width sin márgenes en extremos */}
+      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 py-2.5 px-1 sm:px-2 shadow-xl w-full">
+        <div className="w-full flex items-center justify-center">
+          <div className="flex items-center justify-start md:justify-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full px-1 sm:px-2">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-5 py-2.5 rounded-2xl text-sm font-extrabold whitespace-nowrap flex-shrink-0 transition-all ${
+                  selectedCategory.toLowerCase() === cat.toLowerCase()
+                    ? 'bg-gradient-to-r from-teal-500 via-teal-600 to-emerald-600 text-white shadow-xl shadow-teal-950/60 scale-105 ring-1 ring-teal-400/40'
+                    : 'bg-slate-900/90 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800/90'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
         </div>
       </div>
