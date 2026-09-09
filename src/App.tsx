@@ -90,50 +90,49 @@ function App() {
       return undefined
     }
 
-    const hydrateFromSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+    let isResolving = false
 
-      if (session?.user && (!isAuthenticated || !currentUser?.organizationId)) {
-        const authorizedUser = await resolveAuthorizedAppUser(session.user)
-        if (!authorizedUser) {
-          await authLogout()
-          setCurrentUser(null)
-          setAuthenticated(false)
-          return
-        }
-        setCurrentUser(authorizedUser)
-        setAuthenticated(true)
-      }
-    }
-
-    hydrateFromSession()
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        void (async () => {
-          const authorizedUser = await resolveAuthorizedAppUser(session.user)
-          if (!authorizedUser) {
-            await authLogout()
-            setCurrentUser(null)
-            setAuthenticated(false)
-            return
-          }
-          setCurrentUser(authorizedUser)
-          setAuthenticated(true)
-        })()
+    const handleSessionUser = async (user: any) => {
+      if (isResolving) return
+      const state = useAppStore.getState()
+      if (state.isAuthenticated && state.currentUser?.id === user?.id && state.currentUser?.organizationId) {
         return
       }
 
-      setCurrentUser(null)
-      setAuthenticated(false)
+      isResolving = true
+      try {
+        const authorizedUser = await resolveAuthorizedAppUser(user)
+        if (!authorizedUser) {
+          await authLogout()
+          useAppStore.getState().setCurrentUser(null)
+          useAppStore.getState().setAuthenticated(false)
+          return
+        }
+        useAppStore.getState().setCurrentUser(authorizedUser)
+        useAppStore.getState().setAuthenticated(true)
+      } catch (err) {
+        logger.error('app', 'Error resolviendo sesión de usuario', err)
+      } finally {
+        isResolving = false
+      }
+    }
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        useAppStore.getState().setCurrentUser(null)
+        useAppStore.getState().setAuthenticated(false)
+        return
+      }
+
+      if (session?.user) {
+        void handleSessionUser(session.user)
+      }
     })
 
     return () => {
       authListener.subscription.unsubscribe()
     }
-  }, [isAuthenticated, currentUser?.organizationId, setAuthenticated, setCurrentUser])
+  }, [])
 
 
 
