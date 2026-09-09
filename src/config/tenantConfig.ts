@@ -29,7 +29,7 @@ export interface TenantSettings {
 export function isLocalitoTenant(): boolean {
   if (typeof window !== 'undefined') {
     const host = (window.location.hostname || '').toLowerCase()
-    if (host.includes('localito')) return true
+    if (host.includes('localito') || host.includes('reisbloc-fnb') || host.includes('localhost') || host === '127.0.0.1') return true
 
     try {
       const persisted = localStorage.getItem('app-store')

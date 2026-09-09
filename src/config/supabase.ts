@@ -64,7 +64,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => await fn(),
   },
   global: {
     fetch: (url, options = {}) => {

@@ -91,16 +91,24 @@ function onError(error: unknown, info: any) {
     logger.warn('error-boundary', `Error recurrente detectado (${errorCount} veces), sugiriendo recarga`)
   }
 
-  // Detectar error de carga de módulos (común tras un nuevo deploy en Vercel)
-  const errorStr = (error as any)?.message || String(error);
+  // Detectar error de carga de módulos (común tras un nuevo deploy en Vercel o chunks obsoletos en Service Worker)
+  const errorStr = ((error as any)?.message || String(error)).toLowerCase()
   if (
-    errorStr.includes('Failed to fetch dynamically imported module') || 
-    errorStr.includes('Load chunk') ||
-    errorStr.includes('Importing a module script failed')
+    errorStr.includes('dynamically imported module') || 
+    errorStr.includes('failed to fetch dynamically imported') ||
+    errorStr.includes('error loading dynamically imported') ||
+    errorStr.includes('load chunk') ||
+    errorStr.includes('importing a module script failed')
   ) {
-    logger.warn('error-boundary', 'Detectado error de despliegue (chunk mismatch). Recargando app...');
-    // Pequeño delay para asegurar que el log se envíe antes de recargar
-    setTimeout(() => window.location.reload(), 100);
+    logger.warn('error-boundary', 'Detectado error de despliegue (chunk mismatch). Limpiando cachés y recargando app...')
+    if ('caches' in window) {
+      caches.keys().then((keys) => {
+        keys.forEach((key) => caches.delete(key))
+      }).catch(() => {})
+    }
+    setTimeout(() => {
+      window.location.reload()
+    }, 150)
     return
   }
 

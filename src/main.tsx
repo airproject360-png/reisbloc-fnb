@@ -16,7 +16,28 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import ErrorBoundary from './components/common/ErrorBoundary'
 import './styles/globals.css'
+
+// Recuperación automática ante chunks obsoletos tras nuevos despliegues
+window.addEventListener('vite:preloadError', () => {
+  console.warn('🔄 Chunk obsoleto detectado por Vite. Limpiando y recargando...')
+  if ('caches' in window) {
+    caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {})
+  }
+  window.location.reload()
+})
+
+window.addEventListener('error', (e) => {
+  const msg = String(e?.message || '').toLowerCase()
+  if (msg.includes('dynamically imported module') || msg.includes('failed to fetch dynamically')) {
+    console.warn('🔄 Error de importación dinámica. Limpiando y recargando...')
+    if ('caches' in window) {
+      caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {})
+    }
+    window.location.reload()
+  }
+})
 
 // Registrar Service Worker para PWA y fuerza de actualización inmediata
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
@@ -45,10 +66,6 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     })
   })
 }
-
-
-
-import ErrorBoundary from './components/common/ErrorBoundary'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
