@@ -530,35 +530,35 @@ export default function POS() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-28 select-none">
-      {/* Header Banner Centrado */}
-      <header className="relative bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 border-b border-teal-500/20 px-2 sm:px-4 py-2 sm:py-2.5 overflow-hidden shadow-2xl">
-        <div className="w-full flex flex-col md:flex-row items-center justify-center gap-2 sm:gap-3 relative z-10">
+      {/* Header Banner Compacto */}
+      <header className="relative bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 border-b border-teal-500/20 px-2 sm:px-4 py-1.5 overflow-hidden shadow-lg">
+        <div className="w-full flex flex-col md:flex-row items-center justify-center gap-2 relative z-10">
           <div className="flex items-center gap-2 shrink-0">
             {tenant.logoUrl ? (
               <img 
                 src={tenant.logoUrl} 
                 alt={tenant.clientName} 
-                className="h-9 sm:h-11 w-auto object-contain rounded-xl border border-amber-500/30 shadow-md"
+                className="h-7 sm:h-8 w-auto object-contain rounded-lg border border-amber-500/30 shadow-sm"
               />
             ) : (
-              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
-                <Store size={20} />
+              <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
+                <Store size={16} />
               </div>
             )}
           </div>
 
-          {/* Selector de Ubicación en Una Sola Fila Compacta */}
-          <div className="w-full max-w-5xl bg-slate-900/90 backdrop-blur-md px-2.5 py-1.5 sm:py-2 rounded-2xl border border-slate-800 shadow-xl flex flex-col items-center text-center">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <span className="text-[10px] uppercase font-black tracking-wider text-teal-400">
+          {/* Selector de Ubicación Compacto en Una Sola Fila */}
+          <div className="w-full max-w-4xl bg-slate-900/90 backdrop-blur-md px-2 py-1 rounded-xl border border-slate-800 shadow-sm flex flex-col items-center text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-0.5">
+              <span className="text-[9px] uppercase font-bold tracking-wider text-teal-400">
                 Ubicación:
               </span>
-              <span className="text-xs font-black text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-lg border border-amber-500/30">
+              <span className="text-[10px] font-black text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30">
                 {getTableDisplayName(currentLoc)}
               </span>
             </div>
-            {/* Todas las ubicaciones en una sola fila (flex-nowrap) */}
-            <div className="w-full flex items-center justify-start md:justify-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-nowrap">
+            {/* Todas las ubicaciones en una sola fila compacta */}
+            <div className="w-full flex items-center justify-start md:justify-center gap-1 overflow-x-auto no-scrollbar py-0.5 flex-nowrap">
               {tableLocations.map((loc) => {
                 const isSelected = currentLoc === loc.id
                 const isPeriquera = loc.id >= 21 && loc.id <= 29
@@ -579,15 +579,15 @@ export default function POS() {
                 let styleClasses = 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700/50'
                 if (isSelected) {
                   if (isPeriquera) {
-                    styleClasses = 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black shadow-lg shadow-orange-500/30 scale-105 ring-2 ring-orange-400'
+                    styleClasses = 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black shadow-md shadow-orange-500/30 scale-105 ring-1 ring-orange-400'
                   } else if (isCaja) {
-                    styleClasses = 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black shadow-lg scale-105 ring-2 ring-emerald-400'
+                    styleClasses = 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black shadow-md scale-105 ring-1 ring-emerald-400'
                   } else if (isBarra) {
-                    styleClasses = 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black shadow-lg scale-105 ring-2 ring-purple-400'
+                    styleClasses = 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black shadow-md scale-105 ring-1 ring-purple-400'
                   } else if (isLlevar) {
-                    styleClasses = 'bg-gradient-to-r from-sky-500 to-blue-500 text-white font-black shadow-lg scale-105 ring-2 ring-sky-400'
+                    styleClasses = 'bg-gradient-to-r from-sky-500 to-blue-500 text-white font-black shadow-md scale-105 ring-1 ring-sky-400'
                   } else {
-                    styleClasses = 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-lg scale-105 ring-2 ring-amber-400'
+                    styleClasses = 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-md scale-105 ring-1 ring-amber-400'
                   }
                 } else {
                   if (isPeriquera) {
@@ -606,7 +606,7 @@ export default function POS() {
                     key={loc.id}
                     onClick={() => setCurrentTable(loc.id)}
                     title={loc.label}
-                    className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all ${styleClasses}`}
+                    className={`px-2 py-0.5 rounded-lg text-[11px] font-bold whitespace-nowrap flex-shrink-0 transition-all ${styleClasses}`}
                   >
                     {displayBadge}
                   </button>
@@ -617,18 +617,18 @@ export default function POS() {
         </div>
       </header>
 
-      {/* Categorías de Menú Centradas Full-Width sin márgenes en extremos */}
-      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 py-2.5 px-1 sm:px-2 shadow-xl w-full">
+      {/* Espacio de Categorías Más Amplio, Simétrico y Elegante */}
+      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 py-4 px-2 shadow-xl w-full">
         <div className="w-full flex items-center justify-center">
-          <div className="flex items-center justify-start md:justify-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full px-1 sm:px-2">
+          <div className="flex items-center justify-start md:justify-center gap-2.5 overflow-x-auto no-scrollbar py-0.5 w-full px-2">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-5 py-2.5 rounded-2xl text-sm font-extrabold whitespace-nowrap flex-shrink-0 transition-all ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all ${
                   selectedCategory.toLowerCase() === cat.toLowerCase()
-                    ? 'bg-gradient-to-r from-teal-500 via-teal-600 to-emerald-600 text-white shadow-xl shadow-teal-950/60 scale-105 ring-1 ring-teal-400/40'
-                    : 'bg-slate-900/90 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800/90'
+                    ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-900/40 scale-105'
+                    : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
                 }`}
               >
                 {cat}
