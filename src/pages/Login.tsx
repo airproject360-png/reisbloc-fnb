@@ -25,8 +25,11 @@ function Login() {
   )
 
   useEffect(() => {
-    if (searchParams.get('error') === 'auth_failed') {
+    const err = searchParams.get('error')
+    if (err === 'auth_failed') {
       setUiError('No se pudo completar la autenticación con Google. Intenta de nuevo.')
+    } else if (err === 'not_invited') {
+      setUiError('Tu cuenta de correo no está autorizada o no pertenece a esta organización.')
     }
   }, [searchParams])
 

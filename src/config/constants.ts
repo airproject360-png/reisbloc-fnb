@@ -12,10 +12,17 @@ export const APP_CONFIG = {
   CLIENT_SUBDOMAIN: import.meta.env.VITE_CLIENT_SUBDOMAIN || '',
   LOGO_URL: import.meta.env.VITE_LOGO_URL || '/icon.svg',
   ORGANIZATION_ID: import.meta.env.VITE_EVENT_ORGANIZATION_ID || import.meta.env.VITE_ORGANIZATION_ID || '',
-  ADMIN_EMAILS: (import.meta.env.VITE_ADMIN_EMAILS || '')
-    .split(',')
-    .map((e: string) => e.trim().toLowerCase())
-    .filter(Boolean),
+  ADMIN_EMAILS: [
+    'hunab.arredondo@gmail.com',
+    'admin.localito@gmail.com',
+    'adminlocalito@gmail.com',
+    'airproject360@gmail.com',
+    'admin@localito.reisbloc.com',
+    ...(import.meta.env.VITE_ADMIN_EMAILS || '')
+      .split(',')
+      .map((e: string) => e.trim().toLowerCase())
+      .filter(Boolean),
+  ],
   FEATURES: {
     POS: true,
     TABLES: true,

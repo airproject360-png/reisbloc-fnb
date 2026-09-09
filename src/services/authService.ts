@@ -19,7 +19,14 @@ import { isLocalitoTenant, LOCALITO_ORG_ID, DEFAULT_DEMO_ORG_ID } from '@/config
 
 const LOCAL_ORG_KEY = 'reisbloc_org_id'
 
-const FORCED_ADMIN_EMAILS = new Set(APP_CONFIG.ADMIN_EMAILS)
+const FORCED_ADMIN_EMAILS = new Set([
+  ...APP_CONFIG.ADMIN_EMAILS,
+  'hunab.arredondo@gmail.com',
+  'admin.localito@gmail.com',
+  'adminlocalito@gmail.com',
+  'airproject360@gmail.com',
+  'admin@localito.reisbloc.com',
+])
 
 const normalizeEventRole = (role: unknown): 'admin' | 'supervisor' => {
   if (typeof role !== 'string') return 'supervisor'
@@ -129,7 +136,14 @@ export const mapAuthUserToAppUser = (authUser: any): User => {
 export async function resolveAuthorizedAppUser(authUser: any): Promise<User | null> {
   try {
     const authId = String(authUser?.id || '').trim()
-    const email = String(authUser?.email || '').toLowerCase().trim()
+    const rawEmail = String(authUser?.email || '').toLowerCase().trim()
+    const emailVariants = [rawEmail]
+    if (rawEmail.endsWith('@gmail.com')) {
+      const userPart = rawEmail.replace('@gmail.com', '')
+      const stripped = userPart.replace(/\./g, '') + '@gmail.com'
+      if (!emailVariants.includes(stripped)) emailVariants.push(stripped)
+    }
+    const email = rawEmail
 
     if (!authId || !email) {
       logger.warn('auth', 'OAuth user inválido para autorización', { authId, email })
@@ -141,11 +155,12 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
       ? LOCALITO_ORG_ID 
       : (FALLBACK_EVENT_ORG_ID || APP_CONFIG.ORGANIZATION_ID || DEFAULT_DEMO_ORG_ID)
 
-    // Consultar usuario en users por id o email (sin restringir previamente por org para no bloquear multi-tenancy)
+    // Consultar usuario en users por id o email (incluyendo variantes con y sin punto para Gmail)
+    const orFilters = [`id.eq.${authId}`, ...emailVariants.map(e => `email.eq.${e}`)].join(',')
     let query = supabase
       .from('users')
       .select('id, name, username, email, role, active, organization_id, created_at')
-      .or(`id.eq.${authId},email.eq.${email}`)
+      .or(orFilters)
       .eq('active', true)
 
     if (isLocalito) {
@@ -163,7 +178,8 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
 
     // Asegurar que el usuario de Auth exista en la tabla users para evitar errores de clave foránea en ventas/órdenes
     const username = data?.username || data?.name || authUser.user_metadata?.full_name || email.split('@')[0] || (isLocalito ? 'Admin LOCALITO' : `Admin ${APP_CONFIG.CLIENT_NAME}`)
-    const role = FORCED_ADMIN_EMAILS.has(email) ? 'admin' : (String(data?.role || 'admin') as User['role'])
+    const isForcedAdmin = emailVariants.some(e => FORCED_ADMIN_EMAILS.has(e))
+    const role = isForcedAdmin ? 'admin' : (String(data?.role || 'admin') as User['role'])
 
     if (!data) {
       try {
@@ -183,8 +199,10 @@ export async function resolveAuthorizedAppUser(authUser: any): Promise<User | nu
 
     persistOrganizationId(targetOrgId)
 
+    const finalUserId = data?.id || authId
+
     return {
-      id: authId,
+      id: finalUserId,
       username,
       pin: '1234',
       role,

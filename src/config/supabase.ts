@@ -18,6 +18,8 @@ const DEFAULT_ANON_KEY = 'placeholder-anon-key'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || DEFAULT_ANON_KEY
 
+import { isLocalitoTenant, LOCALITO_ORG_ID } from './tenantConfig'
+
 export const isSupabaseConfigured = Boolean(
   import.meta.env.VITE_SUPABASE_URL && 
   import.meta.env.VITE_SUPABASE_ANON_KEY && 
@@ -28,6 +30,10 @@ export const isSupabaseConfigured = Boolean(
 
 // Función para resolver dinámicamente la organización activa para PostgREST RLS
 function getActiveOrganizationId(): string | null {
+  if (isLocalitoTenant()) {
+    return LOCALITO_ORG_ID
+  }
+
   if (typeof window !== 'undefined') {
     try {
       const storedOrg = window.localStorage.getItem('reisbloc_org_id')
@@ -40,10 +46,6 @@ function getActiveOrganizationId(): string | null {
           return parsed.state.currentUser.organizationId
         }
       }
-
-      if ((window.location.hostname || '').toLowerCase().includes('localito')) {
-        return '1a70643e-23a3-4224-939e-d7daf381c083'
-      }
     } catch {
       // Ignorar errores de acceso a localStorage
     }
@@ -52,9 +54,7 @@ function getActiveOrganizationId(): string | null {
   return (
     (import.meta.env.VITE_EVENT_ORGANIZATION_ID as string) ||
     (import.meta.env.VITE_ORGANIZATION_ID as string) ||
-    (typeof window !== 'undefined' && (window.location.hostname || '').toLowerCase().includes('localito')
-      ? '1a70643e-23a3-4224-939e-d7daf381c083'
-      : null)
+    null
   )
 }
 
