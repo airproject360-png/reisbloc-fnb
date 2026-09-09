@@ -122,15 +122,6 @@ export default function Bar() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 relative">
-      {/* Background Doodle */}
-      <div 
-        className="fixed inset-0 z-0 opacity-30 pointer-events-none bg-repeat"
-        style={{
-          backgroundImage: 'url("/doodle_ceviche.webp")',
-          backgroundSize: '300px',
-          filter: 'grayscale(100%)'
-        }}
-      />
       <div className="relative z-10">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-700 to-indigo-800 text-white shadow-2xl">

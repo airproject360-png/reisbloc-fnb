@@ -122,14 +122,6 @@ export default function OrdersToServe() {
 
   return (
     <div className="min-h-screen relative bg-gray-50">
-      {/* Background Doodle */}
-      <div 
-        className="fixed inset-0 z-0 opacity-40 pointer-events-none bg-repeat"
-        style={{
-          backgroundImage: 'url("/doodle_ceviche.webp")',
-          backgroundSize: '450px',
-        }}
-      />
       {/* Gradient Overlay */}
       <div className="fixed inset-0 bg-gradient-to-br from-blue-500/5 via-cyan-500/5 to-white/5 z-0 pointer-events-none" />
 

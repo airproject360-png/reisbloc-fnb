@@ -145,17 +145,7 @@ function App() {
     <Router>
       <ToastProvider>
         {/* 🎨 FONDO BASE GLOBAL */}
-        <div className="fixed inset-0 bg-slate-50 z-[-2]" />
-
-        {/* Fondo doodle global */}
-        <div 
-          className="fixed inset-0 z-[-1] opacity-5 pointer-events-none bg-repeat"
-          style={{
-            backgroundImage: 'url("/doodle_ceviche.webp")',
-            backgroundSize: '300px', // Ajusta el tamaño del patrón
-            filter: 'grayscale(100%)' // Opcional: para que no compita con los colores de la UI
-          }}
-        />
+        <div className="fixed inset-0 bg-slate-50 z-[-1]" />
 
         <div className="relative min-h-screen">
           {/* Solo mostrar NavBar si está autenticado y el dispositivo está aprobado */}

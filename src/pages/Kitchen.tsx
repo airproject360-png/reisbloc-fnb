@@ -127,15 +127,6 @@ export default function Kitchen() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative">
-      {/* Background Doodle */}
-      <div 
-        className="fixed inset-0 z-0 opacity-30 pointer-events-none bg-repeat"
-        style={{
-          backgroundImage: 'url("/doodle_ceviche.webp")',
-          backgroundSize: '300px',
-          filter: 'grayscale(100%)'
-        }}
-      />
       <div className="relative z-10">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white shadow-2xl">

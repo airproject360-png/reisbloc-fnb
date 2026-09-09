@@ -9,16 +9,6 @@ export default function NotFound() {
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Capa 1: Color de fondo base */}
       <div className="absolute inset-0 bg-slate-900 z-0" />
-
-      {/* Capa 2: Doodle */}
-      <div 
-        className="absolute inset-0 z-0 opacity-70 pointer-events-none bg-repeat"
-        style={{
-          backgroundImage: 'url("/doodle_ceviche.webp")',
-          backgroundSize: '300px',
-          filter: 'grayscale(100%)'
-        }}
-      />
       
       {/* Capa 3: Gradiente */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-slate-900/20 to-blue-900/20 z-0" />

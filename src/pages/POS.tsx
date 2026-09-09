@@ -9,8 +9,7 @@ import { DEMO_PRODUCTS } from '@/services/demoSeedService'
 import printService from '@/services/printService'
 import OrderNoteModal from '@/components/pos/OrderNoteModal'
 import DarkKitchenRecipeModal from '@/components/admin/DarkKitchenRecipeModal'
-import clipPinpadService from '@/services/clipPinpadService'
-import { getTenantSettings, LOCALITO_TABLE_LOCATIONS } from '@/config/tenantConfig'
+import { getTenantSettings, LOCALITO_TABLE_LOCATIONS, getTableDisplayName } from '@/config/tenantConfig'
 import {
   MapPin,
   ChefHat,
@@ -531,64 +530,111 @@ export default function POS() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-28 select-none">
-      {/* Header Banner */}
-      <header className="relative bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 border-b border-teal-500/20 px-4 py-4 overflow-hidden shadow-2xl">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 relative z-10">
-          <div className="flex items-center gap-3">
+      {/* Header Banner Centrado */}
+      <header className="relative bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 border-b border-teal-500/20 px-3 sm:px-4 py-3 overflow-hidden shadow-2xl">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-4 relative z-10">
+          <div className="flex items-center gap-3 shrink-0">
             {tenant.logoUrl ? (
               <img 
                 src={tenant.logoUrl} 
                 alt={tenant.clientName} 
-                className="h-12 md:h-14 w-auto object-contain rounded-2xl border border-amber-500/30 shadow-xl shadow-amber-500/10"
+                className="h-10 sm:h-12 md:h-13 w-auto object-contain rounded-2xl border border-amber-500/30 shadow-xl shadow-amber-500/10"
               />
             ) : (
-              <div className="h-12 w-12 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
-                <Store size={26} />
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
+                <Store size={24} />
               </div>
             )}
           </div>
 
-          {/* Selector Simplificado de Ubicación / Mesas */}
-          <div className="w-full md:w-auto bg-slate-900/90 backdrop-blur-md p-3 rounded-2xl border border-slate-800 shadow-xl">
-            <p className="text-[10px] uppercase font-black tracking-wider text-teal-400 mb-1.5 text-center md:text-left">
-              Ubicación / Mesa del Pedido:
-            </p>
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-              {tableLocations.map((loc) => (
-                <button
-                  key={loc.id}
-                  onClick={() => setCurrentTable(loc.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                    currentLoc === loc.id
-                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-lg scale-105 font-black'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                  }`}
-                >
-                  {loc.label}
-                </button>
-              ))}
+          {/* Selector Centrado de Ubicación / Mesas */}
+          <div className="w-full max-w-4xl bg-slate-900/90 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl border border-slate-800 shadow-xl flex flex-col items-center text-center">
+            <div className="flex items-center justify-center gap-2 mb-1.5">
+              <span className="text-[10px] sm:text-[11px] uppercase font-black tracking-wider text-teal-400">
+                Ubicación del Pedido:
+              </span>
+              <span className="text-xs font-black text-amber-300 bg-amber-500/15 px-2.5 py-0.5 rounded-lg border border-amber-500/30">
+                {getTableDisplayName(currentLoc)}
+              </span>
+            </div>
+            <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-wrap">
+              {tableLocations.map((loc) => {
+                const isSelected = currentLoc === loc.id
+                const isPeriquera = loc.id >= 21 && loc.id <= 29
+                const isCaja = loc.id === 0
+                const isBarra = loc.id === 99
+                const isLlevar = loc.id === 100
+
+                const displayBadge = isPeriquera
+                  ? (loc.shortLabel || `P${loc.id - 20}`)
+                  : isCaja
+                  ? (loc.shortLabel || '🏪 Caja')
+                  : isBarra
+                  ? (loc.shortLabel || 'Barra')
+                  : isLlevar
+                  ? (loc.shortLabel || 'Llevar')
+                  : (loc.shortLabel || `#${loc.id}`)
+
+                let styleClasses = 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700/50'
+                if (isSelected) {
+                  if (isPeriquera) {
+                    styleClasses = 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black shadow-lg shadow-orange-500/30 scale-105 ring-2 ring-orange-400'
+                  } else if (isCaja) {
+                    styleClasses = 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black shadow-lg scale-105 ring-2 ring-emerald-400'
+                  } else if (isBarra) {
+                    styleClasses = 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black shadow-lg scale-105 ring-2 ring-purple-400'
+                  } else if (isLlevar) {
+                    styleClasses = 'bg-gradient-to-r from-sky-500 to-blue-500 text-white font-black shadow-lg scale-105 ring-2 ring-sky-400'
+                  } else {
+                    styleClasses = 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-lg scale-105 ring-2 ring-amber-400'
+                  }
+                } else {
+                  if (isPeriquera) {
+                    styleClasses = 'bg-orange-500/10 text-orange-400 border border-orange-500/30 hover:bg-orange-500/20'
+                  } else if (isCaja) {
+                    styleClasses = 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20'
+                  } else if (isBarra) {
+                    styleClasses = 'bg-purple-500/10 text-purple-300 border border-purple-500/30 hover:bg-purple-500/20'
+                  } else if (isLlevar) {
+                    styleClasses = 'bg-sky-500/10 text-sky-300 border border-sky-500/30 hover:bg-sky-500/20'
+                  }
+                }
+
+                return (
+                  <button
+                    key={loc.id}
+                    onClick={() => setCurrentTable(loc.id)}
+                    title={loc.label}
+                    className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${styleClasses}`}
+                  >
+                    {displayBadge}
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
       </header>
 
-      {/* Categorías de Menú */}
-      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 py-3 px-4 shadow-xl">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  selectedCategory.toLowerCase() === cat.toLowerCase()
-                    ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-900/40 scale-105'
-                    : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+      {/* Categorías de Menú Centradas */}
+      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 py-2.5 px-3 sm:px-4 shadow-xl">
+        <div className="max-w-7xl mx-auto flex items-center justify-center">
+          <div className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto no-scrollbar pb-1 max-w-full">
+            <div className="flex items-center justify-center gap-2 mx-auto">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    selectedCategory.toLowerCase() === cat.toLowerCase()
+                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-900/40 scale-105'
+                      : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
