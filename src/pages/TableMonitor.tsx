@@ -9,6 +9,7 @@ import { Order, OrderItem } from '@/types'
 import { LayoutDashboard, ArrowLeftRight, XCircle, Timer, Edit, CheckCircle, CreditCard, Printer, RefreshCw } from 'lucide-react'
 import EditOrderModal from '@/components/admin/EditOrderModal'
 import { getTenantSettings, calculateCardFee, getTableDisplayName } from '@/config/tenantConfig'
+import { buildTicketHTML as generateTicketHTML } from '@/utils/ticketTemplates'
 
 interface TransferState {
   [orderId: string]: number
@@ -97,100 +98,27 @@ export default function TableMonitor() {
     const dateStr = new Date().toLocaleString('es-MX')
     const ticketFolio = ordersList[0]?.id ? ordersList[0].id.slice(-8).toUpperCase() : `LOC-${Date.now().toString().slice(-6)}`
 
-    const lines = allItems
-      .map(item => `
-        <div style="margin-bottom:4px;">
-          <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:bold;">
-            <span>${item.quantity}x ${item.productName}</span>
-            <span>$${(item.unitPrice * item.quantity).toFixed(2)}</span>
-          </div>
-          <div style="font-size:9px;color:#555;margin-left:10px;">
-            P.U. $${item.unitPrice.toFixed(2)}
-          </div>
-          ${item.notes ? `<div style="font-size:9px;font-style:italic;margin-left:10px;">↳ ${item.notes}</div>` : ''}
-        </div>
-      `)
-      .join('')
-
-    return `
-      <div style="width:58mm;padding:6px;font-family:'Courier New', monospace;font-size:11px;line-height:1.25;color:#000;">
-        <!-- Header Logo & Store Name -->
-        <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
-          <div style="font-weight:900;font-size:16px;letter-spacing:1px;">${tenant.clientName}</div>
-          <div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;">${tenant.clientTagline}</div>
-          <div style="font-size:10px;font-weight:bold;margin-top:4px;border:1px solid #000;padding:2px 0;">
-            ${isPaymentTicket ? '*** TICKET DE VENTA ***' : '*** CUENTA DE CONSUMO ***'}
-          </div>
-        </div>
-
-        <!-- Ticket Metadata -->
-        <div style="font-size:9px;border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:6px;">
-          <div style="display:flex;justify-content:space-between;">
-            <span><strong>Cuenta:</strong> ${getTableDisplayName(tableNumber)}</span>
-            <span><strong>Folio:</strong> ${ticketFolio}</span>
-          </div>
-          <div style="margin-top:2px;">Fecha: ${dateStr}</div>
-          <div>Atendido por: ${currentUser?.username || currentUser?.name || `Personal ${tenant.clientName}`}</div>
-        </div>
-
-        ${customNotes ? `
-        <!-- Custom Customer & Order Notes -->
-        <div style="border:1px dashed #000;padding:4px;margin-bottom:6px;font-size:9px;background:#f9f9f9;">
-          <div style="font-weight:bold;">NOTAS / DIRECCIÓN DEL PEDIDO:</div>
-          <div>${customNotes}</div>
-        </div>
-        ` : ''}
-
-        <!-- Itemized List -->
-        <div style="border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:6px;">
-          <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:9px;border-bottom:1px stroke #ccc;padding-bottom:2px;margin-bottom:4px;">
-            <span>CANT / DESCRIPCIÓN</span>
-            <span>IMPORTE</span>
-          </div>
-          ${lines || '<div style="text-align:center;font-size:10px;">(Sin consumos registrados)</div>'}
-        </div>
-
-        <!-- Totals -->
-        <div style="border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
-          <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px;">
-            <span>Subtotal Consumo:</span>
-            <span>$${baseItemsTotal.toFixed(2)} MXN</span>
-          </div>
-          ${cardFee > 0 ? `
-          <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px;font-weight:bold;">
-            <span>Cargo Servicio Tarjeta (3% + $1):</span>
-            <span>+$${cardFee.toFixed(2)} MXN</span>
-          </div>
-          ` : ''}
-          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:900;margin-top:4px;border-top:1px solid #000;padding-top:4px;">
-            <span>${isPaymentTicket ? 'TOTAL PAGADO:' : 'TOTAL A PAGAR:'}</span>
-            <span>$${finalTotalToDisplay.toFixed(2)} MXN</span>
-          </div>
-          ${paymentDetails ? `
-          <div style="display:flex;justify-content:space-between;font-size:10px;margin-top:4px;">
-            <span>FORMA DE PAGO:</span>
-            <span><strong>${paymentDetails.method.toUpperCase()}</strong></span>
-          </div>
-          ` : ''}
-          ${cardFee > 0 ? `
-          <div style="font-size:8px;color:#333;margin-top:4px;text-align:center;font-style:italic;">
-            * Incluye cargo por servicio de cobro con tarjeta.
-          </div>
-          ` : ''}
-          ${paymentDetails?.adjustmentNote ? `
-          <div style="font-size:9px;color:#333;margin-top:4px;font-style:italic;">
-            * Ajuste autorizado por administración: ${paymentDetails.adjustmentNote}
-          </div>
-          ` : ''}
-        </div>
-
-        <!-- Fancy Footer -->
-        <div style="text-align:center;font-size:9px;margin-top:6px;">
-          <div style="font-weight:bold;font-size:10px;">¡GRACIAS POR SU PREFERENCIA!</div>
-          <div style="margin-top:4px;font-size:8px;color:#444;">Powered by Reisbloc (reisbloc.com)</div>
-        </div>
-      </div>
-    `
+    return generateTicketHTML({
+      title: isPaymentTicket ? 'TICKET DE VENTA' : 'CUENTA DE CONSUMO',
+      ticketFolio,
+      locationLabel: getTableDisplayName(tableNumber),
+      dateStr,
+      cashierName: currentUser?.username || currentUser?.name || `Personal ${tenant.clientName}`,
+      customNotes,
+      items: allItems.map(item => ({
+        quantity: item.quantity,
+        productName: item.productName,
+        unitPrice: item.unitPrice,
+        notes: item.notes,
+      })),
+      subtotal: baseItemsTotal,
+      cardFee,
+      discountAmount: paymentDetails?.adjustmentNote ? Math.max(0, totalWithFee - finalTotalToDisplay) : 0,
+      adjustmentReason: paymentDetails?.adjustmentNote,
+      finalTotal: finalTotalToDisplay,
+      paymentMethod: paymentDetails?.method,
+      tenant,
+    })
   }
 
   const formatCurrency = (amount: number) => {
@@ -314,7 +242,27 @@ export default function TableMonitor() {
 
     setBusyOrders(prev => ({ ...prev, [editOrder.id]: true }))
     try {
+      const prevItems = editOrder.items || []
+      const removedItems = prevItems.filter(prev => !updatedItems.some(curr => curr.id === prev.id))
+
       await supabaseService.updateOrder(editOrder.id, { items: updatedItems, notes })
+
+      if (removedItems.length > 0) {
+        supabaseService.logAudit({
+          action: 'DELETE_PRODUCT_FROM_ORDER',
+          table_name: 'orders',
+          record_id: editOrder.id,
+          user_id: currentUser.id,
+          old_value: { items: prevItems.map(i => `${i.quantity}x ${i.productName}`) },
+          new_value: {
+            items: updatedItems.map(i => `${i.quantity}x ${i.productName}`),
+            removed: removedItems.map(i => `${i.quantity}x ${i.productName}`),
+            tableNumber: editOrder.tableNumber,
+            authorizedBy: currentUser.username || currentUser.name
+          }
+        }).catch(err => logger.warn('audit', 'Error logging item deletion:', err as any))
+      }
+
       setEditOrder(null)
       alert('✅ Orden actualizada exitosamente')
     } catch (err: any) {
@@ -331,6 +279,21 @@ export default function TableMonitor() {
     setBusyOrders(prev => ({ ...prev, [editOrder.id]: true }))
     try {
       await supabaseService.updateOrder(editOrder.id, { status: 'cancelled', cancelReason: reason, cancelledBy: currentUser.id, cancelledAt: new Date() })
+
+      supabaseService.logAudit({
+        action: 'ORDER_CANCELLED',
+        table_name: 'orders',
+        record_id: editOrder.id,
+        user_id: currentUser.id,
+        new_value: {
+          tableNumber: editOrder.tableNumber,
+          reason,
+          total: calculateOrderTotal(editOrder),
+          itemsCount: editOrder.items?.length || 0,
+          cancelledBy: currentUser.username || currentUser.name
+        }
+      }).catch(err => logger.warn('audit', 'Error logging order cancellation:', err as any))
+
       setEditOrder(null)
       alert('✅ Orden cancelada exitosamente')
     } catch (err: any) {

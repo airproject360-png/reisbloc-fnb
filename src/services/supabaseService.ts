@@ -560,6 +560,14 @@ class SupabaseService {
         .eq('id', deviceId)
 
       if (error) throw error
+
+      this.createAuditLog({
+        userId: useAppStore.getState().currentUser?.id || '',
+        action: 'DEVICE_APPROVED',
+        entityType: 'DEVICES',
+        entityId: deviceId,
+        newValue: { status: 'approved', approvedAt: new Date().toISOString() }
+      }).catch(e => logger.warn('supabase', 'Audit device error', e))
     } catch (error) {
       logger.error('supabase', 'Error approving device', error as any)
       throw error
@@ -576,6 +584,14 @@ class SupabaseService {
         .eq('id', deviceId)
 
       if (error) throw error
+
+      this.createAuditLog({
+        userId: useAppStore.getState().currentUser?.id || '',
+        action: 'DEVICE_REJECTED',
+        entityType: 'DEVICES',
+        entityId: deviceId,
+        newValue: { status: 'rejected' }
+      }).catch(e => logger.warn('supabase', 'Audit device error', e))
     } catch (error) {
       logger.error('supabase', 'Error revoking device', error as any)
       throw error
@@ -1327,15 +1343,36 @@ class SupabaseService {
 
   async createAuditLog(log: Omit<AuditLog, 'id' | 'created_at'>): Promise<void> {
     try {
+      const isValidUUID = (id: string | null | undefined): boolean => {
+        if (!id) return false
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+      }
+
+      const orgId = this.getCurrentOrgId()
+      const validOrgId = isValidUUID(orgId) ? orgId : null
+      const currentUserId = useAppStore.getState().currentUser?.id
+      const validUserId = isValidUUID(log.userId) 
+        ? log.userId 
+        : (isValidUUID(currentUserId) ? currentUserId : null)
+
+      // Guardar información estructurada de cambios
+      const changesPayload = log.oldValue || log.newValue
+        ? { 
+            ...(log.oldValue !== undefined ? { old: log.oldValue } : {}),
+            ...(log.newValue !== undefined ? { new: log.newValue } : {}),
+            ...(log.userId && !isValidUUID(log.userId) ? { author: log.userId } : {})
+          }
+        : (log.userId && !isValidUUID(log.userId) ? { author: log.userId } : null)
+
       const { error } = await supabase.rpc('record_audit_log', {
-        p_org_id: this.getCurrentOrgId(),
-        p_user_id: log.userId,
+        p_org_id: validOrgId,
+        p_user_id: validUserId,
         p_action: log.action,
-        p_table_name: log.entityType,
-        p_record_id: log.entityId,
-        p_changes: log.oldValue || log.newValue ? { old: log.oldValue, new: log.newValue } : null,
+        p_table_name: log.entityType || 'SYSTEM',
+        p_record_id: String(log.entityId || 'system'),
+        p_changes: changesPayload,
         p_ip_address: log.ipAddress || (await this.getClientIP()) || null,
-        p_device_id: log.deviceId || null,
+        p_device_id: isValidUUID(log.deviceId) ? log.deviceId : null,
       })
 
       if (error) throw error
@@ -1452,6 +1489,22 @@ class SupabaseService {
       }
 
       logger.info('supabase', '✅ Closing saved successfully')
+
+      // Registrar en auditoría
+      this.createAuditLog({
+        userId: payload.closed_by || '',
+        action: 'DAILY_CLOSE_COMPLETED',
+        entityType: 'CLOSING',
+        entityId: String(payload.date),
+        newValue: {
+          totalSales: payload.total_sales,
+          cash: payload.total_cash,
+          card: payload.total_card,
+          ordersCount: payload.orders_count,
+          notes: payload.notes,
+        },
+      }).catch(e => logger.warn('supabase', 'Audit close error', e))
+
       return payload.closed_by || ''
     } catch (error: any) {
       logger.error('supabase', '❌ Error saving closing:', error?.message || String(error))
@@ -1963,21 +2016,27 @@ class SupabaseService {
     user_id?: string
     record_id?: string
     organization_id?: string
+    table_name?: string
+    changes?: any
     [key: string]: any
   }): Promise<void> {
     try {
-      const orgId = entry.organization_id || this.getCurrentOrgId()
-      const userId = entry.user_id || useAppStore.getState().currentUser?.id || null
-      await supabase.from('audit_logs').insert([{
+      const userId = entry.user_id || entry.userId || useAppStore.getState().currentUser?.id || ''
+      const entityType = entry.table_name || entry.entity_type || entry.entityType || 'SYSTEM'
+      const entityId = entry.record_id || entry.entity_id || entry.entityId || 'system'
+      const oldValue = entry.old_value !== undefined ? entry.old_value : entry.oldValue
+      const newValue = entry.new_value !== undefined ? entry.new_value : (entry.newValue !== undefined ? entry.newValue : entry.details)
+
+      await this.createAuditLog({
+        userId,
         action: entry.action,
-        entity_type: entry.entity_type || 'SYSTEM',
-        entity_id: entry.entity_id || entry.record_id || null,
-        old_value: entry.old_value || null,
-        new_value: entry.new_value || entry.details || null,
-        organization_id: orgId,
-        user_id: userId,
-        created_at: new Date().toISOString(),
-      }])
+        entityType,
+        entityId,
+        oldValue: oldValue ?? entry.changes?.old ?? null,
+        newValue: newValue ?? entry.changes?.new ?? entry.changes ?? null,
+        deviceId: entry.deviceId || entry.device_id,
+        ipAddress: entry.ipAddress || entry.ip_address,
+      })
     } catch (err) {
       logger.warn('supabase', 'Error logging audit entry', err as any)
     }

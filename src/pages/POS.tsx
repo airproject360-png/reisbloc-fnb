@@ -7,6 +7,8 @@ import terminalSyncService from '@/services/terminalSyncService'
 import { Product, OrderItem } from '@/types/index'
 import { DEMO_PRODUCTS } from '@/services/demoSeedService'
 import printService from '@/services/printService'
+import { buildTicketHTML } from '@/utils/ticketTemplates'
+import clipPinpadService from '@/services/clipPinpadService'
 import OrderNoteModal from '@/components/pos/OrderNoteModal'
 import DarkKitchenRecipeModal from '@/components/admin/DarkKitchenRecipeModal'
 import { getTenantSettings, LOCALITO_TABLE_LOCATIONS, getTableDisplayName } from '@/config/tenantConfig'
@@ -321,8 +323,10 @@ export default function POS() {
           const statusRes = await clipPinpadService.pollPayment(res.pinpad_request_id, (st) => {
             if (st === 'PENDING') {
               setPinpadStatusMsg('💳 Esperando tarjeta en Clip Total 3...')
+            } else if (st === 'IN_PROCESS') {
+              setPinpadStatusMsg('⏳ Tarjeta detectada. Procesando en terminal Clip...')
             }
-          }, 60)
+          })
 
           if (statusRes.status === 'PAID' || statusRes.status === 'APPROVED') {
             setPinpadStatusMsg('✅ ¡Pago aprobado con éxito en Clip Total 3!')
@@ -333,7 +337,9 @@ export default function POS() {
             })
           }
         } catch (pollErr: any) {
-          setPinpadStatusMsg(`⚠️ ${pollErr.message}`)
+          const msg = pollErr?.message || 'Pago no completado en la terminal'
+          setPinpadStatusMsg(`❌ ${msg}`)
+          alert(`⚠️ ${msg}`)
         }
       }
     } catch (err: any) {
@@ -408,96 +414,34 @@ export default function POS() {
         createdAt: new Date(),
       } as any)
 
-      // 2. Imprimir ticket de venta fancy de 58mm (sin propina, Powered by Reisbloc)
+      // 2. Imprimir ticket de venta oficial (con logo y banner Powered by Reisbloc IA)
       try {
         const ticketFolio = `LOC-${Date.now().toString().slice(-6)}`
         const dateStr = new Date().toLocaleString('es-MX')
-        const methodLabel = paymentMethod === 'card' ? 'TARJETA (TERMINAL)' : paymentMethod === 'transfer' ? 'TRANSFERENCIA SPEI' : 'EFECTIVO'
         const changeAmount = paymentMethod === 'cash' ? Math.max(0, received - finalTotal) : 0
 
-        const html = `
-          <div style="width:58mm;padding:6px;font-family:'Courier New', monospace;font-size:11px;line-height:1.25;color:#000;">
-            <!-- Header Logo & Store Name -->
-            <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
-              <div style="font-weight:900;font-size:16px;letter-spacing:1px;">${tenant.clientName}</div>
-              <div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;margin-top:1px;">${tenant.clientTagline}</div>
-              <div style="font-size:10px;font-weight:bold;margin-top:4px;border:1px solid #000;padding:2px 0;">
-                TICKET DE COMPRA
-              </div>
-            </div>
-
-            <!-- Ticket Metadata -->
-            <div style="font-size:9px;border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:6px;">
-              <div style="display:flex;justify-content:space-between;">
-                <span><strong>Ubicación:</strong> ${locLabel}</span>
-                <span><strong>Folio:</strong> ${ticketFolio}</span>
-              </div>
-              <div style="margin-top:2px;">Fecha: ${dateStr}</div>
-              <div>Atendido por: ${currentUser.username || currentUser.name || `Personal ${tenant.clientName}`}</div>
-            </div>
-
-            ${posTicketNotes.trim() ? `
-            <!-- Customer Notes / Address -->
-            <div style="border:1px dashed #000;padding:4px;margin-bottom:6px;font-size:9px;background:#f9f9f9;">
-              <div style="font-weight:bold;">NOTAS / DIRECCIÓN DEL CLIENTE:</div>
-              <div>${posTicketNotes.trim()}</div>
-            </div>
-            ` : ''}
-
-            <!-- Itemized List -->
-            <div style="border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:6px;">
-              <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:9px;border-bottom:1px stroke #ccc;padding-bottom:2px;margin-bottom:4px;">
-                <span>CANT / DESCRIPCIÓN</span>
-                <span>IMPORTE</span>
-              </div>
-              ${cartItems.map(item => `
-                <div style="margin-bottom:4px;">
-                  <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:bold;">
-                    <span>${item.quantity}x ${item.productName}</span>
-                    <span>$${(item.unitPrice * item.quantity).toFixed(2)}</span>
-                  </div>
-                  <div style="font-size:9px;color:#555;margin-left:10px;">
-                    P.U. $${item.unitPrice.toFixed(2)}
-                  </div>
-                  ${item.notes ? `<div style="font-size:9px;font-style:italic;margin-left:10px;">↳ ${item.notes}</div>` : ''}
-                </div>
-              `).join('')}
-            </div>
-
-            <!-- Totals -->
-            <div style="border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
-              <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:900;">
-                <span>TOTAL A PAGAR:</span>
-                <span>$${finalTotal.toFixed(2)} MXN</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;font-size:10px;margin-top:4px;">
-                <span>FORMA DE PAGO:</span>
-                <span><strong>${methodLabel}</strong></span>
-              </div>
-              ${isAdjusted ? `
-              <div style="font-size:9px;color:#333;margin-top:4px;font-style:italic;">
-                * Ajuste autorizado por administración: ${adjustmentReason.trim()}
-              </div>
-              ` : ''}
-              ${paymentMethod === 'cash' ? `
-              <div style="display:flex;justify-content:space-between;font-size:9px;margin-top:2px;color:#444;">
-                <span>Efectivo Recibido:</span>
-                <span>$${received.toFixed(2)}</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:bold;margin-top:2px;">
-                <span>CAMBIO:</span>
-                <span>$${changeAmount.toFixed(2)}</span>
-              </div>
-              ` : ''}
-            </div>
-
-            <!-- Fancy Footer -->
-            <div style="text-align:center;font-size:9px;margin-top:6px;">
-              <div style="font-weight:bold;font-size:10px;">¡GRACIAS POR SU PREFERENCIA!</div>
-              <div style="margin-top:4px;font-size:8px;color:#444;">Powered by Reisbloc (reisbloc.com)</div>
-            </div>
-          </div>
-        `
+        const html = buildTicketHTML({
+          title: 'TICKET DE COMPRA',
+          ticketFolio,
+          locationLabel: locLabel,
+          dateStr,
+          cashierName: currentUser.username || currentUser.name || `Personal ${tenant.clientName}`,
+          customNotes: posTicketNotes.trim(),
+          items: cartItems.map(item => ({
+            quantity: item.quantity,
+            productName: item.productName,
+            unitPrice: item.unitPrice,
+            notes: item.notes,
+          })),
+          subtotal: originalTotal,
+          finalTotal,
+          paymentMethod,
+          cashReceived: paymentMethod === 'cash' ? received : undefined,
+          changeAmount: paymentMethod === 'cash' ? changeAmount : undefined,
+          adjustmentReason: isAdjusted ? adjustmentReason.trim() : undefined,
+          discountAmount: isAdjusted ? (originalTotal - finalTotal) : 0,
+          tenant,
+        })
 
         await printService.printReceipt(html, { title: `Ticket de Venta ${ticketFolio}`, width: 58 })
       } catch (printErr) {
@@ -530,104 +474,88 @@ export default function POS() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-28 select-none">
-      {/* Header Banner Compacto */}
-      <header className="relative bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 border-b border-teal-500/20 px-2 sm:px-4 py-1.5 overflow-hidden shadow-lg">
-        <div className="w-full flex flex-col md:flex-row items-center justify-center gap-2 relative z-10">
-          <div className="flex items-center gap-2 shrink-0">
-            {tenant.logoUrl ? (
-              <img 
-                src={tenant.logoUrl} 
-                alt={tenant.clientName} 
-                className="h-7 sm:h-8 w-auto object-contain rounded-lg border border-amber-500/30 shadow-sm"
-              />
-            ) : (
-              <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
-                <Store size={16} />
-              </div>
-            )}
-          </div>
-
-          {/* Selector de Ubicación Compacto en Una Sola Fila */}
-          <div className="w-full max-w-4xl bg-slate-900/90 backdrop-blur-md px-2 py-1 rounded-xl border border-slate-800 shadow-sm flex flex-col items-center text-center">
-            <div className="flex items-center justify-center gap-1.5 mb-0.5">
-              <span className="text-[9px] uppercase font-bold tracking-wider text-teal-400">
-                Ubicación:
-              </span>
-              <span className="text-[10px] font-black text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30">
-                {getTableDisplayName(currentLoc)}
-              </span>
+      {/* Header de Ubicaciones Simétrico y Elegante (Localito, Caja, Mesas, Periqueras, Barra, Llevar) */}
+      <header className="bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 py-3 px-2 shadow-md w-full">
+        <div className="w-full flex items-center justify-center">
+          <div className="flex items-center justify-start md:justify-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full px-2 scroll-smooth">
+            {/* Badge de Marca / Localito */}
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-amber-500/30 text-amber-300 text-xs font-black whitespace-nowrap flex-shrink-0 shadow-sm">
+              {tenant.logoUrl ? (
+                <img 
+                  src={tenant.logoUrl} 
+                  alt={tenant.clientName} 
+                  className="h-4 w-auto object-contain rounded"
+                />
+              ) : (
+                <Store size={14} className="text-amber-400" />
+              )}
+              <span>{tenant.clientName}</span>
+              <span className="text-slate-700">|</span>
+              <span className="text-teal-400 font-bold">{getTableDisplayName(currentLoc)}</span>
             </div>
-            {/* Todas las ubicaciones en una sola fila compacta */}
-            <div className="w-full flex items-center justify-start md:justify-center gap-1 overflow-x-auto no-scrollbar py-0.5 flex-nowrap">
-              {tableLocations.map((loc) => {
-                const isSelected = currentLoc === loc.id
-                const isPeriquera = loc.id >= 21 && loc.id <= 29
-                const isCaja = loc.id === 0
-                const isBarra = loc.id === 99
-                const isLlevar = loc.id === 100
 
-                const displayBadge = isPeriquera
-                  ? (loc.shortLabel || `P${loc.id - 20}`)
-                  : isCaja
-                  ? (loc.shortLabel || '🏪 Caja')
-                  : isBarra
-                  ? (loc.shortLabel || 'Barra')
-                  : isLlevar
-                  ? (loc.shortLabel || 'Llevar')
-                  : (loc.shortLabel || `#${loc.id}`)
+            <div className="h-5 w-px bg-slate-800 shrink-0 mx-0.5" />
 
-                let styleClasses = 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700/50'
-                if (isSelected) {
-                  if (isPeriquera) {
-                    styleClasses = 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black shadow-md shadow-orange-500/30 scale-105 ring-1 ring-orange-400'
-                  } else if (isCaja) {
-                    styleClasses = 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black shadow-md scale-105 ring-1 ring-emerald-400'
-                  } else if (isBarra) {
-                    styleClasses = 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black shadow-md scale-105 ring-1 ring-purple-400'
-                  } else if (isLlevar) {
-                    styleClasses = 'bg-gradient-to-r from-sky-500 to-blue-500 text-white font-black shadow-md scale-105 ring-1 ring-sky-400'
-                  } else {
-                    styleClasses = 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-md scale-105 ring-1 ring-amber-400'
-                  }
-                } else {
-                  if (isPeriquera) {
-                    styleClasses = 'bg-orange-500/10 text-orange-400 border border-orange-500/30 hover:bg-orange-500/20'
-                  } else if (isCaja) {
-                    styleClasses = 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20'
-                  } else if (isBarra) {
-                    styleClasses = 'bg-purple-500/10 text-purple-300 border border-purple-500/30 hover:bg-purple-500/20'
-                  } else if (isLlevar) {
-                    styleClasses = 'bg-sky-500/10 text-sky-300 border border-sky-500/30 hover:bg-sky-500/20'
-                  }
-                }
+            {/* Ubicaciones: Caja, Mesas 1-12, Periqueras 1-4, Barra, Llevar */}
+            {tableLocations.map((loc) => {
+              const isSelected = currentLoc === loc.id
+              const isPeriquera = loc.id >= 21 && loc.id <= 29
+              const isCaja = loc.id === 0
+              const isBarra = loc.id === 99
+              const isLlevar = loc.id === 100
+              const hasDraft = (draftOrders[loc.id]?.length || 0) > 0
 
-                return (
-                  <button
-                    key={loc.id}
-                    onClick={() => setCurrentTable(loc.id)}
-                    title={loc.label}
-                    className={`px-2 py-0.5 rounded-lg text-[11px] font-bold whitespace-nowrap flex-shrink-0 transition-all ${styleClasses}`}
-                  >
-                    {displayBadge}
-                  </button>
-                )
-              })}
-            </div>
+              const displayBadge = isPeriquera
+                ? (loc.shortLabel || `P${loc.id - 20}`)
+                : isCaja
+                ? (loc.shortLabel || '🏪 Caja')
+                : isBarra
+                ? (loc.shortLabel || 'Barra')
+                : isLlevar
+                ? (loc.shortLabel || '🛍️ Llevar')
+                : (loc.shortLabel || `#${loc.id}`)
+
+              return (
+                <button
+                  key={loc.id}
+                  onClick={() => setCurrentTable(loc.id)}
+                  title={loc.label}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 active:scale-95 ${
+                    isSelected
+                      ? isCaja
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black shadow-lg shadow-emerald-500/25 scale-105 ring-1 ring-emerald-400'
+                        : isPeriquera
+                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black shadow-lg shadow-orange-500/25 scale-105 ring-1 ring-orange-400'
+                        : isBarra
+                        ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black shadow-lg shadow-purple-500/25 scale-105 ring-1 ring-purple-400'
+                        : isLlevar
+                        ? 'bg-gradient-to-r from-sky-500 to-blue-500 text-white font-black shadow-lg shadow-sky-500/25 scale-105 ring-1 ring-sky-400'
+                        : 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-lg shadow-amber-500/25 scale-105 ring-1 ring-amber-300'
+                      : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  <span>{displayBadge}</span>
+                  {hasDraft && (
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  )}
+                </button>
+              )
+            })}
           </div>
         </div>
       </header>
 
       {/* Espacio de Categorías Más Amplio, Simétrico y Elegante */}
-      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 py-4 px-2 shadow-xl w-full">
+      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 py-3 px-2 shadow-xl w-full">
         <div className="w-full flex items-center justify-center">
-          <div className="flex items-center justify-start md:justify-center gap-2.5 overflow-x-auto no-scrollbar py-0.5 w-full px-2">
+          <div className="flex items-center justify-start md:justify-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full px-2 scroll-smooth">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all active:scale-95 ${
                   selectedCategory.toLowerCase() === cat.toLowerCase()
-                    ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-900/40 scale-105'
+                    ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-900/40 scale-105 ring-1 ring-teal-400/40'
                     : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
                 }`}
               >

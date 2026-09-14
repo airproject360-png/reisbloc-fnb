@@ -24,7 +24,6 @@ export default function AuditLogsPanel() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [filter, setFilter] = useState({
     action: 'all',
-    entityType: 'all',
     dateFrom: '',
     dateTo: '',
     search: '',
@@ -50,8 +49,11 @@ export default function AuditLogsPanel() {
 
   const filteredLogs = logs.filter(log => {
     if (filter.action !== 'all' && log.action !== filter.action) return false
-    if (filter.entityType !== 'all' && log.entityType !== filter.entityType) return false
-    if (filter.search && !JSON.stringify(log).toLowerCase().includes(filter.search.toLowerCase())) return false
+    if (filter.search) {
+      const s = filter.search.toLowerCase()
+      const searchTarget = `${log.action} ${log.userId || ''} ${log.entityId || ''} ${JSON.stringify(log.newValue || '')} ${JSON.stringify(log.oldValue || '')}`.toLowerCase()
+      if (!searchTarget.includes(s)) return false
+    }
     const logDate = new Date(log.timestamp || (log as any).created_at || Date.now())
     if (filter.dateFrom && logDate < new Date(filter.dateFrom)) return false
     if (filter.dateTo && logDate > new Date(filter.dateTo)) return false
@@ -59,21 +61,27 @@ export default function AuditLogsPanel() {
   })
 
   const actionStyles: Record<string, { label: string; badge: string }> = {
+    SALE_COMPLETED: { label: 'Comanda Cobrada', badge: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
+    SALE_AMOUNT_ADJUSTED: { label: 'Ajuste / Descuento de Venta', badge: 'text-amber-400 bg-amber-500/10 border-amber-500/30' },
+    DELETE_PRODUCT_FROM_ORDER: { label: 'Platillo Cancelado de Comanda', badge: 'text-orange-400 bg-orange-500/10 border-orange-500/30' },
+    ORDER_CANCELLED: { label: 'Comanda Completa Cancelada', badge: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
+    DAILY_CLOSE_COMPLETED: { label: 'Cierre de Caja Z', badge: 'text-teal-300 bg-teal-500/10 border-teal-500/30' },
+    INVENTORY_CHANGE: { label: 'Ajuste de Stock / Merma', badge: 'text-purple-300 bg-purple-500/10 border-purple-500/30' },
+    DEVICE_APPROVED: { label: 'Dispositivo Autorizado', badge: 'text-teal-300 bg-teal-500/10 border-teal-500/30' },
+    DEVICE_REJECTED: { label: 'Dispositivo Bloqueado', badge: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
+    USER_CREATED: { label: 'Nuevo Usuario Registrado', badge: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
+    USER_ROLE_CHANGED: { label: 'Rol de Usuario Modificado', badge: 'text-amber-400 bg-amber-500/10 border-amber-500/30' },
+    USER_MODIFIED: { label: 'Usuario Modificado', badge: 'text-amber-400 bg-amber-500/10 border-amber-500/30' },
+    USER_DELETED: { label: 'Usuario Desactivado', badge: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
     LOGIN_SUCCESS: { label: 'Inicio de Sesión', badge: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
     LOGIN_FAILED: { label: 'Login Fallido', badge: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
     LOGOUT: { label: 'Cierre de Sesión', badge: 'text-slate-400 bg-slate-800 border-slate-700' },
     PRODUCT_CREATED: { label: 'Platillo / Receta Creada', badge: 'text-teal-300 bg-teal-500/10 border-teal-500/30' },
     PRODUCT_UPDATED: { label: 'Platillo / Receta Editada', badge: 'text-amber-400 bg-amber-500/10 border-amber-500/30' },
     PRODUCT_DELETED: { label: 'Platillo / Receta Archivada', badge: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
-    INVENTORY_CHANGE: { label: 'Ajuste de Stock / Insumo', badge: 'text-purple-300 bg-purple-500/10 border-purple-500/30' },
-    USER_CREATED: { label: 'Nuevo Usuario Registrado', badge: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
-    USER_MODIFIED: { label: 'Usuario Modificado', badge: 'text-amber-400 bg-amber-500/10 border-amber-500/30' },
-    USER_DELETED: { label: 'Usuario Desactivado', badge: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
     INVITE_SENT: { label: 'Invitación Enviada', badge: 'text-cyan-300 bg-cyan-500/10 border-cyan-500/30' },
     INVITE_BLOCKED: { label: 'Invitación Bloqueada', badge: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
     VIEW_REPORT: { label: 'Consulta de Reporte', badge: 'text-blue-300 bg-blue-500/10 border-blue-500/30' },
-    SALE_COMPLETED: { label: 'Comanda Cobrada', badge: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
-    DELETE_PRODUCT_FROM_ORDER: { label: 'Platillo Cancelado de Comanda', badge: 'text-orange-400 bg-orange-500/10 border-orange-500/30' },
   }
 
   if (!canViewLogs) {
@@ -110,14 +118,14 @@ export default function AuditLogsPanel() {
         </button>
       </div>
 
-      {/* Barra de Filtros */}
+      {/* Barra de Filtros Simplificada (Sin Tipos) */}
       <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 p-5 rounded-3xl shadow-xl space-y-3">
         <div className="flex items-center gap-2 text-teal-400 font-extrabold text-xs uppercase tracking-wider">
           <Filter size={16} />
           <span>Filtros de Búsqueda</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
           {/* Búsqueda por texto */}
           <div className="relative">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -125,8 +133,8 @@ export default function AuditLogsPanel() {
               type="text"
               value={filter.search}
               onChange={(e) => setFilter({ ...filter, search: e.target.value })}
-              placeholder="Buscar por usuario, ID o acción..."
-              className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl text-white font-bold placeholder-slate-500 outline-none"
+              placeholder="Buscar por usuario, ID, motivo..."
+              className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl text-white font-bold placeholder-slate-500 outline-none"
             />
           </div>
 
@@ -135,7 +143,7 @@ export default function AuditLogsPanel() {
             <select
               value={filter.action}
               onChange={(e) => setFilter({ ...filter, action: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl text-white font-bold outline-none"
+              className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl text-white font-bold outline-none cursor-pointer"
             >
               <option value="all">Todas las Acciones</option>
               {Object.keys(actionStyles).map(act => (
@@ -146,38 +154,21 @@ export default function AuditLogsPanel() {
             </select>
           </div>
 
-          {/* Filtro por Entidad */}
-          <div>
-            <select
-              value={filter.entityType}
-              onChange={(e) => setFilter({ ...filter, entityType: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl text-white font-bold outline-none"
-            >
-              <option value="all">Todos los Tipos</option>
-              <option value="AUTH">Autenticación / Sesiones</option>
-              <option value="PRODUCT">Platillos / Menú</option>
-              <option value="USER">Usuarios / Personal</option>
-              <option value="REPORT">Reportes & Cierres</option>
-              <option value="ORDER">Comandas & Mesas</option>
-              <option value="SALE">Ventas & Cobros</option>
-            </select>
-          </div>
-
           {/* Fecha desde */}
           <div>
             <input
               type="date"
               value={filter.dateFrom}
               onChange={(e) => setFilter({ ...filter, dateFrom: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl text-white font-bold outline-none"
+              className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl text-white font-bold outline-none"
             />
           </div>
         </div>
 
-        {(filter.search || filter.action !== 'all' || filter.entityType !== 'all' || filter.dateFrom) && (
+        {(filter.search || filter.action !== 'all' || filter.dateFrom) && (
           <div className="pt-2">
             <button
-              onClick={() => setFilter({ action: 'all', entityType: 'all', dateFrom: '', dateTo: '', search: '' })}
+              onClick={() => setFilter({ action: 'all', dateFrom: '', dateTo: '', search: '' })}
               className="text-xs text-amber-400 hover:text-amber-300 font-bold underline"
             >
               Limpiar todos los filtros
