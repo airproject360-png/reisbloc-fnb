@@ -63,6 +63,7 @@ export default function AuditLogsPanel() {
   const actionStyles: Record<string, { label: string; badge: string }> = {
     SALE_COMPLETED: { label: 'Comanda Cobrada', badge: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
     SALE_AMOUNT_ADJUSTED: { label: 'Ajuste / Descuento de Venta', badge: 'text-amber-400 bg-amber-500/10 border-amber-500/30' },
+    DISCOUNT_APPLIED: { label: '🎁 Descuento Friends & Family (10%)', badge: 'text-amber-300 bg-amber-500/20 border-amber-400/40' },
     DELETE_PRODUCT_FROM_ORDER: { label: 'Platillo Cancelado de Comanda', badge: 'text-orange-400 bg-orange-500/10 border-orange-500/30' },
     ORDER_CANCELLED: { label: 'Comanda Completa Cancelada', badge: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
     DAILY_CLOSE_COMPLETED: { label: 'Cierre de Caja Z', badge: 'text-teal-300 bg-teal-500/10 border-teal-500/30' },

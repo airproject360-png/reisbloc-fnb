@@ -18,9 +18,10 @@ export default async function handler(req: any, res: any) {
     return
   }
 
-  const apiKey = process.env.CLIP_API_KEY || '29e7fea7-bcfb-42cf-a8f2-67a0dd521a3b'
-  const apiSecret = process.env.CLIP_API_SECRET || 'e2be52d7-ef4a-4a80-9ba3-f07eee339176'
-  const defaultSerial = process.env.CLIP_PINPAD_SERIAL || 'AA61B532642902383'
+  const apiKey = process.env.CLIP_API_KEY || process.env.VITE_CLIP_API_KEY || '29e7fea7-bcfb-42cf-a8f2-67a0dd521a3b'
+  const apiSecret = process.env.CLIP_API_SECRET || process.env.VITE_CLIP_API_SECRET || 'e2be52d7-ef4a-4a80-9ba3-f07eee339176'
+  const defaultSerial = process.env.CLIP_PINPAD_SERIAL || process.env.VITE_CLIP_PINPAD_SERIAL || 'AA61B532642902383'
+
 
   const authHeader = `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}`
 

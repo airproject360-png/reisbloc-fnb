@@ -15,17 +15,55 @@ interface PrintOptions {
 class PrintService {
   /**
    * Imprimir desde HTML (web)
+   * Compatible con Windows (POS-58 térmico), macOS y iOS Safari (iPad/iPhone)
    */
   async printHTML(
     htmlContent: string,
     options: PrintOptions = {}
   ): Promise<void> {
     try {
-      const { title = 'Ticket', silent = false, width = 58 } = options
+      const { title = 'Ticket', width = 58 } = options
 
-      // Crear iframe invisible
+      // 1. Preparar contenedor aislado #thermal-print-area en el DOM principal
+      // Gracias al CSS @media print { body > *:not(#thermal-print-area) { display: none !important; } }
+      // en caso de que el navegador imprima la ventana raíz, SÓLO se imprimirá el ticket de 58mm,
+      // NUNCA la interfaz completa del POS (soluciona el bug en iOS Safari).
+      let printContainer = document.getElementById('thermal-print-area')
+      if (!printContainer) {
+        printContainer = document.createElement('div')
+        printContainer.id = 'thermal-print-area'
+        document.body.appendChild(printContainer)
+      }
+      printContainer.innerHTML = htmlContent
+
+      // Detección de iOS (iPad / iPhone / iPod / iPadOS con Safari)
+      const isIOS =
+        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
+      if (isIOS) {
+        // En iOS Safari, los iframes ocultos rompen el renderizado y causan que Safari
+        // imprima toda la página. Usando #thermal-print-area aislado y window.print(),
+        // iOS Safari imprime con precisión únicamente el ticket de 58mm.
+        logger.info('print', 'Imprimiendo en iOS Safari con aislamiento térmico', { title })
+        window.print()
+        setTimeout(() => {
+          if (printContainer) printContainer.innerHTML = ''
+        }, 1500)
+        return
+      }
+
+      // 2. En navegadores de escritorio (Chrome, Edge, Firefox), usar iframe off-screen
+      // NOTA: NUNCA usar `display: none` porque algunos motores excluyen el frame del layout.
       const iframe = document.createElement('iframe')
-      iframe.style.display = 'none'
+      iframe.style.position = 'fixed'
+      iframe.style.top = '-9999px'
+      iframe.style.left = '-9999px'
+      iframe.style.width = `${width}mm`
+      iframe.style.height = '100px'
+      iframe.style.opacity = '0.01'
+      iframe.style.pointerEvents = 'none'
+      iframe.style.border = 'none'
       document.body.appendChild(iframe)
 
       const doc = iframe.contentDocument || iframe.contentWindow?.document
@@ -39,16 +77,18 @@ class PrintService {
           <meta charset="UTF-8">
           <title>${title}</title>
           <style>
-            * { margin: 0; padding: 0; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
-              font-family: "Courier New", monospace;
-              font-size: 12px;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Courier New", monospace;
+              font-size: 11px;
               width: ${width}mm;
-              padding: 8px;
+              padding: 2mm;
+              color: #000;
+              background: #fff;
             }
             @media print {
-              body { width: ${width}mm; }
-              @page { size: ${width}mm auto; margin: 0; }
+              body { width: ${width}mm; margin: 0; padding: 0; }
+              @page { size: ${width}mm auto; margin: 0mm; }
             }
           </style>
         </head>
@@ -64,10 +104,22 @@ class PrintService {
 
       // Esperar a que cargue y luego imprimir
       setTimeout(() => {
-        iframe.contentWindow?.print()
-        // Eliminar iframe después de 1 segundo
-        setTimeout(() => document.body.removeChild(iframe), 1000)
-      }, 250)
+        try {
+          iframe.contentWindow?.focus()
+          iframe.contentWindow?.print()
+        } catch (printErr) {
+          logger.warn('print', 'Fallback a impresión directa', printErr as any)
+          window.print()
+        } finally {
+          // Eliminar iframe después de 1.5 segundos
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe)
+            }
+            if (printContainer) printContainer.innerHTML = ''
+          }, 1500)
+        }
+      }, 300)
 
       logger.info('print', 'Impresión iniciada (web)', { title })
     } catch (error) {

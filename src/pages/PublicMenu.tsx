@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Search, Sparkles, MapPin, ChefHat, Utensils } from 'lucide-react'
-import { DEMO_PRODUCTS, DemoProduct } from '@/services/demoSeedService'
+import { Product } from '@/types/index'
 import { useAppStore } from '@/store/appStore'
 import DarkKitchenRecipeModal from '@/components/admin/DarkKitchenRecipeModal'
 import { getTenantSettings } from '@/config/tenantConfig'
@@ -9,19 +9,24 @@ export default function PublicMenu() {
   const tenant = getTenantSettings()
   const { products: storeProducts } = useAppStore()
   const displayProducts = useMemo(() => {
-    if (storeProducts && storeProducts.length > 0) return storeProducts
-    return tenant.isLocalito ? DEMO_PRODUCTS : []
-  }, [storeProducts, tenant.isLocalito])
+    return storeProducts || []
+  }, [storeProducts])
 
-  const [selectedCategory, setSelectedCategory] = useState<string>('Todos')
+  const [selectedCategory, setSelectedCategory] = useState<string>('TODOS')
   const [searchTerm, setSearchTerm] = useState('')
-  const [recipeModalProduct, setRecipeModalProduct] = useState<DemoProduct | null>(null)
+  const [recipeModalProduct, setRecipeModalProduct] = useState<Product | null>(null)
 
-  const categories = ['Todos', 'Quesadillas Maíz', 'Quesadillas Harina', 'Platos', 'Especialidades', 'Extras', 'Bebidas']
+  const categories = useMemo(() => {
+    const raw = Array.from(
+      new Set(displayProducts.map(p => (p.category || '').toUpperCase().trim()).filter(Boolean))
+    ) as string[]
+    return ['TODOS', ...raw]
+  }, [displayProducts])
 
   const filteredProducts = useMemo(() => {
     return displayProducts.filter((p) => {
-      const matchCat = selectedCategory === 'Todos' || p.category.toLowerCase() === selectedCategory.toLowerCase()
+      const pCat = (p.category || '').toUpperCase().trim()
+      const matchCat = selectedCategory === 'TODOS' || pCat === selectedCategory
       const matchSearch =
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -91,19 +96,23 @@ export default function PublicMenu() {
 
           {/* Categoría Pills */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  selectedCategory.toLowerCase() === cat.toLowerCase()
-                    ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-900/40 scale-105'
-                    : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+            {categories.map((cat) => {
+              const upperCat = cat.toUpperCase()
+              const isSelected = selectedCategory.toUpperCase() === upperCat
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(upperCat)}
+                  className={`px-4 py-2 rounded-xl text-xs font-black tracking-wide whitespace-nowrap transition-all ${
+                    isSelected
+                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-900/40 scale-105'
+                      : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  {upperCat}
+                </button>
+              )
+            })}
           </div>
         </div>
       </div>

@@ -312,3 +312,43 @@ body {
   background: rgba(242, 239, 232, 0.7);
   @apply backdrop-blur-sm border border-[color:var(--border-light)] shadow-sm;
 }
+
+/* 🖨️ Thermal Receipt / Comanda Isolation (Evita imprimir toda la pantalla en iOS Safari y escritorio) */
+#thermal-print-area {
+  display: none;
+}
+
+@media print {
+  html, body {
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Ocultar toda la interfaz de la aplicación al imprimir tickets térmicos */
+  body > *:not(#thermal-print-area) {
+    display: none !important;
+  }
+
+  #thermal-print-area {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: auto !important;
+    max-width: 80mm !important;
+    min-width: 54mm !important;
+    margin: 0 !important;
+    padding: 2mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-sizing: border-box !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 0mm;
+  }
+}
+

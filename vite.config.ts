@@ -13,12 +13,12 @@
  * GNU Affero General Public License for more details.
  */
 
-import { defineConfig, type Plugin, type Connect } from 'vite'
+import { defineConfig, loadEnv, type Plugin, type Connect } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
-function clipPinpadDevPlugin(): Plugin {
+function clipPinpadDevPlugin(env?: Record<string, string>): Plugin {
   const handler: Connect.NextHandleFunction = async (req, res, next) => {
     if (!req.url || !req.url.startsWith('/api/clip-pinpad')) {
       return next()
@@ -37,10 +37,11 @@ function clipPinpadDevPlugin(): Plugin {
       return
     }
 
-    const apiKey = process.env.CLIP_API_KEY || '29e7fea7-bcfb-42cf-a8f2-67a0dd521a3b'
-    const apiSecret = process.env.CLIP_API_SECRET || 'e2be52d7-ef4a-4a80-9ba3-f07eee339176'
-    const defaultSerial = process.env.CLIP_PINPAD_SERIAL || 'AA61B532642902383'
+    const apiKey = env?.CLIP_API_KEY || env?.VITE_CLIP_API_KEY || process.env.CLIP_API_KEY || process.env.VITE_CLIP_API_KEY || '29e7fea7-bcfb-42cf-a8f2-67a0dd521a3b'
+    const apiSecret = env?.CLIP_API_SECRET || env?.VITE_CLIP_API_SECRET || process.env.CLIP_API_SECRET || process.env.VITE_CLIP_API_SECRET || 'e2be52d7-ef4a-4a80-9ba3-f07eee339176'
+    const defaultSerial = env?.CLIP_PINPAD_SERIAL || env?.VITE_CLIP_PINPAD_SERIAL || process.env.CLIP_PINPAD_SERIAL || process.env.VITE_CLIP_PINPAD_SERIAL || 'AA61B532642902383'
     const authHeader = `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}`
+
 
     try {
       const parsedUrl = new URL(req.url, 'http://localhost')
@@ -118,7 +119,7 @@ function clipPinpadDevPlugin(): Plugin {
           tip_amount: tipAmount ? Number(tipAmount).toFixed(2) : undefined,
           reference: reference || `LOC-${Date.now().toString().slice(-6)}`,
           serial_number_pos: serialNumber || defaultSerial,
-          webhook_url: process.env.CLIP_WEBHOOK_URL || 'https://htjhzdtlvdbtlfdhsydq.supabase.co/functions/v1/clip-webhook',
+          webhook_url: env?.CLIP_WEBHOOK_URL || env?.VITE_CLIP_WEBHOOK_URL || process.env.CLIP_WEBHOOK_URL || process.env.VITE_CLIP_WEBHOOK_URL || 'https://htjhzdtlvdbtlfdhsydq.supabase.co/functions/v1/clip-webhook',
           preferences: {
             is_auto_return_enabled: true,
             is_retry_enabled: true,
@@ -174,10 +175,14 @@ function clipPinpadDevPlugin(): Plugin {
   }
 }
 
-export default defineConfig({
-  plugins: [
-    clipPinpadDevPlugin(),
-    react(),
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  Object.assign(process.env, env)
+
+  return {
+    plugins: [
+      clipPinpadDevPlugin(env),
+      react(),
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
@@ -241,5 +246,9 @@ export default defineConfig({
         },
       },
     },
-  }
+  },
+}
 })
+
+
+

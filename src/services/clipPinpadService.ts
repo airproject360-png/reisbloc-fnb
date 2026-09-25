@@ -38,8 +38,9 @@ class ClipPinpadService {
   private defaultSerial = 'AA61B532642902383'
 
   public getSerialNumber(): string {
-    return localStorage.getItem('reisbloc_clip_serial') || this.defaultSerial
+    return localStorage.getItem('reisbloc_clip_serial') || import.meta.env.VITE_CLIP_PINPAD_SERIAL || this.defaultSerial
   }
+
 
   public setSerialNumber(serial: string) {
     localStorage.setItem('reisbloc_clip_serial', serial.trim())

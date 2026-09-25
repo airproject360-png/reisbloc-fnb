@@ -16,7 +16,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { User, Device, Product, OrderItem } from '@/types'
-import { DEMO_PRODUCTS, DEMO_ADMIN_USER } from '@/services/demoSeedService'
+import { DEMO_ADMIN_USER } from '@/services/demoSeedService'
 import { isLocalitoTenant } from '@/config/tenantConfig'
 
 const isLocalito = typeof window !== 'undefined' ? isLocalitoTenant() : false
@@ -63,10 +63,10 @@ const initialState: AppState = {
   currentUser: null,
   currentDevice: null,
   tables: isLocalito
-    ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 99, 100]
-    : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 21, 22, 23, 99, 100]
+    : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
   currentTableNumber: isLocalito ? 0 : 1,
-  products: isLocalito ? DEMO_PRODUCTS : [],
+  products: [],
   users: [DEMO_ADMIN_USER],
   draftOrders: {},
 }

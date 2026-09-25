@@ -21,7 +21,6 @@ import { useAppStore } from '@/store/appStore'
 import { getStoredOrganizationId } from './authService'
 import { APP_CONFIG } from '@/config/constants'
 import { isLocalitoTenant, LOCALITO_ORG_ID, DEFAULT_DEMO_ORG_ID } from '@/config/tenantConfig'
-import { DEMO_PRODUCTS } from './demoSeedService'
 import deviceService from './deviceService'
 import {
   User,
@@ -702,10 +701,6 @@ class SupabaseService {
       console.warn('Error reading local products backup:', e)
     }
 
-    // Solo devolver DEMO_PRODUCTS si es el tenant de LOCALITO
-    if (orgId === LOCALITO_ORG_ID || isLocalitoTenant()) {
-      return (DEMO_PRODUCTS || []) as unknown as Product[]
-    }
     return []
   }
 
@@ -780,17 +775,11 @@ class SupabaseService {
         return localBackup
       }
 
-      if (orgId === LOCALITO_ORG_ID || isLocalitoTenant()) {
-        return (DEMO_PRODUCTS || []) as unknown as Product[]
-      }
       return []
     }).catch(error => {
       logger.error('supabase', 'Error getting products, checking local backup', error as any)
       const backup = this.getLocalProductsBackup()
       if (backup.length > 0) return backup
-      if (this.getCurrentOrgId() === LOCALITO_ORG_ID || isLocalitoTenant()) {
-        return (DEMO_PRODUCTS || []) as unknown as Product[]
-      }
       return []
     })
   }
@@ -1859,6 +1848,25 @@ class SupabaseService {
       supabase.removeChannel(channel)
     }
   }
+  async getDiscountLogsByDateRange(startDate: Date, endDate: Date): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .eq('organization_id', this.getCurrentOrgId())
+        .in('action', ['DISCOUNT_APPLIED', 'SALE_AMOUNT_ADJUSTED'])
+        .gte('created_at', startDate.toISOString())
+        .lt('created_at', endDate.toISOString())
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      logger.error('supabase', 'Error getting discount logs by date range', error as any)
+      return []
+    }
+  }
+
   async getSalesMetrics(
     startDate: Date,
     endDate: Date
@@ -1868,11 +1876,22 @@ class SupabaseService {
     totalDigital: number
     totalClip: number
     totalTips: number
+    totalDiscounts: number
+    discountCount: number
     transactionCount: number
     averageTicket: number
   }> {
     try {
-      const sales = await this.getSalesByDateRange(startDate, endDate)
+      const [sales, discountLogs] = await Promise.all([
+        this.getSalesByDateRange(startDate, endDate),
+        this.getDiscountLogsByDateRange(startDate, endDate)
+      ])
+
+      const totalDiscounts = discountLogs.reduce((sum, log: any) => {
+        const changes = log.changes || {}
+        const disc = Number(changes.discountAmount || (changes.difference ? Math.abs(changes.difference) : 0) || 0)
+        return sum + Math.abs(disc)
+      }, 0)
 
       const metrics = sales.reduce(
         (acc: any, sale: any) => {
@@ -1893,6 +1912,8 @@ class SupabaseService {
           totalDigital: 0,
           totalClip: 0,
           totalTips: 0,
+          totalDiscounts,
+          discountCount: discountLogs.length,
           transactionCount: 0,
           averageTicket: 0,
         }
@@ -1911,6 +1932,8 @@ class SupabaseService {
         totalDigital: 0,
         totalClip: 0,
         totalTips: 0,
+        totalDiscounts: 0,
+        discountCount: 0,
         transactionCount: 0,
         averageTicket: 0,
       }

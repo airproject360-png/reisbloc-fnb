@@ -3,14 +3,14 @@ import { useNavigate, Link } from 'react-router-dom'
 import logger from '@/utils/logger'
 import { useAppStore } from '@/store/appStore'
 import supabaseService from '@/services/supabaseService'
-import terminalSyncService from '@/services/terminalSyncService'
+import terminalSyncService, { KitchenOrderPrintPayload, ReceiptPrintPayload } from '@/services/terminalSyncService'
 import { Product, OrderItem } from '@/types/index'
-import { DEMO_PRODUCTS } from '@/services/demoSeedService'
 import printService from '@/services/printService'
-import { buildTicketHTML } from '@/utils/ticketTemplates'
+import { buildTicketHTML, buildKitchenTicketHTML } from '@/utils/ticketTemplates'
 import clipPinpadService from '@/services/clipPinpadService'
 import OrderNoteModal from '@/components/pos/OrderNoteModal'
 import DarkKitchenRecipeModal from '@/components/admin/DarkKitchenRecipeModal'
+import CategoryOrderModal from '@/components/pos/CategoryOrderModal'
 import { getTenantSettings, LOCALITO_TABLE_LOCATIONS, getTableDisplayName } from '@/config/tenantConfig'
 import {
   MapPin,
@@ -30,8 +30,12 @@ import {
   Store,
   Smartphone,
   Monitor,
-  Eye
+  Eye,
+  Edit,
+  SlidersHorizontal
 } from 'lucide-react'
+
+
 
 export default function POS() {
   const navigate = useNavigate()
@@ -51,7 +55,7 @@ export default function POS() {
 
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
-  const [selectedCategory, setSelectedCategory] = useState<string>('Todos')
+  const [selectedCategory, setSelectedCategory] = useState<string>('TODOS')
   const [editingItem, setEditingItem] = useState<OrderItem | null>(null)
   const [recipeProduct, setRecipeProduct] = useState<Product | null>(null)
   const [showCartDrawer, setShowCartDrawer] = useState(false)
@@ -63,6 +67,7 @@ export default function POS() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [showChangeCalculator, setShowChangeCalculator] = useState(false)
   const [enablePriceAdjustment, setEnablePriceAdjustment] = useState(false)
+  const [applyFriendsAndFamily, setApplyFriendsAndFamily] = useState(false)
   const [adjustedTotal, setAdjustedTotal] = useState<string>('')
   const [adjustmentReason, setAdjustmentReason] = useState<string>('')
   const [posTicketNotes, setPosTicketNotes] = useState<string>('')
@@ -89,7 +94,6 @@ export default function POS() {
       { id: 9, label: 'Mesa 9' },
       { id: 10, label: 'Mesa 10' },
       { id: 11, label: 'Mesa 11' },
-      { id: 12, label: 'Mesa 12' },
     ]
   }, [tenant.isLocalito])
 
@@ -103,19 +107,60 @@ export default function POS() {
   const cartSubtotal = cartItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
   const isReadOnly = currentUser?.role === 'supervisor'
 
-  const categories = useMemo(() => {
-    let savedCats = ['Quesadillas Maíz', 'Quesadillas Harina', 'Platos', 'Especialidades', 'Extras', 'Bebidas']
+  const [showCategoryOrderModal, setShowCategoryOrderModal] = useState(false)
+  const [customCategoryOrder, setCustomCategoryOrder] = useState<string[]>(() => {
     try {
-      const stored = localStorage.getItem('localito_categories')
+      const stored = localStorage.getItem('localito_category_order') || localStorage.getItem('localito_categories')
       if (stored) {
         const parsed = JSON.parse(stored)
-        if (Array.isArray(parsed) && parsed.length > 0) savedCats = parsed
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((c: string) => c.toUpperCase().trim())
+        }
       }
     } catch {}
-    const defaultCats = ['Todos', ...savedCats]
-    const prodCats = Array.from(new Set((products || []).map(p => p.category))).filter(c => c && !defaultCats.includes(c))
-    return [...defaultCats, ...prodCats]
-  }, [products])
+    return ['QUESADILLAS MAÍZ', 'QUESADILLAS HARINA', 'PLATOS', 'ESPECIALIDADES', 'EXTRAS', 'BEBIDAS']
+  })
+
+  // Categorías ordenadas según preferencia personalizada del negocio (Bebidas al final) en UPPERCASE estricto
+  const categories = useMemo(() => {
+    const prodCats = Array.from(
+      new Set(
+        (products || [])
+          .map(p => (p.category || '').toUpperCase().trim())
+          .filter(Boolean)
+      )
+    ) as string[]
+    const allUnique = Array.from(new Set([...customCategoryOrder, ...prodCats]))
+
+    const sorted = allUnique.sort((a, b) => {
+      let indexA = customCategoryOrder.indexOf(a)
+      let indexB = customCategoryOrder.indexOf(b)
+
+      if (indexA === -1) indexA = 990
+      if (indexB === -1) indexB = 990
+
+      // Si a o b es bebida y no estaba ordenado explícitamente, asegurar que vaya al final
+      const isBevA = a.includes('BEBIDA') || a.includes('REFRESCO')
+      const isBevB = b.includes('BEBIDA') || b.includes('REFRESCO')
+      if (indexA >= 990 && isBevA) indexA = 999
+      if (indexB >= 990 && isBevB) indexB = 999
+
+      return indexA - indexB
+    })
+
+    return ['TODOS', ...sorted]
+  }, [products, customCategoryOrder])
+
+  const handleSaveCategoryOrder = (newOrder: string[]) => {
+    const uppercaseOrder = newOrder.map(c => c.toUpperCase().trim())
+    setCustomCategoryOrder(uppercaseOrder)
+    try {
+      localStorage.setItem('localito_category_order', JSON.stringify(uppercaseOrder))
+      localStorage.setItem('localito_categories', JSON.stringify(uppercaseOrder))
+    } catch (err) {
+      logger.warn('pos', 'Error guardando orden de categorías:', err as any)
+    }
+  }
 
   useEffect(() => {
     setCurrentTable(0)
@@ -126,14 +171,10 @@ export default function POS() {
     setLoading(true)
     try {
       const prods = await supabaseService.getAllProducts()
-      if (prods && prods.length > 0) {
-        setProducts(prods)
-      } else {
-        setProducts(DEMO_PRODUCTS as any)
-      }
+      setProducts(prods || [])
     } catch (error) {
       logger.error('pos', 'Error loading products', error as any)
-      setProducts(DEMO_PRODUCTS as any)
+      setProducts([])
     } finally {
       setLoading(false)
     }
@@ -141,7 +182,8 @@ export default function POS() {
 
   const filteredProducts = useMemo(() => {
     return (products || []).filter((p) => {
-      const matchCat = selectedCategory === 'Todos' || p.category.toLowerCase() === selectedCategory.toLowerCase()
+      const pCat = (p.category || '').toUpperCase().trim()
+      const matchCat = selectedCategory === 'TODOS' || pCat === selectedCategory
       return matchCat
     })
   }, [products, selectedCategory])
@@ -166,63 +208,6 @@ export default function POS() {
     setEditingItem(null)
   }
 
-  // 🧑‍🍳 ENVIAR A COCINA (IMPRIME COMANDA 58mm)
-  const handleSendToKitchen = async () => {
-    if (!currentUser || cartItems.length === 0 || sending) return
-
-    setSending(true)
-    try {
-      const orderId = await supabaseService.createOrder({
-        tableNumber: currentLoc,
-        items: cartItems,
-        status: 'sent',
-        createdBy: currentUser.id,
-        createdAt: new Date(),
-        notes: `🍽️ Comida - ${tableLocations.find(l => l.id === currentLoc)?.label || `Mesa ${currentLoc}`}`,
-      })
-
-      // Imprimir comanda de cocina (58mm)
-      try {
-        const dateStr = new Date().toLocaleString('es-MX')
-        const locName = tableLocations.find(l => l.id === currentLoc)?.label || `Mesa #${currentLoc}`
-        const html = `
-          <div style="width:58mm;padding:4px;font-family:'Courier New', monospace;font-size:11px;line-height:1.2;color:#000;">
-            <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:6px;">
-              <div style="font-weight:900;font-size:15px;">*** COMANDA DE COCINA ***</div>
-              <div style="font-size:12px;font-weight:bold;margin-top:2px;">${tenant.clientName} - ${locName.toUpperCase()}</div>
-              <div style="font-size:9px;margin-top:2px;">Fecha: ${dateStr}</div>
-            </div>
-            <div style="border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:6px;">
-              ${cartItems.map(item => `
-                <div style="margin-bottom:6px;">
-                  <div style="font-size:13px;font-weight:900;">
-                    [ ${item.quantity}x ] ${item.productName}
-                  </div>
-                  ${item.notes ? `<div style="font-size:10px;font-weight:bold;background:#eee;padding:2px;margin-top:2px;">↳ NOTA: ${item.notes}</div>` : ''}
-                </div>
-              `).join('')}
-            </div>
-            <div style="text-align:center;font-size:9px;font-weight:bold;">
-              Folio: #${orderId.slice(-6).toUpperCase()}
-            </div>
-          </div>
-        `
-        await printService.printReceipt(html, { title: 'Comanda Cocina', width: 58 })
-      } catch (err) {
-        logger.warn('pos', 'Error imprimiendo comanda de cocina:', err as any)
-      }
-
-      alert(`✅ Comanda enviada a cocina (${tableLocations.find(l => l.id === currentLoc)?.label})`)
-      clearDraftForTable(currentLoc)
-      setCurrentTable(0)
-      setShowCartDrawer(false)
-    } catch (err: any) {
-      alert(`❌ Error enviando comanda: ${err?.message || err}`)
-    } finally {
-      setSending(false)
-    }
-  }
-
   // Identificador único de estación (Computadora de Caja o iPad)
   const [stationId] = useState(() => {
     let id = localStorage.getItem('reisbloc_station_id')
@@ -238,11 +223,97 @@ export default function POS() {
     const saved = localStorage.getItem('reisbloc_is_primary_caja')
     if (saved !== null) return saved === 'true'
     // Detectar si es computadora de escritorio (no iPad/móvil)
-    const isMobile = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent)
+    const isMobile =
+      /iPad|iPhone|iPod|Android/i.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    return !isMobile
+  })
+
+  // ¿Esta estación tiene la impresora térmica física conectada directamente (POS-58 en COM5 / USB)?
+  // Por defecto: True en computadoras de escritorio (Caja), False en iPad/móvil
+  const [hasPhysicalPrinter, setHasPhysicalPrinter] = useState<boolean>(() => {
+    const saved = localStorage.getItem('reisbloc_has_physical_printer')
+    if (saved !== null) return saved === 'true'
+    const isMobile =
+      /iPad|iPhone|iPod|Android/i.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
     return !isMobile
   })
 
   const activeSaleRef = useRef<string | null>(null)
+  const pinpadAbortRef = useRef<boolean>(false)
+
+  // 🧑‍🍳 ENVIAR A COCINA (IMPRIME COMANDA 58mm O RETRANSMITE A CAJA PRINCIPAL)
+  const handleSendToKitchen = async () => {
+    if (!currentUser || cartItems.length === 0 || sending) return
+
+    setSending(true)
+    try {
+      const locLabel = tableLocations.find(l => l.id === currentLoc)?.label || `Mesa ${currentLoc}`
+      const waiterName = currentUser.username || currentUser.name || 'Personal de Servicio'
+
+      const orderId = await supabaseService.createOrder({
+        tableNumber: currentLoc,
+        items: cartItems,
+        status: 'sent',
+        createdBy: currentUser.id,
+        createdAt: new Date(),
+        notes: `🍽️ Comida - ${locLabel}`,
+      })
+
+      const kitchenItems = cartItems.map(item => ({
+        quantity: item.quantity,
+        productName: item.productName,
+        notes: item.notes,
+      }))
+
+      if (hasPhysicalPrinter) {
+        // Esta estación tiene la impresora conectada directamente (PC Caja Principal) -> Imprimir comanda 58mm
+        try {
+          const html = buildKitchenTicketHTML({
+            orderId,
+            locationLabel: locLabel,
+            dateStr: new Date().toLocaleString('es-MX'),
+            waiterName,
+            notes: posTicketNotes.trim() || undefined,
+            items: kitchenItems,
+            tenant,
+          })
+          await printService.printKitchenTicket(html, { title: `Comanda ${locLabel}`, width: 58 })
+        } catch (err) {
+          logger.warn('pos', 'Error imprimiendo comanda de cocina:', err as any)
+        }
+      } else {
+        // Esta estación NO tiene impresora física (iPad de mesero).
+        // Enviar comanda por Realtime a la Caja Principal para que la imprima de inmediato en POS-COMANDAS.
+        // ¡CERO VENTANAS DE IMPRESIÓN AIRPRINT EN EL IPAD!
+        try {
+          await terminalSyncService.sendKitchenOrderPrint({
+            orderId,
+            tableNumber: currentLoc,
+            locationLabel: locLabel,
+            waiterName,
+            notes: posTicketNotes.trim() || undefined,
+            items: kitchenItems,
+            timestamp: new Date().toISOString(),
+            originStation: stationId,
+          })
+          logger.info('pos', 'Comanda transmitida a Caja Principal para impresión en POS-COMANDAS')
+        } catch (syncErr) {
+          logger.warn('pos', 'Error transmitiendo comanda a Caja Principal:', syncErr as any)
+        }
+      }
+
+      alert(`✅ Comanda enviada a cocina (${locLabel})`)
+      clearDraftForTable(currentLoc)
+      setCurrentTable(0)
+      setShowCartDrawer(false)
+    } catch (err: any) {
+      alert(`❌ Error enviando comanda: ${err?.message || err}`)
+    } finally {
+      setSending(false)
+    }
+  }
 
   // Sincronización en vivo con Terminal Clip Total 3
   useEffect(() => {
@@ -289,16 +360,89 @@ export default function POS() {
     return () => unsub()
   }, [showPaymentModal, cartItems, currentLoc, cartSubtotal, stationId])
 
+  // 🖨️ Auto-impresión en Estación Central (Caja Principal con POS-COMANDAS)
+  useEffect(() => {
+    if (!hasPhysicalPrinter) return
+
+    const unsubKitchen = terminalSyncService.on('kitchen_order_print', async (payload: KitchenOrderPrintPayload) => {
+      logger.info('pos', '📥 Comanda remota recibida desde iPad/móvil:', payload)
+      if (payload.originStation === stationId) return
+
+      try {
+        const html = buildKitchenTicketHTML({
+          orderId: payload.orderId,
+          locationLabel: payload.locationLabel,
+          dateStr: new Date(payload.timestamp || Date.now()).toLocaleString('es-MX'),
+          waiterName: payload.waiterName || 'Personal de Servicio',
+          notes: payload.notes,
+          items: payload.items,
+          tenant,
+        })
+        await printService.printKitchenTicket(html, {
+          title: `Comanda ${payload.locationLabel}`,
+          width: 58,
+        })
+        logger.info('pos', `✅ Comanda remota de ${payload.locationLabel} impresa en POS-COMANDAS`)
+      } catch (err) {
+        logger.error('pos', 'Error al imprimir comanda remota:', err as any)
+      }
+    })
+
+    const unsubReceipt = terminalSyncService.on('receipt_print', async (payload: ReceiptPrintPayload) => {
+      logger.info('pos', '📥 Ticket remoto recibido desde iPad/móvil:', payload)
+      if (payload.originStation === stationId) return
+
+      try {
+        const html = buildTicketHTML({
+          title: 'TICKET DE COMPRA',
+          ticketFolio: payload.ticketFolio,
+          locationLabel: payload.locationLabel,
+          dateStr: new Date(payload.timestamp || Date.now()).toLocaleString('es-MX'),
+          cashierName: payload.cashierName,
+          customNotes: payload.customNotes,
+          items: payload.items,
+          subtotal: payload.subtotal,
+          finalTotal: payload.finalTotal,
+          paymentMethod: payload.paymentMethod,
+          cashReceived: payload.cashReceived,
+          changeAmount: payload.changeAmount,
+          adjustmentReason: payload.adjustmentReason,
+          discountAmount: payload.discountAmount,
+          discountType: payload.discountType,
+          discountName: payload.discountName,
+          tenant,
+        })
+        await printService.printReceipt(html, {
+          title: `Ticket de Venta ${payload.ticketFolio}`,
+          width: 58,
+        })
+        logger.info('pos', `✅ Ticket de venta ${payload.ticketFolio} auto-impreso en POS-COMANDAS`)
+      } catch (err) {
+        logger.error('pos', 'Error al auto-imprimir ticket remoto:', err as any)
+      }
+    })
+
+    return () => {
+      unsubKitchen()
+      unsubReceipt()
+    }
+  }, [hasPhysicalPrinter, stationId, tenant])
+
   // ⚡ Disparar Cobro Directo a la Terminal Clip Total 3 vía PinPad Cloud API
   const handleTriggerClipPinpad = async () => {
     if (cartItems.length === 0 || isPinpadLoading || isProcessingPayment) return
 
+    pinpadAbortRef.current = false
     const originalTotal = cartSubtotal
-    const isAdjusted = canAdjustSale && enablePriceAdjustment && parseFloat(adjustedTotal) >= 0 && parseFloat(adjustedTotal) !== originalTotal
-    const finalTotal = isAdjusted ? parseFloat(adjustedTotal) : originalTotal
+    const ffDiscount = Math.round(cartSubtotal * 0.10 * 100) / 100
+    const isCustomAdjusted = canAdjustSale && enablePriceAdjustment && parseFloat(adjustedTotal) >= 0 && parseFloat(adjustedTotal) !== originalTotal
+    const isAdjusted = isCustomAdjusted || applyFriendsAndFamily
+    const finalTotal = isCustomAdjusted
+      ? parseFloat(adjustedTotal)
+      : (applyFriendsAndFamily ? Math.max(0, originalTotal - ffDiscount) : originalTotal)
 
     setIsPinpadLoading(true)
-    setPinpadStatusMsg('Conectando con la nube de Clip PinPad...')
+    setPinpadStatusMsg('Conectando con la terminal física Clip Total 3...')
 
     try {
       const saleId = `LOC-${Date.now().toString().slice(-6)}`
@@ -307,7 +451,7 @@ export default function POS() {
       if (res.code || res.message) {
         if (res.code === 'ERR10_03') {
           alert(`⚠️ Clip PinPad API: La terminal física con S/N ${clipPinpadService.getSerialNumber()} aún no está activa en modo PinPad por Soporte de Clip.\n\n` +
-                `Pide al soporte de Clip que activen este número de serie en modo PinPad. Mientras tanto, puedes cobrar directamente ingresando los $${finalTotal.toFixed(2)} en la app de Clip y confirmar el cobro abajo.`)
+                `Pide al soporte de Clip que activen este número de serie en modo PinPad. Mientras tanto, puedes cobrar directamente ingresando los $${finalTotal.toFixed(2)} en la app de Clip y confirmar el cobro abajo con "Omitir terminal".`)
           setPinpadStatusMsg('Terminal pendiente de activar por Soporte de Clip')
         } else {
           alert(`⚠️ Error Clip PinPad: ${res.message || res.name || 'Error en comunicación con Clip'}`)
@@ -317,16 +461,25 @@ export default function POS() {
       }
 
       if (res.pinpad_request_id) {
-        setPinpadStatusMsg(`💳 ¡Orden enviada a Clip Total! Folio: ${res.pinpad_request_id.slice(-6).toUpperCase()}`)
+        setPinpadStatusMsg(`💳 ¡Orden enviada a Clip Total! Esperando tarjeta ($${finalTotal.toFixed(2)} MXN)...`)
 
         try {
-          const statusRes = await clipPinpadService.pollPayment(res.pinpad_request_id, (st) => {
-            if (st === 'PENDING') {
-              setPinpadStatusMsg('💳 Esperando tarjeta en Clip Total 3...')
-            } else if (st === 'IN_PROCESS') {
-              setPinpadStatusMsg('⏳ Tarjeta detectada. Procesando en terminal Clip...')
-            }
-          })
+          const statusRes = await clipPinpadService.pollPayment(
+            res.pinpad_request_id,
+            (st) => {
+              if (pinpadAbortRef.current) {
+                throw new Error('Cobro cancelado por el cajero')
+              }
+              if (st === 'PENDING') {
+                setPinpadStatusMsg(`💳 Esperando que el cliente acerque, deslice o inserte tarjeta en Clip Total 3...`)
+              } else if (st === 'IN_PROCESS') {
+                setPinpadStatusMsg('⏳ Tarjeta detectada. Procesando transacción con el banco...')
+              } else {
+                setPinpadStatusMsg(`Terminal Clip: ${st}...`)
+              }
+            },
+            90
+          )
 
           if (statusRes.status === 'PAID' || statusRes.status === 'APPROVED') {
             setPinpadStatusMsg('✅ ¡Pago aprobado con éxito en Clip Total 3!')
@@ -338,8 +491,12 @@ export default function POS() {
           }
         } catch (pollErr: any) {
           const msg = pollErr?.message || 'Pago no completado en la terminal'
-          setPinpadStatusMsg(`❌ ${msg}`)
-          alert(`⚠️ ${msg}`)
+          if (msg.includes('cancelado')) {
+            setPinpadStatusMsg('❌ Cobro cancelado')
+          } else {
+            setPinpadStatusMsg(`❌ ${msg}`)
+            alert(`⚠️ ${msg}`)
+          }
         }
       }
     } catch (err: any) {
@@ -355,17 +512,25 @@ export default function POS() {
     if (!currentUser || cartItems.length === 0 || isProcessingPayment) return
 
     const originalTotal = cartSubtotal
-    const isAdjusted = canAdjustSale && enablePriceAdjustment && parseFloat(adjustedTotal) >= 0 && parseFloat(adjustedTotal) !== originalTotal
-    const finalTotal = isAdjusted ? parseFloat(adjustedTotal) : originalTotal
+    const ffDiscount = Math.round(cartSubtotal * 0.10 * 100) / 100
+    const isCustomAdjusted = canAdjustSale && enablePriceAdjustment && parseFloat(adjustedTotal) >= 0 && parseFloat(adjustedTotal) !== originalTotal
+    const isAdjusted = isCustomAdjusted || applyFriendsAndFamily
+    const finalTotal = isCustomAdjusted
+      ? parseFloat(adjustedTotal)
+      : (applyFriendsAndFamily ? Math.max(0, originalTotal - ffDiscount) : originalTotal)
+    const discountAmount = isAdjusted ? (originalTotal - finalTotal) : 0
+    const effectiveReason = applyFriendsAndFamily && !adjustmentReason.trim()
+      ? 'Descuento Friends & Family (10%)'
+      : adjustmentReason.trim()
 
-    if (isAdjusted && !adjustmentReason.trim()) {
-      alert('⚠️ Para realizar un ajuste al total de la venta, es OBLIGATORIO ingresar el motivo en el apartado de notas.')
+    if (isCustomAdjusted && !adjustmentReason.trim()) {
+      alert('⚠️ Para realizar un ajuste manual al total de la venta, es OBLIGATORIO ingresar el motivo en el apartado de notas.')
       return
     }
 
     const received = parseFloat(cashReceived) || finalTotal
     if (paymentMethod === 'cash' && received < finalTotal) {
-      alert(`⚠️ El monto recibido ($${received}) es menor al total a pagar ($${finalTotal}).`)
+      alert(`⚠️ El monto recibido ($${received.toFixed(2)}) es menor al total a pagar ($${finalTotal.toFixed(2)}).`)
       return
     }
 
@@ -373,20 +538,23 @@ export default function POS() {
     try {
       const locLabel = tableLocations.find(l => l.id === currentLoc)?.label || `Mesa ${currentLoc}`
 
-      // Si hubo ajuste por Admin/Capitán, registrar en audit_logs de Supabase
+      // Si hubo ajuste por Admin/Capitán o descuento Friends & Family, registrar en audit_logs de Supabase
       if (isAdjusted) {
         try {
           await supabaseService.logAudit({
             organization_id: supabaseService.getCurrentOrgId(),
             user_id: currentUser.id,
-            action: 'SALE_AMOUNT_ADJUSTED',
+            action: applyFriendsAndFamily ? 'DISCOUNT_APPLIED' : 'SALE_AMOUNT_ADJUSTED',
             table_name: 'sales',
             record_id: `pos-${currentLoc}-${Date.now()}`,
             changes: {
+              discountType: applyFriendsAndFamily ? 'FRIENDS_AND_FAMILY' : 'CUSTOM_ADJUSTMENT',
+              discountPercentage: applyFriendsAndFamily ? 10 : undefined,
+              discountAmount,
               originalTotal,
               adjustedTotal: finalTotal,
               difference: finalTotal - originalTotal,
-              reason: adjustmentReason.trim(),
+              reason: effectiveReason,
               authorizedBy: currentUser.username || currentUser.name,
               role: currentUser.role,
               location: locLabel,
@@ -404,7 +572,7 @@ export default function POS() {
         tableNumber: currentLoc,
         items: cartItems,
         subtotal: finalTotal,
-        discounts: isAdjusted ? originalTotal - finalTotal : 0,
+        discounts: discountAmount,
         tax: 0,
         total: finalTotal,
         paymentMethod: paymentMethod === 'card' ? 'clip' : paymentMethod === 'transfer' ? 'digital' : 'cash',
@@ -415,37 +583,68 @@ export default function POS() {
       } as any)
 
       // 2. Imprimir ticket de venta oficial (con logo y banner Powered by Reisbloc IA)
-      try {
-        const ticketFolio = `LOC-${Date.now().toString().slice(-6)}`
-        const dateStr = new Date().toLocaleString('es-MX')
-        const changeAmount = paymentMethod === 'cash' ? Math.max(0, received - finalTotal) : 0
+      const ticketFolio = `LOC-${Date.now().toString().slice(-6)}`
+      const dateStr = new Date().toLocaleString('es-MX')
+      const changeAmount = paymentMethod === 'cash' ? Math.max(0, received - finalTotal) : 0
+      const ticketItems = cartItems.map(item => ({
+        quantity: item.quantity,
+        productName: item.productName,
+        unitPrice: item.unitPrice,
+        notes: item.notes,
+      }))
 
-        const html = buildTicketHTML({
-          title: 'TICKET DE COMPRA',
-          ticketFolio,
-          locationLabel: locLabel,
-          dateStr,
-          cashierName: currentUser.username || currentUser.name || `Personal ${tenant.clientName}`,
-          customNotes: posTicketNotes.trim(),
-          items: cartItems.map(item => ({
-            quantity: item.quantity,
-            productName: item.productName,
-            unitPrice: item.unitPrice,
-            notes: item.notes,
-          })),
-          subtotal: originalTotal,
-          finalTotal,
-          paymentMethod,
-          cashReceived: paymentMethod === 'cash' ? received : undefined,
-          changeAmount: paymentMethod === 'cash' ? changeAmount : undefined,
-          adjustmentReason: isAdjusted ? adjustmentReason.trim() : undefined,
-          discountAmount: isAdjusted ? (originalTotal - finalTotal) : 0,
-          tenant,
-        })
+      if (hasPhysicalPrinter) {
+        // Estación con impresora conectada directamente (Caja Principal)
+        try {
+          const html = buildTicketHTML({
+            title: 'TICKET DE COMPRA',
+            ticketFolio,
+            locationLabel: locLabel,
+            dateStr,
+            cashierName: currentUser.username || currentUser.name || `Personal ${tenant.clientName}`,
+            customNotes: posTicketNotes.trim(),
+            items: ticketItems,
+            subtotal: originalTotal,
+            finalTotal,
+            paymentMethod,
+            cashReceived: paymentMethod === 'cash' ? received : undefined,
+            changeAmount: paymentMethod === 'cash' ? changeAmount : undefined,
+            adjustmentReason: isAdjusted ? effectiveReason : undefined,
+            discountAmount,
+            discountType: applyFriendsAndFamily ? 'FRIENDS_AND_FAMILY' : undefined,
+            discountName: applyFriendsAndFamily ? 'Friends & Family (10%)' : undefined,
+            tenant,
+          })
 
-        await printService.printReceipt(html, { title: `Ticket de Venta ${ticketFolio}`, width: 58 })
-      } catch (printErr) {
-        logger.warn('pos', 'Error imprimiendo ticket de venta:', printErr as any)
+          await printService.printReceipt(html, { title: `Ticket de Venta ${ticketFolio}`, width: 58 })
+        } catch (printErr) {
+          logger.warn('pos', 'Error imprimiendo ticket de venta localmente:', printErr as any)
+        }
+      } else {
+        // Estación remota (iPad / móvil) -> retransmitir a Caja Principal para impresión física sin abrir diálogos AirPrint
+        try {
+          await terminalSyncService.sendReceiptPrint({
+            ticketFolio,
+            locationLabel: locLabel,
+            cashierName: currentUser.username || currentUser.name || `Personal ${tenant.clientName}`,
+            customNotes: posTicketNotes.trim() || undefined,
+            items: ticketItems,
+            subtotal: originalTotal,
+            finalTotal,
+            paymentMethod,
+            cashReceived: paymentMethod === 'cash' ? received : undefined,
+            changeAmount: paymentMethod === 'cash' ? changeAmount : undefined,
+            adjustmentReason: isAdjusted ? effectiveReason : undefined,
+            discountAmount,
+            discountType: applyFriendsAndFamily ? 'FRIENDS_AND_FAMILY' : undefined,
+            discountName: applyFriendsAndFamily ? 'Friends & Family (10%)' : undefined,
+            timestamp: new Date().toISOString(),
+            originStation: stationId,
+          })
+          logger.info('pos', 'Ticket de venta retransmitido a Caja Principal para impresión en POS-COMANDAS')
+        } catch (syncErr) {
+          logger.warn('pos', 'Error retransmitiendo ticket a Caja Principal:', syncErr as any)
+        }
       }
 
       // 3. Limpiar borrador de la mesa y resetear a Caja / Mostrador
@@ -458,6 +657,7 @@ export default function POS() {
       setAdjustmentReason('')
       setPosTicketNotes('')
       setEnablePriceAdjustment(false)
+      setApplyFriendsAndFamily(false)
       setShowChangeCalculator(false)
       await terminalSyncService.resetTerminal()
       if (terminalDetails?.terminalApproved) {
@@ -474,12 +674,13 @@ export default function POS() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-28 select-none">
-      {/* Header de Ubicaciones Simétrico y Elegante (Localito, Caja, Mesas, Periqueras, Barra, Llevar) */}
-      <header className="bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 py-3 px-2 shadow-md w-full">
-        <div className="w-full flex items-center justify-center">
-          <div className="flex items-center justify-start md:justify-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full px-2 scroll-smooth">
+      {/* Header de Ubicaciones Justificado a la Izquierda + Opciones (Impresora & Organizar) Justificadas a la Derecha */}
+      <header className="bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 py-2.5 px-3 shadow-md w-full">
+        <div className="max-w-7xl 2xl:max-w-[1720px] mx-auto flex items-center justify-between gap-3">
+          {/* Lado Izquierdo: Marca + Ubicaciones (Caja, Mesas 1-11, Periqueras 1-3, Barra, Llevar) alineadas a la izquierda */}
+          <div className="flex items-center justify-start gap-2 overflow-x-auto no-scrollbar py-0.5 scroll-smooth min-w-0">
             {/* Badge de Marca / Localito */}
-            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-amber-500/30 text-amber-300 text-xs font-black whitespace-nowrap flex-shrink-0 shadow-sm">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-amber-500/30 text-amber-300 text-xs font-black whitespace-nowrap flex-shrink-0 shadow-sm">
               {tenant.logoUrl ? (
                 <img 
                   src={tenant.logoUrl} 
@@ -496,7 +697,7 @@ export default function POS() {
 
             <div className="h-5 w-px bg-slate-800 shrink-0 mx-0.5" />
 
-            {/* Ubicaciones: Caja, Mesas 1-12, Periqueras 1-4, Barra, Llevar */}
+            {/* Ubicaciones: Caja, Mesas 1-11, Periqueras 1-3, Barra, Llevar */}
             {tableLocations.map((loc) => {
               const isSelected = currentLoc === loc.id
               const isPeriquera = loc.id >= 21 && loc.id <= 29
@@ -520,7 +721,7 @@ export default function POS() {
                   key={loc.id}
                   onClick={() => setCurrentTable(loc.id)}
                   title={loc.label}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 active:scale-95 ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 active:scale-95 ${
                     isSelected
                       ? isCaja
                         ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black shadow-lg shadow-emerald-500/25 scale-105 ring-1 ring-emerald-400'
@@ -542,34 +743,95 @@ export default function POS() {
               )
             })}
           </div>
+
+          {/* Lado Derecho: Controles de Estación (Impresora & Organizar) */}
+          <div className="flex items-center justify-end gap-2 flex-shrink-0">
+            {/* Indicador / Switch de Impresora Física vs Remota (iPad) */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextVal = !hasPhysicalPrinter
+                setHasPhysicalPrinter(nextVal)
+                localStorage.setItem('reisbloc_has_physical_printer', String(nextVal))
+              }}
+              title={
+                hasPhysicalPrinter
+                  ? 'Impresora física conectada directamente en esta estación (Caja Principal). Clic para cambiar a modo iPad/Remoto.'
+                  : 'Modo iPad / Móvil: Las comandas y tickets se envían a la Caja Principal sin abrir ventanas de impresión en iOS. Clic para cambiar.'
+              }
+              className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 shadow-md active:scale-95 ${
+                hasPhysicalPrinter
+                  ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/60'
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+            >
+              <span>{hasPhysicalPrinter ? '🖨️' : '📡'}</span>
+              <span className="hidden lg:inline">
+                {hasPhysicalPrinter ? 'Impresora: Caja' : 'Impresora: iPad'}
+              </span>
+            </button>
+
+            {/* Botón para organizar categorías */}
+            <button
+              type="button"
+              onClick={() => setShowCategoryOrderModal(true)}
+              title="Personalizar orden de categorías (mover bebidas al final, etc.)"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 text-slate-400 hover:text-amber-400 text-xs font-bold transition-all flex items-center gap-1.5 shadow-md active:scale-95"
+            >
+              <SlidersHorizontal size={14} className="text-amber-400" />
+              <span className="hidden lg:inline">Organizar</span>
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* Espacio de Categorías Más Amplio, Simétrico y Elegante */}
-      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 py-3 px-2 shadow-xl w-full">
-        <div className="w-full flex items-center justify-center">
-          <div className="flex items-center justify-start md:justify-center gap-2 overflow-x-auto no-scrollbar py-0.5 w-full px-2 scroll-smooth">
-            {categories.map((cat) => (
+      {/* Espacio de Categorías Limpio, Amplio y con Desplazamiento Fluido */}
+      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 py-2.5 px-3 shadow-xl w-full">
+        <div className="max-w-7xl 2xl:max-w-[1720px] mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 scroll-smooth">
+          {categories.map((cat) => {
+            const upperCat = cat.toUpperCase()
+            const isSelected = selectedCategory.toUpperCase() === upperCat
+            return (
               <button
                 key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all active:scale-95 ${
-                  selectedCategory.toLowerCase() === cat.toLowerCase()
+                onClick={() => setSelectedCategory(upperCat)}
+                className={`px-4 py-2 rounded-xl text-xs font-black tracking-wide whitespace-nowrap flex-shrink-0 transition-all active:scale-95 ${
+                  isSelected
                     ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg shadow-teal-900/40 scale-105 ring-1 ring-teal-400/40'
                     : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
                 }`}
               >
-                {cat}
+                {upperCat}
               </button>
-            ))}
-          </div>
+            )
+          })}
         </div>
       </div>
+
 
       {/* Grid de Productos Interactivo (Optimizado para caber más en pantallas de escritorio) */}
       <main className="max-w-7xl 2xl:max-w-[1720px] mx-auto px-3 sm:px-4 mt-4 md:mt-6">
         {loading ? (
           <div className="text-center py-16 text-slate-400 font-bold">Cargando menú de platillos...</div>
+        ) : products.length === 0 ? (
+          <div className="text-center py-20 bg-slate-900/40 rounded-3xl border border-slate-800/80 p-8 max-w-lg mx-auto">
+            <Utensils className="w-12 h-12 text-teal-400 mx-auto mb-3 opacity-60" />
+            <h3 className="text-lg font-bold text-white mb-1">Catálogo de Platillos Listo</h3>
+            <p className="text-xs text-slate-400 mb-5 leading-relaxed">
+              La base de datos de producción está limpia y conectada. Puedes agregar platillos desde el módulo de Inventario.
+            </p>
+            <Link
+              to="/inventory"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-bold shadow-lg shadow-teal-900/30 transition-all active:scale-95"
+            >
+              <Plus size={16} />
+              <span>Gestionar Inventario & Menú</span>
+            </Link>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-16 text-slate-400 font-bold">
+            No hay platillos en la categoría "{selectedCategory}".
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 md:gap-3 lg:gap-3.5">
             {filteredProducts.map((product) => {
@@ -600,11 +862,11 @@ export default function POS() {
 
                     {/* Content */}
                     <div className="p-3">
-                      <h3 className="text-xs sm:text-sm font-bold text-white group-hover:text-teal-300 transition-colors line-clamp-1" title={product.name}>
+                      <h3 className="text-xs sm:text-sm font-bold text-white group-hover:text-teal-300 transition-colors line-clamp-2 leading-snug" title={product.name}>
                         {product.name}
                       </h3>
                       {product.description && (
-                        <p className="text-[11px] md:text-[10px] text-slate-400 mt-0.5 line-clamp-1 leading-normal">
+                        <p className="text-[11px] md:text-[10px] text-slate-400 mt-0.5 line-clamp-2 leading-normal">
                           {product.description}
                         </p>
                       )}
@@ -802,7 +1064,10 @@ export default function POS() {
                 </p>
               </div>
               <button
-                onClick={() => setShowPaymentModal(false)}
+                onClick={() => {
+                  setShowPaymentModal(false)
+                  setApplyFriendsAndFamily(false)
+                }}
                 className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
               >
                 <X size={20} />
@@ -810,12 +1075,42 @@ export default function POS() {
             </div>
 
             {/* Total Display */}
-            <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 text-center">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total A Cobrar</div>
-              <div className="text-4xl font-black text-emerald-400 mt-1">
-                ${cartSubtotal.toFixed(2)} <span className="text-sm font-normal text-slate-400">MXN</span>
-              </div>
-            </div>
+            {(() => {
+              const ffDiscount = Math.round(cartSubtotal * 0.10 * 100) / 100
+              const isCustomAdjusted = canAdjustSale && enablePriceAdjustment && parseFloat(adjustedTotal) >= 0 && parseFloat(adjustedTotal) !== cartSubtotal
+              const currentTotal = isCustomAdjusted
+                ? parseFloat(adjustedTotal)
+                : (applyFriendsAndFamily ? Math.max(0, cartSubtotal - ffDiscount) : cartSubtotal)
+              const currentDiscount = Math.max(0, cartSubtotal - currentTotal)
+
+              return (
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-center space-y-1">
+                  {currentDiscount > 0 ? (
+                    <div>
+                      <div className="flex items-center justify-between text-xs text-slate-400 font-bold px-2">
+                        <span>Subtotal comanda:</span>
+                        <span className="line-through">${cartSubtotal.toFixed(2)} MXN</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-amber-400 font-black px-2 pb-1 border-b border-slate-800">
+                        <span>{applyFriendsAndFamily ? '🎁 Descuento Friends & Family (10%):' : 'Ajuste / Descuento:'}</span>
+                        <span>-${currentDiscount.toFixed(2)} MXN</span>
+                      </div>
+                      <div className="text-xs font-bold text-slate-300 uppercase tracking-wider pt-1.5">Total A Cobrar</div>
+                      <div className="text-3xl font-black text-amber-400">
+                        ${currentTotal.toFixed(2)} <span className="text-sm font-normal text-slate-400">MXN</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total A Cobrar</div>
+                      <div className="text-4xl font-black text-emerald-400 mt-1">
+                        ${cartSubtotal.toFixed(2)} <span className="text-sm font-normal text-slate-400">MXN</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Select Método de Pago */}
             <div className="space-y-2">
@@ -913,32 +1208,50 @@ export default function POS() {
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                     <p className="font-black text-sm text-white">Clip Total 3 (PinPad)</p>
                   </div>
-                  <span className="text-[10px] font-mono text-teal-300 bg-teal-950 px-2 py-0.5 rounded border border-teal-800">
-                    S/N: {clipPinpadService.getSerialNumber()}
-                  </span>
-                </div>
-
-                <div className="flex flex-col gap-2">
                   <button
                     type="button"
-                    onClick={handleTriggerClipPinpad}
-                    disabled={isPinpadLoading || isProcessingPayment}
-                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-xl shadow-amber-500/20 active:scale-98 transition-all disabled:opacity-50"
+                    onClick={() => {
+                      const cur = clipPinpadService.getSerialNumber()
+                      const val = prompt('Número de Serie (S/N) de la Terminal Clip Total 3:', cur)
+                      if (val && val.trim()) {
+                        clipPinpadService.setSerialNumber(val.trim())
+                        setPinpadStatusMsg(`Terminal configurada con S/N: ${val.trim()}`)
+                      }
+                    }}
+                    title="Clic para cambiar o verificar el número de serie de la terminal"
+                    className="text-[10px] font-mono text-teal-300 bg-teal-950 hover:bg-teal-900 px-2 py-0.5 rounded border border-teal-800 cursor-pointer transition-colors flex items-center gap-1"
                   >
-                    <Smartphone size={16} />
-                    <span>{isPinpadLoading ? 'Enviando a Terminal Clip...' : '⚡ Disparar Cobro en Clip Total 3'}</span>
+                    <span>S/N: {clipPinpadService.getSerialNumber()}</span>
+                    <Edit size={10} className="text-teal-400" />
                   </button>
-
-                  {pinpadStatusMsg && (
-                    <div className="bg-slate-950/90 p-2.5 rounded-xl border border-amber-500/40 text-center text-amber-300 font-bold text-xs animate-pulse">
-                      {pinpadStatusMsg}
-                    </div>
-                  )}
                 </div>
 
-                <div className="text-[11px] text-slate-400 text-center border-t border-slate-800/80 pt-2 space-y-1">
-                  <p>También puedes ingresar el monto manualmente en la app de Clip.</p>
-                  <p className="text-[10px] text-slate-500">Al aprobar la transacción en Clip, presiona el botón verde inferior.</p>
+
+                <div className="space-y-2">
+                  {pinpadStatusMsg ? (
+                    <div className="bg-slate-950/90 p-3 rounded-xl border border-amber-500/50 text-center space-y-1">
+                      <div className="text-amber-300 font-black text-xs animate-pulse">
+                        {pinpadStatusMsg}
+                      </div>
+                      {isPinpadLoading && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            pinpadAbortRef.current = true
+                            setIsPinpadLoading(false)
+                            setPinpadStatusMsg('Cobro cancelado')
+                          }}
+                          className="mt-1 px-3 py-1 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/40 rounded-lg text-[10px] font-bold transition-all"
+                        >
+                          ✕ Cancelar cobro en Clip
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-slate-950/60 p-2.5 rounded-xl border border-teal-500/20 text-center text-teal-300 text-[11px] font-medium">
+                      ✓ Terminal física Clip Total 3 lista. Al presionar el botón de cobro abajo se mandará la orden automáticamente.
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -951,6 +1264,46 @@ export default function POS() {
                 </p>
               </div>
             )}
+
+            {/* Descuento Especial: Friends & Family (10%) */}
+            <div className={`p-3.5 rounded-2xl border transition-all ${
+              applyFriendsAndFamily 
+                ? 'bg-amber-950/40 border-amber-500/60 shadow-lg shadow-amber-950/30' 
+                : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+            }`}>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black text-amber-400 flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={applyFriendsAndFamily}
+                    onChange={(e) => {
+                      const checked = e.target.checked
+                      setApplyFriendsAndFamily(checked)
+                      if (checked) {
+                        setEnablePriceAdjustment(false)
+                        setAdjustedTotal('')
+                      }
+                    }}
+                    className="rounded text-amber-500 focus:ring-0 w-4 h-4 cursor-pointer"
+                  />
+                  <span>🎁 Descuento Friends & Family (10%)</span>
+                </label>
+                {applyFriendsAndFamily ? (
+                  <span className="text-[11px] font-black text-amber-300 bg-amber-900/60 border border-amber-600/50 px-2.5 py-0.5 rounded-full">
+                    -${(Math.round(cartSubtotal * 0.10 * 100) / 100).toFixed(2)} MXN
+                  </span>
+                ) : (
+                  <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800">
+                    Audit Log
+                  </span>
+                )}
+              </div>
+              {applyFriendsAndFamily && (
+                <p className="text-[11px] text-amber-200/90 mt-1.5 pl-6 font-medium">
+                  ✓ Descuento del 10% aplicado automáticamente. Se registra en el log de auditoría del sistema y se reflejará en el corte de caja y reportes.
+                </p>
+              )}
+            </div>
 
             {/* Ajuste de Venta Exclusivo Admin & Capitán con Registro en LOG */}
             {canAdjustSale && (
@@ -1016,14 +1369,56 @@ export default function POS() {
             </div>
 
             {/* Confirmar Cobro */}
-            <button
-              onClick={() => handleConfirmPayment()}
-              disabled={isProcessingPayment}
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-2xl active:scale-98 transition-all disabled:opacity-50"
-            >
-              <CheckCircle2 size={20} />
-              <span>{isProcessingPayment ? 'Procesando Pago...' : 'Confirmar Cobro e Imprimir Ticket'}</span>
-            </button>
+            {paymentMethod === 'card' ? (
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleTriggerClipPinpad}
+                  disabled={isPinpadLoading || isProcessingPayment}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-2xl active:scale-98 transition-all disabled:opacity-50"
+                >
+                  <Smartphone size={20} />
+                  <span>
+                    {isPinpadLoading 
+                      ? (pinpadStatusMsg || 'Enviando a Terminal Clip...') 
+                      : `⚡ Cobrar en Clip Total 3 ($${(() => {
+                          const ff = Math.round(cartSubtotal * 0.10 * 100) / 100
+                          const custom = canAdjustSale && enablePriceAdjustment && parseFloat(adjustedTotal) >= 0 && parseFloat(adjustedTotal) !== cartSubtotal
+                          return (custom ? parseFloat(adjustedTotal) : (applyFriendsAndFamily ? Math.max(0, cartSubtotal - ff) : cartSubtotal)).toFixed(2)
+                        })()} MXN)`
+                    }
+                  </span>
+                </button>
+
+                <div className="text-center pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmPayment()}
+                    disabled={isPinpadLoading || isProcessingPayment}
+                    className="text-[11px] text-slate-400 hover:text-slate-200 underline font-medium transition-colors"
+                  >
+                    Omitir terminal (Registrar cobro manual / terminal independiente)
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleConfirmPayment()}
+                disabled={isProcessingPayment}
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-2xl active:scale-98 transition-all disabled:opacity-50"
+              >
+                <CheckCircle2 size={20} />
+                <span>
+                  {isProcessingPayment 
+                    ? 'Procesando Pago...' 
+                    : paymentMethod === 'cash' 
+                      ? 'Confirmar Cobro en Efectivo e Imprimir Ticket' 
+                      : 'Confirmar Transferencia SPEI e Imprimir Ticket'
+                  }
+                </span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -1045,6 +1440,17 @@ export default function POS() {
           product={recipeProduct as any}
         />
       )}
+
+      {/* Category Order Customization Modal */}
+      {showCategoryOrderModal && (
+        <CategoryOrderModal
+          isOpen={showCategoryOrderModal}
+          onClose={() => setShowCategoryOrderModal(false)}
+          currentCategories={categories}
+          onSave={handleSaveCategoryOrder}
+        />
+      )}
     </div>
   )
 }
+

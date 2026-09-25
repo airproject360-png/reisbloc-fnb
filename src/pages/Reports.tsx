@@ -554,21 +554,39 @@ export default function Reports() {
           <div className="space-y-6">
             {/* KPI Metrics Cards */}
             {metrics && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 {/* Total Ventas */}
                 <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 hover:border-emerald-500/40 rounded-3xl p-5 shadow-xl transition-all group">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-[11px] font-black text-emerald-400 uppercase tracking-wider">Total Ventas</span>
-                      <p className="text-3xl font-black text-white mt-1">
+                      <span className="text-[11px] font-black text-emerald-400 uppercase tracking-wider">Ventas Netas</span>
+                      <p className="text-2xl sm:text-3xl font-black text-white mt-1">
                         ${(metrics.totalSales || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                       <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-bold mt-1.5">
-                        <TrendingUp size={13} /> Facturación en Caja
+                        <TrendingUp size={13} /> Facturación Cobrada
                       </span>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
                       <DollarSign size={24} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Descuentos Otorgados (Friends & Family) */}
+                <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 hover:border-amber-500/40 rounded-3xl p-5 shadow-xl transition-all group">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Descuentos (F&F)</span>
+                      <p className="text-2xl sm:text-3xl font-black text-amber-300 mt-1">
+                        -${(metrics.totalDiscounts || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                      <span className="text-[11px] text-amber-200/90 font-bold mt-1.5 block">
+                        {metrics.discountCount || 0} cortesías y F&F
+                      </span>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+                      <Percent size={24} />
                     </div>
                   </div>
                 </div>
@@ -578,7 +596,7 @@ export default function Reports() {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-[11px] font-black text-teal-400 uppercase tracking-wider">Comandas Emitidas</span>
-                      <p className="text-3xl font-black text-white mt-1">
+                      <p className="text-2xl sm:text-3xl font-black text-white mt-1">
                         {metrics.totalOrders || metrics.transactionCount || 0}
                       </p>
                       <span className="text-[11px] text-slate-400 font-bold mt-1.5 block">
@@ -596,7 +614,7 @@ export default function Reports() {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Ticket Promedio</span>
-                      <p className="text-3xl font-black text-white mt-1">
+                      <p className="text-2xl sm:text-3xl font-black text-white mt-1">
                         ${(metrics.averageTicket || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                       <span className="text-[11px] text-amber-300/80 font-bold mt-1.5 block">
@@ -609,14 +627,14 @@ export default function Reports() {
                   </div>
                 </div>
 
-                {/* 4ta Métrica: Platillo Estrella en Localito (o Propinas si estuviera habilitado en otro tenant) */}
+                {/* 5ta Métrica: Platillo Estrella en Localito (o Propinas si estuviera habilitado en otro tenant) */}
                 <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 hover:border-indigo-500/40 rounded-3xl p-5 shadow-xl transition-all group">
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-[11px] font-black text-indigo-400 uppercase tracking-wider">
                         {tenant.enableTips ? 'Propinas Equipo' : 'Platillo Más Vendido'}
                       </span>
-                      <p className="text-2xl font-black text-white mt-1 truncate max-w-[180px]">
+                      <p className="text-xl sm:text-2xl font-black text-white mt-1 truncate max-w-[180px]">
                         {tenant.enableTips
                           ? `$${(metrics.totalTips || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
                           : (topProducts[0]?.name || 'Platillos del Menú')}

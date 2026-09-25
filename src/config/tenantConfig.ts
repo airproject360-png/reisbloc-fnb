@@ -27,11 +27,9 @@ export const LOCALITO_TABLE_LOCATIONS: TableLocation[] = [
   { id: 9, label: 'Mesa 9', shortLabel: '#9' },
   { id: 10, label: 'Mesa 10', shortLabel: '#10' },
   { id: 11, label: 'Mesa 11', shortLabel: '#11' },
-  { id: 12, label: 'Mesa 12', shortLabel: '#12' },
   { id: 21, label: 'Periquera 1', shortLabel: 'P1' },
   { id: 22, label: 'Periquera 2', shortLabel: 'P2' },
   { id: 23, label: 'Periquera 3', shortLabel: 'P3' },
-  { id: 24, label: 'Periquera 4', shortLabel: 'P4' },
   { id: 99, label: 'Barra', shortLabel: 'Barra' },
   { id: 100, label: 'Para Llevar / Delivery', shortLabel: 'Llevar' },
 ]

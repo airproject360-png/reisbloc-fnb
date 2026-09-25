@@ -73,6 +73,7 @@ export default function TableMonitor() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [showChangeCalculator, setShowChangeCalculator] = useState(false)
   const [enablePriceAdjustment, setEnablePriceAdjustment] = useState(false)
+  const [applyFriendsAndFamily, setApplyFriendsAndFamily] = useState(false)
   const [adjustedTotal, setAdjustedTotal] = useState<string>('')
   const [adjustmentReason, setAdjustmentReason] = useState<string>('')
   const [ticketNotes, setTicketNotes] = useState<string>('')
@@ -83,7 +84,7 @@ export default function TableMonitor() {
     ordersList: Order[],
     tableNumber: number,
     title = 'Cuenta',
-    paymentDetails?: { tip: number; total: number; method: string; adjustmentNote?: string },
+    paymentDetails?: { tip: number; total: number; method: string; adjustmentNote?: string; discountType?: string; discountName?: string },
     customNotes?: string
   ): string => {
     const allItems = ordersList.flatMap(o => o.items || [])
@@ -113,7 +114,9 @@ export default function TableMonitor() {
       })),
       subtotal: baseItemsTotal,
       cardFee,
-      discountAmount: paymentDetails?.adjustmentNote ? Math.max(0, totalWithFee - finalTotalToDisplay) : 0,
+      discountAmount: (paymentDetails?.adjustmentNote || paymentDetails?.discountType) ? Math.max(0, totalWithFee - finalTotalToDisplay) : 0,
+      discountType: paymentDetails?.discountType,
+      discountName: paymentDetails?.discountName,
       adjustmentReason: paymentDetails?.adjustmentNote,
       finalTotal: finalTotalToDisplay,
       paymentMethod: paymentDetails?.method,
@@ -330,11 +333,19 @@ export default function TableMonitor() {
     if (!currentUser || !fastPaymentData || isProcessingPayment) return
 
     const originalTotal = fastPaymentData.total
-    const isAdjusted = canAdjustSale && enablePriceAdjustment && parseFloat(adjustedTotal) >= 0 && parseFloat(adjustedTotal) !== originalTotal
-    const finalTotal = isAdjusted ? parseFloat(adjustedTotal) : originalTotal
+    const ffDiscount = Math.round(originalTotal * 0.10 * 100) / 100
+    const isCustomAdjusted = canAdjustSale && enablePriceAdjustment && parseFloat(adjustedTotal) >= 0 && parseFloat(adjustedTotal) !== originalTotal
+    const isAdjusted = isCustomAdjusted || applyFriendsAndFamily
+    const finalTotal = isCustomAdjusted
+      ? parseFloat(adjustedTotal)
+      : (applyFriendsAndFamily ? Math.max(0, originalTotal - ffDiscount) : originalTotal)
+    const discountAmount = isAdjusted ? (originalTotal - finalTotal) : 0
+    const effectiveReason = applyFriendsAndFamily && !adjustmentReason.trim()
+      ? 'Descuento Friends & Family (10%)'
+      : adjustmentReason.trim()
 
-    if (isAdjusted && !adjustmentReason.trim()) {
-      alert('⚠️ Para realizar un ajuste al total de la venta, es OBLIGATORIO ingresar el motivo en el apartado de notas.')
+    if (isCustomAdjusted && !adjustmentReason.trim()) {
+      alert('⚠️ Para realizar un ajuste manual al total de la venta, es OBLIGATORIO ingresar el motivo en el apartado de notas.')
       return
     }
 
@@ -352,20 +363,23 @@ export default function TableMonitor() {
       const allItems = ordersToProcess.flatMap(o => o.items || [])
       const mappedMethod = paymentMethod === 'card' ? 'card' : paymentMethod === 'transfer' ? 'transfer' : 'cash'
 
-      // Si hubo ajuste de precio por Admin/Capitán, registrar en audit_logs de Supabase
+      // Si hubo ajuste de precio por Admin/Capitán o descuento Friends & Family, registrar en audit_logs de Supabase
       if (isAdjusted) {
         try {
           await supabaseService.logAudit({
             organization_id: supabaseService.getCurrentOrgId(),
             user_id: currentUser.id,
-            action: 'SALE_AMOUNT_ADJUSTED',
+            action: applyFriendsAndFamily ? 'DISCOUNT_APPLIED' : 'SALE_AMOUNT_ADJUSTED',
             table_name: 'sales',
             record_id: `table-${tableNumber}`,
             changes: {
+              discountType: applyFriendsAndFamily ? 'FRIENDS_AND_FAMILY' : 'CUSTOM_ADJUSTMENT',
+              discountPercentage: applyFriendsAndFamily ? 10 : undefined,
+              discountAmount,
               originalTotal,
               adjustedTotal: finalTotal,
               difference: finalTotal - originalTotal,
-              reason: adjustmentReason.trim(),
+              reason: effectiveReason,
               authorizedBy: currentUser.username || currentUser.name,
               role: currentUser.role,
               tableNumber,
@@ -384,7 +398,7 @@ export default function TableMonitor() {
         tableNumber,
         items: allItems,
         subtotal: finalTotal,
-        discounts: isAdjusted ? originalTotal - finalTotal : 0,
+        discounts: discountAmount,
         tax: 0,
         total: finalTotal,
         paymentMethod: mappedMethod as any,
@@ -413,7 +427,9 @@ export default function TableMonitor() {
             tip: 0,
             total: finalTotal,
             method: mappedMethod,
-            adjustmentNote: isAdjusted ? adjustmentReason.trim() : undefined,
+            adjustmentNote: isAdjusted ? effectiveReason : undefined,
+            discountType: applyFriendsAndFamily ? 'FRIENDS_AND_FAMILY' : undefined,
+            discountName: applyFriendsAndFamily ? 'Friends & Family (10%)' : undefined,
           },
           ticketNotes.trim() || undefined
         )
@@ -432,6 +448,10 @@ export default function TableMonitor() {
       const tableDisplayName = getTableDisplayName(tableNumber)
       alert(`✅ Pago registrado exitosamente (${tableDisplayName} · $${finalTotal.toFixed(2)} MXN)`)
       setFastPaymentData(null)
+      setEnablePriceAdjustment(false)
+      setApplyFriendsAndFamily(false)
+      setAdjustedTotal('')
+      setAdjustmentReason('')
       await loadActiveOrders()
     } catch (err: any) {
       alert(`❌ Error procesando el pago: ${err?.message || err}`)
@@ -633,7 +653,10 @@ export default function TableMonitor() {
                   </span>
                 </div>
                 <button
-                  onClick={() => setFastPaymentData(null)}
+                  onClick={() => {
+                    setFastPaymentData(null)
+                    setApplyFriendsAndFamily(false)
+                  }}
                   className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800"
                 >
                   <XCircle size={20} />
@@ -641,12 +664,42 @@ export default function TableMonitor() {
               </div>
 
               {/* Total a Pagar */}
-              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-center">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total a Cobrar:</span>
-                <div className="text-3xl font-black text-emerald-400 mt-1">
-                  ${fastPaymentData.total.toFixed(2)} <span className="text-sm font-normal text-slate-300">MXN</span>
-                </div>
-              </div>
+              {(() => {
+                const ffDiscount = Math.round(fastPaymentData.total * 0.10 * 100) / 100
+                const isCustomAdjusted = canAdjustSale && enablePriceAdjustment && parseFloat(adjustedTotal) >= 0 && parseFloat(adjustedTotal) !== fastPaymentData.total
+                const currentTotal = isCustomAdjusted
+                  ? parseFloat(adjustedTotal)
+                  : (applyFriendsAndFamily ? Math.max(0, fastPaymentData.total - ffDiscount) : fastPaymentData.total)
+                const currentDiscount = Math.max(0, fastPaymentData.total - currentTotal)
+
+                return (
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-center space-y-1">
+                    {currentDiscount > 0 ? (
+                      <div>
+                        <div className="flex items-center justify-between text-xs text-slate-400 font-bold px-2">
+                          <span>Subtotal comanda:</span>
+                          <span className="line-through">${fastPaymentData.total.toFixed(2)} MXN</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-amber-400 font-black px-2 pb-1 border-b border-slate-800">
+                          <span>{applyFriendsAndFamily ? '🎁 Descuento Friends & Family (10%):' : 'Ajuste / Descuento:'}</span>
+                          <span>-${currentDiscount.toFixed(2)} MXN</span>
+                        </div>
+                        <div className="text-xs font-bold text-slate-300 uppercase tracking-wider pt-1.5">Total A Cobrar:</div>
+                        <div className="text-3xl font-black text-amber-400">
+                          ${currentTotal.toFixed(2)} <span className="text-sm font-normal text-slate-300">MXN</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total a Cobrar:</span>
+                        <div className="text-3xl font-black text-emerald-400 mt-1">
+                          ${fastPaymentData.total.toFixed(2)} <span className="text-sm font-normal text-slate-300">MXN</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
 
               {/* Selector Método de Pago */}
               <div>
@@ -714,6 +767,46 @@ export default function TableMonitor() {
                   )}
                 </div>
               )}
+
+              {/* Descuento Especial: Friends & Family (10%) */}
+              <div className={`p-3.5 rounded-2xl border transition-all ${
+                applyFriendsAndFamily 
+                  ? 'bg-amber-950/40 border-amber-500/60 shadow-lg shadow-amber-950/30' 
+                  : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-amber-400 flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={applyFriendsAndFamily}
+                      onChange={(e) => {
+                        const checked = e.target.checked
+                        setApplyFriendsAndFamily(checked)
+                        if (checked) {
+                          setEnablePriceAdjustment(false)
+                          setAdjustedTotal('')
+                        }
+                      }}
+                      className="rounded text-amber-500 focus:ring-0 w-4 h-4 cursor-pointer"
+                    />
+                    <span>🎁 Descuento Friends & Family (10%)</span>
+                  </label>
+                  {applyFriendsAndFamily ? (
+                    <span className="text-[11px] font-black text-amber-300 bg-amber-900/60 border border-amber-600/50 px-2.5 py-0.5 rounded-full">
+                      -${(Math.round(fastPaymentData.total * 0.10 * 100) / 100).toFixed(2)} MXN
+                    </span>
+                  ) : (
+                    <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800">
+                      Audit Log
+                    </span>
+                  )}
+                </div>
+                {applyFriendsAndFamily && (
+                  <p className="text-[11px] text-amber-200/90 mt-1.5 pl-6 font-medium">
+                    ✓ Descuento del 10% aplicado automáticamente. Se registra en auditoría y se reflejará en el corte de caja y reportes.
+                  </p>
+                )}
+              </div>
 
               {/* Ajuste de Venta Exclusivo Admin & Capitán con Registro en LOG */}
               {canAdjustSale && (

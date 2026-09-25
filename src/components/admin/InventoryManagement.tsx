@@ -100,9 +100,9 @@ export default function InventoryManagement() {
   const [categoriesList, setCategoriesList] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem('localito_categories')
-      if (stored) return JSON.parse(stored)
+      if (stored) return JSON.parse(stored).map((c: string) => c.toUpperCase().trim())
     } catch {}
-    return ['Quesadillas Maíz', 'Quesadillas Harina', 'Platos', 'Especialidades', 'Extras', 'Bebidas']
+    return ['QUESADILLAS MAÍZ', 'QUESADILLAS HARINA', 'PLATOS', 'ESPECIALIDADES', 'EXTRAS', 'BEBIDAS']
   })
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [newCatInput, setNewCatInput] = useState('')
@@ -165,9 +165,10 @@ export default function InventoryManagement() {
   }, [])
 
   const saveCategories = (newCats: string[]) => {
-    setCategoriesList(newCats)
+    const uppercaseCats = newCats.map(c => c.toUpperCase().trim())
+    setCategoriesList(uppercaseCats)
     try {
-      localStorage.setItem('localito_categories', JSON.stringify(newCats))
+      localStorage.setItem('localito_categories', JSON.stringify(uppercaseCats))
     } catch (e) {
       console.error('Error guardando categorías:', e)
     }
@@ -192,7 +193,7 @@ export default function InventoryManagement() {
   }
 
   const handleCreateInlineDishCat = () => {
-    const trimmed = inlineDishCatInput.trim()
+    const trimmed = inlineDishCatInput.trim().toUpperCase()
     if (!trimmed) return
     if (!categoriesList.includes(trimmed)) {
       saveCategories([...categoriesList, trimmed])
@@ -225,9 +226,9 @@ export default function InventoryManagement() {
   }
 
   const handleAddCategory = () => {
-    const trimmed = newCatInput.trim()
+    const trimmed = newCatInput.trim().toUpperCase()
     if (!trimmed) return
-    if (categoriesList.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+    if (categoriesList.some(c => c.toUpperCase() === trimmed)) {
       alert('Esta categoría ya existe.')
       return
     }
@@ -237,7 +238,7 @@ export default function InventoryManagement() {
   }
 
   const handleUpdateCategory = (oldName: string) => {
-    const trimmed = editCatInput.trim()
+    const trimmed = editCatInput.trim().toUpperCase()
     if (!trimmed || trimmed === oldName) {
       setEditingCatName(null)
       return

@@ -39,6 +39,7 @@ export default function Closing() {
   const [submitting, setSubmitting] = useState(false)
   const [closingData, setClosingData] = useState<any>(null)
   const [employeeMetrics, setEmployeeMetrics] = useState<any[]>([])
+  const [discountLogs, setDiscountLogs] = useState<any[]>([])
   const [confirmed, setConfirmed] = useState(false)
   const [notes, setNotes] = useState('')
   const [showAIModal, setShowAIModal] = useState(false)
@@ -57,8 +58,19 @@ export default function Closing() {
       const tomorrowUTC = new Date(todayUTC)
       tomorrowUTC.setUTCDate(tomorrowUTC.getUTCDate() + 1)
 
-      // Obtener ventas del día desde Supabase y calcular métricas localmente
-      const sales = await supabaseService.getSalesByDateRange(todayUTC, tomorrowUTC)
+      // Obtener ventas y logs de descuentos del día desde Supabase
+      const [sales, rawDiscountLogs] = await Promise.all([
+        supabaseService.getSalesByDateRange(todayUTC, tomorrowUTC),
+        supabaseService.getDiscountLogsByDateRange(todayUTC, tomorrowUTC)
+      ])
+
+      const totalDiscounts = (rawDiscountLogs || []).reduce((sum: number, log: any) => {
+        const changes = log.changes || {}
+        const disc = Number(changes.discountAmount || (changes.difference ? Math.abs(changes.difference) : 0) || 0)
+        return sum + Math.abs(disc)
+      }, 0)
+
+      setDiscountLogs(rawDiscountLogs || [])
 
       // Métricas generales de cierre
       const metrics = sales.reduce(
@@ -80,11 +92,14 @@ export default function Closing() {
           totalDigital: 0,
           totalClip: 0,
           totalTips: 0,
-          totalDiscounts: 0,
+          totalDiscounts,
+          discountCount: (rawDiscountLogs || []).length,
           transactionCount: 0,
           averageTicket: 0,
         }
       )
+      metrics.totalDiscounts = totalDiscounts
+      metrics.discountCount = (rawDiscountLogs || []).length
       metrics.averageTicket = metrics.transactionCount
         ? metrics.totalSales / metrics.transactionCount
         : 0
@@ -220,7 +235,8 @@ export default function Closing() {
     const total = closingData?.totalSales || 0
     const discounts = closingData?.totalDiscounts || 0
     const tips = tenant.enableTips ? (closingData?.totalTips || 0) : 0
-    const toDeposit = total - discounts + (tenant.enableTips ? tips : 0)
+    const grossTotal = total + discounts
+    const toDeposit = total + (tenant.enableTips ? tips : 0)
 
     return `
       <!DOCTYPE html>
@@ -251,17 +267,22 @@ export default function Closing() {
             <h1>🏪 ${tenant.clientName}</h1>
             <p>CIERRE DE CAJA OFICIAL</p>
             <p>${new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-            <p>Cajero: ${currentUser?.username}</p>
+            <p>Cajero: ${currentUser?.username || 'Caja'}</p>
           </div>
 
           <div class="section">
             <div class="line">
-              <span>Total Ventas:</span>
-              <strong>$${total.toFixed(2)}</strong>
+              <span>Venta Bruta:</span>
+              <strong>$${grossTotal.toFixed(2)}</strong>
             </div>
-            <div class="line">
-              <span>Descuentos:</span>
+            ${discounts > 0 ? `
+            <div class="line" style="color: #b45309;">
+              <span>Descuentos (F&F / Cortesías):</span>
               <strong>-$${discounts.toFixed(2)}</strong>
+            </div>` : ''}
+            <div class="line">
+              <span>Total Ventas Netas:</span>
+              <strong>$${total.toFixed(2)}</strong>
             </div>
             ${tenant.enableTips ? `
             <div class="line">
@@ -273,6 +294,24 @@ export default function Closing() {
               <span>$${toDeposit.toFixed(2)}</span>
             </div>
           </div>
+
+          ${discountLogs && discountLogs.length > 0 ? `
+          <div class="section">
+            <strong>DESCUENTOS OTORGADOS (${discountLogs.length})</strong>
+            ${discountLogs.map((log: any) => {
+              const ch = log.changes || {}
+              const amt = Number(ch.discountAmount || (ch.difference ? Math.abs(ch.difference) : 0) || 0)
+              const reas = ch.reason || (log.action === 'DISCOUNT_APPLIED' ? 'Friends & Family 10%' : 'Ajuste')
+              const loc = ch.location || `Mesa ${ch.tableNumber || ''}`
+              return `
+                <div class="line" style="font-size: 11px;">
+                  <span>${loc} (${reas}):</span>
+                  <strong>-$${amt.toFixed(2)}</strong>
+                </div>
+              `
+            }).join('')}
+          </div>
+          ` : ''}
 
           <div class="section">
             <strong>DESGLOSE DE PAGOS</strong>
@@ -396,27 +435,36 @@ export default function Closing() {
 
         {/* Summary Cards */}
         {closingData && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-lg">
-              <p className="text-white/80 text-sm font-medium">Total Ventas</p>
-              <p className="text-4xl font-bold mt-2">${closingData.totalSales?.toFixed(2)}</p>
+              <p className="text-white/80 text-sm font-medium">Venta Neta</p>
+              <p className="text-3xl font-bold mt-2">${closingData.totalSales?.toFixed(2)}</p>
+            </div>
+            <div className="bg-gradient-to-br from-amber-700 via-amber-800 to-stone-800 rounded-2xl p-6 text-white shadow-lg border border-amber-500/30">
+              <div className="flex items-center justify-between">
+                <p className="text-amber-200 text-sm font-medium">Descuentos (F&F)</p>
+                <span className="text-[10px] uppercase font-bold bg-amber-950 px-2 py-0.5 rounded-full border border-amber-500/40 text-amber-300">
+                  {closingData.discountCount || 0} cortesías
+                </span>
+              </div>
+              <p className="text-3xl font-black mt-2 text-amber-300">-${(closingData.totalDiscounts || 0).toFixed(2)}</p>
             </div>
             <div className="bg-gradient-to-br from-slate-800 to-slate-600 rounded-2xl p-6 text-white shadow-lg">
               <p className="text-white/80 text-sm font-medium">Comandas Emitidas</p>
-              <p className="text-4xl font-bold mt-2">{closingData.transactionCount || 0}</p>
+              <p className="text-3xl font-bold mt-2">{closingData.transactionCount || 0}</p>
             </div>
             {tenant.enableTips ? (
               <div className="bg-gradient-to-br from-teal-700 to-cyan-700 rounded-2xl p-6 text-white shadow-lg">
                 <p className="text-white/80 text-sm font-medium">Propinas</p>
-                <p className="text-4xl font-bold mt-2">${closingData.totalTips?.toFixed(2)}</p>
+                <p className="text-3xl font-bold mt-2">${closingData.totalTips?.toFixed(2)}</p>
               </div>
             ) : (
               <div className="bg-gradient-to-br from-teal-700 to-cyan-700 rounded-2xl p-6 text-white shadow-lg">
                 <p className="text-white/80 text-sm font-medium">Efectivo en Caja</p>
-                <p className="text-4xl font-bold mt-2">${(closingData.totalCash || 0).toFixed(2)}</p>
+                <p className="text-3xl font-bold mt-2">${(closingData.totalCash || 0).toFixed(2)}</p>
               </div>
             )}
-            <div className="bg-gradient-to-br from-amber-700 to-stone-700 rounded-2xl p-6 text-white shadow-lg">
+            <div className="bg-gradient-to-br from-stone-700 to-slate-800 rounded-2xl p-6 text-white shadow-lg">
               <p className="text-white/80 text-sm font-medium">Ticket Promedio</p>
               <p className="text-3xl font-bold mt-2">${closingData.averageTicket?.toFixed(2)}</p>
             </div>
@@ -458,12 +506,16 @@ export default function Closing() {
               <h3 className="text-xl font-bold text-slate-900">Resumen Financiero</h3>
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-3 border-b border-gray-200">
-                  <span className="text-gray-700">Subtotal</span>
-                  <span className="text-lg font-semibold">${(closingData.totalSales || 0).toFixed(2)}</span>
+                  <span className="text-gray-700 font-medium">Venta Bruta Total</span>
+                  <span className="text-lg font-semibold text-slate-800">${((closingData.totalSales || 0) + (closingData.totalDiscounts || 0)).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 border-b border-gray-200">
-                  <span className="text-gray-700">Descuentos</span>
-                  <span className="text-lg font-semibold text-red-600">-${(closingData.totalDiscounts || 0).toFixed(2)}</span>
+                  <span className="text-gray-700 font-medium">Descuentos Friends & Family / Cortesías ({closingData.discountCount || 0})</span>
+                  <span className="text-lg font-semibold text-amber-700">-${(closingData.totalDiscounts || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 border-b border-gray-200">
+                  <span className="text-gray-700 font-bold">Total Venta Neta</span>
+                  <span className="text-lg font-black text-emerald-700">${(closingData.totalSales || 0).toFixed(2)}</span>
                 </div>
                 {tenant.enableTips && (
                   <div className="flex justify-between items-center py-3 border-b border-slate-200">
@@ -474,7 +526,7 @@ export default function Closing() {
                 <div className="flex justify-between items-center py-4 bg-gradient-to-r from-slate-50 to-emerald-50 rounded-lg p-4 border border-slate-200">
                   <span className="font-bold text-slate-900">Total a Depositar</span>
                   <span className="text-2xl font-bold text-slate-900">
-                    ${((closingData.totalSales || 0) - (closingData.totalDiscounts || 0) + (tenant.enableTips ? (closingData.totalTips || 0) : 0)).toFixed(2)}
+                    ${((closingData.totalSales || 0) + (tenant.enableTips ? (closingData.totalTips || 0) : 0)).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -525,6 +577,73 @@ export default function Closing() {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Descuentos & Cortesías Auditados del Día */}
+        {discountLogs && discountLogs.length > 0 && (
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <span>🎁 Descuentos & Cortesías del Día</span>
+                  <span className="text-xs font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full">
+                    {discountLogs.length} aplicados
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">Registro de auditoría de descuentos Friends & Family y ajustes de venta</p>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-bold text-slate-500 block">Total Descontado en Caja:</span>
+                <span className="text-xl font-black text-rose-600">
+                  -${(closingData?.totalDiscounts || 0).toFixed(2)} MXN
+                </span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-100 text-slate-700">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-bold">Hora</th>
+                    <th className="px-4 py-3 text-left font-bold">Mesa / Ubicación</th>
+                    <th className="px-4 py-3 text-left font-bold">Tipo / Motivo</th>
+                    <th className="px-4 py-3 text-left font-bold">Autorizado Por</th>
+                    <th className="px-4 py-3 text-right font-bold">Subtotal Original</th>
+                    <th className="px-4 py-3 text-right font-bold text-rose-600">Descuento</th>
+                    <th className="px-4 py-3 text-right font-bold text-emerald-800">Total Cobrado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {discountLogs.map((log: any) => {
+                    const changes = log.changes || {}
+                    const disc = Number(changes.discountAmount || (changes.difference ? Math.abs(changes.difference) : 0) || 0)
+                    const orig = Number(changes.originalTotal || 0)
+                    const finalTot = Number(changes.adjustedTotal || (orig - disc))
+                    const reason = changes.reason || (log.action === 'DISCOUNT_APPLIED' ? 'Descuento Friends & Family (10%)' : 'Ajuste de comanda')
+                    const user = changes.authorizedBy || log.user_id || 'Personal'
+                    const loc = changes.location || `Mesa ${changes.tableNumber || ''}`
+                    const time = log.created_at ? new Date(log.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '--:--'
+
+                    return (
+                      <tr key={log.id} className="hover:bg-amber-50/50">
+                        <td className="px-4 py-3 font-mono text-slate-500">{time}</td>
+                        <td className="px-4 py-3 font-bold text-slate-900">{loc}</td>
+                        <td className="px-4 py-3">
+                          <span className="font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg inline-block">
+                            {reason}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700 font-medium">{user} ({changes.role || 'Caja'})</td>
+                        <td className="px-4 py-3 text-right font-mono text-slate-500">${orig.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right font-mono font-black text-rose-600">-${disc.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right font-mono font-black text-emerald-700">${finalTot.toFixed(2)}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

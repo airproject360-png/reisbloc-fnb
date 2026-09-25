@@ -165,7 +165,7 @@ export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGrid
 
               {/* Title and Price */}
               <div className="space-y-0.5">
-                <p className="text-xs sm:text-sm font-black text-slate-900 line-clamp-1 group-hover:text-amber-600 transition-colors" title={product.name}>
+                <p className="text-xs sm:text-sm font-black text-slate-900 line-clamp-2 leading-snug group-hover:text-amber-600 transition-colors" title={product.name}>
                   {product.name}
                 </p>
                 <div className="flex items-center justify-between">

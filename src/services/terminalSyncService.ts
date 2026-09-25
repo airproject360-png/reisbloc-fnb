@@ -45,6 +45,54 @@ export interface TerminalPaymentCompletedPayload {
   originStation?: string
 }
 
+export interface KitchenOrderPrintPayload {
+  orderId: string
+  tableNumber: number
+  locationLabel: string
+  waiterName?: string
+  notes?: string
+  items: Array<{
+    quantity: number
+    productName: string
+    notes?: string
+  }>
+  timestamp: string
+  originStation?: string
+}
+
+export interface ReceiptPrintPayload {
+  ticketFolio: string
+  locationLabel: string
+  cashierName?: string
+  customNotes?: string
+  items: Array<{
+    quantity: number
+    productName: string
+    unitPrice: number
+    notes?: string
+  }>
+  subtotal: number
+  finalTotal: number
+  paymentMethod: string
+  cashReceived?: number
+  changeAmount?: number
+  discountAmount?: number
+  discountType?: string
+  discountName?: string
+  adjustmentReason?: string
+  timestamp: string
+  originStation?: string
+}
+
+type TerminalSyncEvent =
+  | 'cart_update'
+  | 'payment_request'
+  | 'payment_completed'
+  | 'payment_cancelled'
+  | 'terminal_reset'
+  | 'kitchen_order_print'
+  | 'receipt_print'
+
 type EventCallback<T = any> = (payload: T) => void
 
 class TerminalSyncService {
@@ -85,7 +133,15 @@ class TerminalSyncService {
       },
     })
 
-    const events = ['cart_update', 'payment_request', 'payment_completed', 'payment_cancelled', 'terminal_reset']
+    const events: TerminalSyncEvent[] = [
+      'cart_update',
+      'payment_request',
+      'payment_completed',
+      'payment_cancelled',
+      'terminal_reset',
+      'kitchen_order_print',
+      'receipt_print',
+    ]
     events.forEach(eventName => {
       this.channel.on('broadcast', { event: eventName }, ({ payload }: { payload: any }) => {
         logger.info('terminal-sync', `[Broadcast IN] ${eventName}:`, payload)
@@ -200,6 +256,21 @@ class TerminalSyncService {
   }
 
   /**
+   * Envía comanda de cocina para impresión en la estación central (Caja Principal)
+   * Permite que iPads de meseros manden a cocina sin abrir ventanas en iOS
+   */
+  public async sendKitchenOrderPrint(payload: KitchenOrderPrintPayload) {
+    await this.broadcast('kitchen_order_print', payload)
+  }
+
+  /**
+   * Envía ticket de venta para impresión en la estación central (Caja Principal)
+   */
+  public async sendReceiptPrint(payload: ReceiptPrintPayload) {
+    await this.broadcast('receipt_print', payload)
+  }
+
+  /**
    * Restablece la terminal a la pantalla de reposo / bienvenida
    */
   public async resetTerminal() {
@@ -209,7 +280,7 @@ class TerminalSyncService {
   /**
    * Suscribe un callback a un evento específico
    */
-  public on(event: 'cart_update' | 'payment_request' | 'payment_completed' | 'payment_cancelled' | 'terminal_reset', callback: EventCallback): () => void {
+  public on(event: TerminalSyncEvent, callback: EventCallback): () => void {
     this.connect()
 
     if (!this.listeners.has(event)) {

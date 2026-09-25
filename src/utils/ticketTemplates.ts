@@ -19,6 +19,8 @@ export interface TicketOptions {
   subtotal?: number
   cardFee?: number
   discountAmount?: number
+  discountType?: string
+  discountName?: string
   adjustmentReason?: string
   finalTotal: number
   paymentMethod?: string
@@ -102,6 +104,8 @@ export function buildTicketHTML(options: TicketOptions): string {
     subtotal,
     cardFee = 0,
     discountAmount = 0,
+    discountType,
+    discountName,
     adjustmentReason,
     finalTotal,
     paymentMethod,
@@ -176,9 +180,16 @@ export function buildTicketHTML(options: TicketOptions): string {
           </div>
         ` : ''}
 
-        ${discountAmount > 0 ? `
+        ${discountAmount > 0 && discountType ? `
+          <!-- Banner Destacado de Descuento Oficial -->
+          <div style="border:2px dashed #000;border-radius:4px;padding:6px 4px;margin:6px 0;text-align:center;background:#fff;">
+            <div style="font-size:12px;font-weight:900;letter-spacing:1px;line-height:1.2;">*** DESCUENTO APLICADO ***</div>
+            <div style="font-size:10.5px;font-weight:900;margin-top:2px;letter-spacing:0.5px;text-transform:uppercase;">${discountName ? discountName.toUpperCase() : discountType.toUpperCase()}</div>
+            <div style="font-size:13px;font-weight:900;font-family:monospace;margin-top:2px;">-$${discountAmount.toFixed(2)} MXN</div>
+          </div>
+        ` : discountAmount > 0 ? `
           <div style="display:flex;justify-content:space-between;margin-bottom:2px;color:#444;">
-            <span>Descuento / Ajuste:</span>
+            <span>Ajuste / Descuento:</span>
             <span>-$${discountAmount.toFixed(2)} MXN</span>
           </div>
         ` : ''}
@@ -198,7 +209,7 @@ export function buildTicketHTML(options: TicketOptions): string {
           </div>
         ` : ''}
 
-        ${isAdjusted ? `
+        ${isAdjusted && !discountType ? `
           <div style="font-size:8px;color:#444;margin-top:3px;font-style:italic;">
             * Ajuste autorizado: ${adjustmentReason?.trim()}
           </div>
@@ -275,3 +286,65 @@ export function buildTerminalVoucherHTML(options: {
     </div>
   `
 }
+
+export interface KitchenTicketOptions {
+  orderId: string
+  locationLabel: string
+  dateStr?: string
+  waiterName?: string
+  notes?: string
+  items: Array<{
+    quantity: number
+    productName: string
+    notes?: string
+  }>
+  tenant?: TenantSettings
+}
+
+/**
+ * Genera el documento HTML de la comanda de cocina/barra en 58mm.
+ */
+export function buildKitchenTicketHTML(options: KitchenTicketOptions): string {
+  const {
+    orderId,
+    locationLabel,
+    dateStr = new Date().toLocaleString('es-MX'),
+    waiterName = 'Personal de Servicio',
+    notes,
+    items,
+    tenant,
+  } = options
+
+  return `
+    <div style="width:58mm;padding:2px 4px;font-family:-apple-system,BlinkMacSystemFont,'Courier New',monospace;font-size:11px;line-height:1.25;color:#000;box-sizing:border-box;">
+      <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:6px;">
+        <div style="font-weight:900;font-size:14px;letter-spacing:1px;text-transform:uppercase;">*** COMANDA DE COCINA ***</div>
+        <div style="font-size:12px;font-weight:900;margin-top:2px;">${tenant?.clientName || 'LOCALITO'} - ${locationLabel.toUpperCase()}</div>
+        <div style="font-size:9px;margin-top:2px;">Fecha: ${dateStr}</div>
+        <div style="font-size:9px;">Mesero: ${waiterName}</div>
+      </div>
+
+      <div style="border-bottom:1.5px solid #000;padding-bottom:6px;margin-bottom:6px;">
+        ${items.map(item => `
+          <div style="margin-bottom:6px;">
+            <div style="font-size:13px;font-weight:900;letter-spacing:0.5px;">
+              [ ${item.quantity}x ] ${item.productName}
+            </div>
+            ${item.notes ? `<div style="font-size:9.5px;font-weight:bold;background:#eee;padding:2px 4px;margin-top:2px;border-left:3px solid #000;">↳ NOTA: ${item.notes}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+
+      ${notes ? `
+        <div style="border:1px dashed #000;padding:4px;margin-bottom:6px;font-size:9px;">
+          <strong>Notas:</strong> ${notes}
+        </div>
+      ` : ''}
+
+      <div style="text-align:center;font-size:9.5px;font-weight:900;letter-spacing:1px;">
+        FOLIO: #${orderId.slice(-6).toUpperCase()}
+      </div>
+    </div>
+  `
+}
+
