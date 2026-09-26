@@ -950,6 +950,132 @@ class SupabaseService {
     }
   }
 
+  /**
+   * Actualiza el nombre de una categoría en la base de datos (Supabase) y en almacenamiento local.
+   * Actualiza todos los productos activos asociados.
+   */
+  async updateCategoryName(oldCategory: string, newCategory: string): Promise<boolean> {
+    const trimmedOld = oldCategory.trim()
+    const trimmedNew = newCategory.trim().toUpperCase()
+    if (!trimmedOld || !trimmedNew || trimmedOld.toUpperCase() === trimmedNew) return true
+
+    const orgId = this.getCurrentOrgId()
+
+    // 1. Actualizar inmediatamente en respaldo local
+    const currentBackup = this.getLocalProductsBackup()
+    const updatedBackup = currentBackup.map(p => {
+      if ((p.category || '').toUpperCase().trim() === trimmedOld.toUpperCase()) {
+        return { ...p, category: trimmedNew }
+      }
+      return p
+    })
+    this.saveLocalProductsBackup(updatedBackup)
+
+    // 2. Actualizar llaves en localStorage
+    try {
+      const orderKeys = ['localito_category_order', 'localito_categories']
+      orderKeys.forEach(key => {
+        const stored = localStorage.getItem(key)
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed)) {
+            const updated = parsed
+              .map(c => c.toUpperCase().trim() === trimmedOld.toUpperCase() ? trimmedNew : c.toUpperCase().trim())
+              .filter(c => c !== 'QUESADILLAS HARINA' && c !== 'QUESADILLAS DE HARINA')
+            localStorage.setItem(key, JSON.stringify(updated))
+          }
+        }
+      })
+    } catch (e) {
+      logger.warn('supabase', 'Error actualizando localStorage categories:', e as any)
+    }
+
+    // 3. Persistir en Supabase
+    if (orgId) {
+      try {
+        const { error } = await supabase
+          .from('products')
+          .update({ category: trimmedNew })
+          .eq('organization_id', orgId)
+          .ilike('category', trimmedOld)
+          .is('deleted_at', null)
+
+        if (error) {
+          logger.warn('supabase', 'Advertencia actualizando categoría en Supabase:', error.message)
+          return false
+        }
+        logger.info('supabase', `✅ Categoría "${trimmedOld}" actualizada a "${trimmedNew}" en Supabase.`)
+      } catch (err) {
+        logger.warn('supabase', 'Error actualizando categoría en Supabase:', err as any)
+        return false
+      }
+    }
+    return true
+  }
+
+  /**
+   * Realiza un soft delete de una categoría y de todos sus productos activos en Supabase y localmente.
+   */
+  async softDeleteCategory(categoryName: string): Promise<boolean> {
+    const trimmed = categoryName.trim().toUpperCase()
+    if (!trimmed) return false
+
+    const orgId = this.getCurrentOrgId()
+    const now = new Date().toISOString()
+
+    // 1. Soft delete en respaldo local
+    const currentBackup = this.getLocalProductsBackup()
+    const updatedBackup = currentBackup.map(p => {
+      if ((p.category || '').toUpperCase().trim() === trimmed) {
+        return { ...p, deletedAt: now, active: false }
+      }
+      return p
+    })
+    this.saveLocalProductsBackup(updatedBackup.filter(p => !p.deletedAt))
+
+    // 2. Remover de llaves en localStorage
+    try {
+      const orderKeys = ['localito_category_order', 'localito_categories']
+      orderKeys.forEach(key => {
+        const stored = localStorage.getItem(key)
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed)) {
+            const updated = parsed.filter(c => c.toUpperCase().trim() !== trimmed && c.toUpperCase().trim() !== 'QUESADILLAS HARINA' && c.toUpperCase().trim() !== 'QUESADILLAS DE HARINA')
+            localStorage.setItem(key, JSON.stringify(updated))
+          }
+        }
+      })
+    } catch (e) {
+      logger.warn('supabase', 'Error actualizando localStorage tras soft delete:', e as any)
+    }
+
+    // 3. Soft delete en Supabase
+    if (orgId) {
+      try {
+        const { error } = await supabase
+          .from('products')
+          .update({
+            available: false,
+            deleted_at: now
+          })
+          .eq('organization_id', orgId)
+          .ilike('category', categoryName.trim())
+          .is('deleted_at', null)
+
+        if (error) {
+          logger.warn('supabase', 'Advertencia en soft delete de categoría en Supabase:', error.message)
+          return false
+        }
+        logger.info('supabase', `✅ Soft delete de categoría "${trimmed}" y sus productos completado en Supabase.`)
+      } catch (err) {
+        logger.warn('supabase', 'Error en soft delete de categoría en Supabase:', err as any)
+        return false
+      }
+    }
+    return true
+  }
+
   // ==================== ORDERS ====================
 
   private normalizeOrderStatus(status: any): string | undefined {

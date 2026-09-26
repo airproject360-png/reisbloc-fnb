@@ -178,8 +178,8 @@ export function generateDemoReportsData(fromStr: string, toStr: string): DemoRep
 
   // 2. Top Platillos F&B
   const topProductsBase = [
-    { name: 'Quesadilla Maíz c/ Guisado', category: 'Quesadillas Maíz', qtyRatio: 0.26, price: 48, img: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop' },
-    { name: 'Quesadilla Harina c/ Guisado', category: 'Quesadillas Harina', qtyRatio: 0.21, price: 55, img: 'https://images.unsplash.com/photo-1618040996337-56904b7850b9?w=800&auto=format&fit=crop' },
+    { name: 'Quesadilla Maíz c/ Guisado', category: 'QUESADILLAS MAÍZ', qtyRatio: 0.26, price: 48, img: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop' },
+    { name: 'Quesadilla Maíz con Queso', category: 'QUESADILLAS MAÍZ', qtyRatio: 0.21, price: 35, img: 'https://images.unsplash.com/photo-1618040996337-56904b7850b9?w=800&auto=format&fit=crop' },
     { name: 'Platillo Especial (2 guisados)', category: 'Platos', qtyRatio: 0.18, price: 125, img: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&auto=format&fit=crop' },
     { name: 'Orden Frijoles Puercos Especial', category: 'Especialidades', qtyRatio: 0.14, price: 65, img: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&auto=format&fit=crop' },
     { name: 'Coca-Cola 600ml Fría', category: 'Bebidas', qtyRatio: 0.22, price: 35, img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=800&auto=format&fit=crop' },

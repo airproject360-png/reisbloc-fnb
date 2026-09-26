@@ -43,16 +43,21 @@ export function ProductGrid({ products, onAdd, disableAdd = false }: ProductGrid
 
   // Lista dinámica de categorías sincronizadas con la gestión de inventario
   const categories = useMemo(() => {
-    let savedCats = ['Quesadillas Maíz', 'Quesadillas Harina', 'Platos', 'Especialidades', 'Extras', 'Bebidas']
+    let savedCats = ['QUESADILLAS MAÍZ', 'PLATOS', 'ESPECIALIDADES', 'EXTRAS', 'BEBIDAS']
     try {
       const stored = localStorage.getItem('localito_categories')
       if (stored) {
         const parsed = JSON.parse(stored)
-        if (Array.isArray(parsed) && parsed.length > 0) savedCats = parsed
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          savedCats = parsed
+            .map((c: string) => c.toUpperCase().trim())
+            .filter((c: string) => c !== 'QUESADILLAS HARINA' && c !== 'QUESADILLAS DE HARINA')
+        }
       }
     } catch {}
-    const defaultCats = ['Todos', ...savedCats]
-    const prodCats = Array.from(new Set(products.map(p => p.category))).filter(c => c && !defaultCats.includes(c))
+    const defaultCats = ['TODOS', ...savedCats]
+    const prodCats = Array.from(new Set(products.map(p => (p.category || '').toUpperCase().trim())))
+      .filter(c => c && !defaultCats.includes(c) && c !== 'QUESADILLAS HARINA' && c !== 'QUESADILLAS DE HARINA')
     return [...defaultCats, ...prodCats]
   }, [products])
 

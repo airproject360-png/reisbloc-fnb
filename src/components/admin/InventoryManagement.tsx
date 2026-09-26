@@ -100,9 +100,17 @@ export default function InventoryManagement() {
   const [categoriesList, setCategoriesList] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem('localito_categories')
-      if (stored) return JSON.parse(stored).map((c: string) => c.toUpperCase().trim())
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed
+            .map((c: string) => c.toUpperCase().trim())
+            .filter((c: string) => c !== 'QUESADILLAS HARINA' && c !== 'QUESADILLAS DE HARINA')
+          if (cleaned.length > 0) return cleaned
+        }
+      }
     } catch {}
-    return ['QUESADILLAS MAÍZ', 'QUESADILLAS HARINA', 'PLATOS', 'ESPECIALIDADES', 'EXTRAS', 'BEBIDAS']
+    return ['QUESADILLAS MAÍZ', 'PLATOS', 'ESPECIALIDADES', 'EXTRAS', 'BEBIDAS']
   })
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [newCatInput, setNewCatInput] = useState('')
@@ -165,10 +173,13 @@ export default function InventoryManagement() {
   }, [])
 
   const saveCategories = (newCats: string[]) => {
-    const uppercaseCats = newCats.map(c => c.toUpperCase().trim())
+    const uppercaseCats = newCats
+      .map(c => c.toUpperCase().trim())
+      .filter(c => c !== 'QUESADILLAS HARINA' && c !== 'QUESADILLAS DE HARINA')
     setCategoriesList(uppercaseCats)
     try {
       localStorage.setItem('localito_categories', JSON.stringify(uppercaseCats))
+      localStorage.setItem('localito_category_order', JSON.stringify(uppercaseCats))
     } catch (e) {
       console.error('Error guardando categorías:', e)
     }
@@ -227,7 +238,7 @@ export default function InventoryManagement() {
 
   const handleAddCategory = () => {
     const trimmed = newCatInput.trim().toUpperCase()
-    if (!trimmed) return
+    if (!trimmed || trimmed === 'QUESADILLAS HARINA' || trimmed === 'QUESADILLAS DE HARINA') return
     if (categoriesList.some(c => c.toUpperCase() === trimmed)) {
       alert('Esta categoría ya existe.')
       return
@@ -237,30 +248,71 @@ export default function InventoryManagement() {
     setNewCatInput('')
   }
 
-  const handleUpdateCategory = (oldName: string) => {
+  const handleUpdateCategory = async (oldName: string) => {
     const trimmed = editCatInput.trim().toUpperCase()
     if (!trimmed || trimmed === oldName) {
       setEditingCatName(null)
       return
     }
-    const updated = categoriesList.map(c => c === oldName ? trimmed : c)
-    saveCategories(updated)
-    setEditingCatName(null)
-    setEditCatInput('')
+    if (trimmed === 'QUESADILLAS HARINA' || trimmed === 'QUESADILLAS DE HARINA') {
+      alert('Esta categoría está deshabilitada.')
+      return
+    }
+
+    try {
+      // 1. Persistir cambio en Supabase y local products backup
+      await supabaseService.updateCategoryName(oldName, trimmed)
+
+      // 2. Actualizar lista de categorías
+      const updated = categoriesList.map(c => c === oldName ? trimmed : c)
+      saveCategories(updated)
+
+      // 3. Actualizar platillos en memoria
+      setProducts(prev => prev.map(p => {
+        if ((p.category || '').toUpperCase().trim() === oldName.toUpperCase()) {
+          return { ...p, category: trimmed }
+        }
+        return p
+      }))
+
+      if (productCategory === oldName) {
+        setProductCategory(trimmed)
+      }
+    } catch (e) {
+      console.error('Error al actualizar nombre de categoría:', e)
+      alert('Error al actualizar la categoría.')
+    } finally {
+      setEditingCatName(null)
+      setEditCatInput('')
+    }
   }
 
-  const handleDeleteCategory = (catName: string) => {
+  const handleDeleteCategory = async (catName: string) => {
     if (categoriesList.length <= 1) {
       alert('Debe existir al menos una categoría en el menú.')
       return
     }
-    if (!confirm(`¿Eliminar la categoría "${catName}"? Los platillos con esta categoría deberán ser reasignados.`)) {
+    if (!confirm(`¿Eliminar la categoría "${catName}"? Se realizará soft delete de los platillos asociados a esta categoría en el sistema.`)) {
       return
     }
-    const updated = categoriesList.filter(c => c !== catName)
-    saveCategories(updated)
-    if (productCategory === catName) {
-      setProductCategory(updated[0])
+
+    try {
+      // 1. Soft delete en Supabase y local products backup
+      await supabaseService.softDeleteCategory(catName)
+
+      // 2. Actualizar lista de categorías
+      const updated = categoriesList.filter(c => c !== catName)
+      saveCategories(updated)
+
+      // 3. Remover platillos de la vista en memoria
+      setProducts(prev => prev.filter(p => (p.category || '').toUpperCase().trim() !== catName.toUpperCase()))
+
+      if (productCategory === catName) {
+        setProductCategory(updated[0] || 'QUESADILLAS MAÍZ')
+      }
+    } catch (e) {
+      console.error('Error al eliminar categoría:', e)
+      alert('Error al eliminar la categoría.')
     }
   }
 
@@ -429,6 +481,24 @@ export default function InventoryManagement() {
       const loadedProducts = await supabaseService.getAllProducts()
       if (loadedProducts && loadedProducts.length > 0) {
         setProducts(loadedProducts)
+        const dbCategories = Array.from(
+          new Set(
+            loadedProducts
+              .map(p => (p.category || '').toUpperCase().trim())
+              .filter(c => c && c !== 'QUESADILLAS HARINA' && c !== 'QUESADILLAS DE HARINA')
+          )
+        )
+        if (dbCategories.length > 0) {
+          setCategoriesList(prev => {
+            const combined = Array.from(
+              new Set([
+                ...prev.filter(c => c !== 'QUESADILLAS HARINA' && c !== 'QUESADILLAS DE HARINA'),
+                ...dbCategories
+              ])
+            )
+            return combined
+          })
+        }
       }
     } catch (error) {
       console.error('Error loading products:', error)

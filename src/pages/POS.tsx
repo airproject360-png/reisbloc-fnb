@@ -114,11 +114,18 @@ export default function POS() {
       if (stored) {
         const parsed = JSON.parse(stored)
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((c: string) => c.toUpperCase().trim())
+          const cleaned = parsed
+            .map((c: string) => c.toUpperCase().trim())
+            .filter((c: string) => c !== 'QUESADILLAS HARINA' && c !== 'QUESADILLAS DE HARINA')
+          if (cleaned.length > 0) {
+            localStorage.setItem('localito_category_order', JSON.stringify(cleaned))
+            localStorage.setItem('localito_categories', JSON.stringify(cleaned))
+            return cleaned
+          }
         }
       }
     } catch {}
-    return ['QUESADILLAS MAÍZ', 'QUESADILLAS HARINA', 'PLATOS', 'ESPECIALIDADES', 'EXTRAS', 'BEBIDAS']
+    return ['QUESADILLAS MAÍZ', 'PLATOS', 'ESPECIALIDADES', 'EXTRAS', 'BEBIDAS']
   })
 
   // Categorías ordenadas según preferencia personalizada del negocio (Bebidas al final) en UPPERCASE estricto
@@ -127,10 +134,11 @@ export default function POS() {
       new Set(
         (products || [])
           .map(p => (p.category || '').toUpperCase().trim())
-          .filter(Boolean)
+          .filter(c => c && c !== 'QUESADILLAS HARINA' && c !== 'QUESADILLAS DE HARINA')
       )
     ) as string[]
     const allUnique = Array.from(new Set([...customCategoryOrder, ...prodCats]))
+      .filter(c => c !== 'QUESADILLAS HARINA' && c !== 'QUESADILLAS DE HARINA')
 
     const sorted = allUnique.sort((a, b) => {
       let indexA = customCategoryOrder.indexOf(a)
@@ -152,7 +160,9 @@ export default function POS() {
   }, [products, customCategoryOrder])
 
   const handleSaveCategoryOrder = (newOrder: string[]) => {
-    const uppercaseOrder = newOrder.map(c => c.toUpperCase().trim())
+    const uppercaseOrder = newOrder
+      .map(c => c.toUpperCase().trim())
+      .filter(c => c !== 'QUESADILLAS HARINA' && c !== 'QUESADILLAS DE HARINA')
     setCustomCategoryOrder(uppercaseOrder)
     try {
       localStorage.setItem('localito_category_order', JSON.stringify(uppercaseOrder))
@@ -161,6 +171,65 @@ export default function POS() {
       logger.warn('pos', 'Error guardando orden de categorías:', err as any)
     }
   }
+
+  const handleRenameCategory = async (oldName: string, newName: string) => {
+    const trimmedOld = oldName.trim().toUpperCase()
+    const trimmedNew = newName.trim().toUpperCase()
+    if (!trimmedNew || trimmedOld === trimmedNew) return
+
+    try {
+      await supabaseService.updateCategoryName(trimmedOld, trimmedNew)
+      setProducts(prev => prev.map(p => {
+        if ((p.category || '').toUpperCase().trim() === trimmedOld) {
+          return { ...p, category: trimmedNew }
+        }
+        return p
+      }))
+      const newOrder = customCategoryOrder.map(c => c === trimmedOld ? trimmedNew : c)
+      handleSaveCategoryOrder(newOrder)
+      if (selectedCategory === trimmedOld) {
+        setSelectedCategory(trimmedNew)
+      }
+    } catch (err: any) {
+      logger.error('pos', 'Error al renombrar categoría:', err)
+      alert(`Error al renombrar categoría: ${err?.message || err}`)
+    }
+  }
+
+  const handleSoftDeleteCategory = async (catName: string) => {
+    const trimmed = catName.trim().toUpperCase()
+    if (!confirm(`¿Eliminar la categoría "${trimmed}"? Esta acción removerá la categoría y sus platillos del menú activo (soft delete).`)) {
+      return
+    }
+
+    try {
+      await supabaseService.softDeleteCategory(trimmed)
+      setProducts(prev => prev.filter(p => (p.category || '').toUpperCase().trim() !== trimmed))
+      const newOrder = customCategoryOrder.filter(c => c !== trimmed)
+      handleSaveCategoryOrder(newOrder)
+      if (selectedCategory === trimmed) {
+        setSelectedCategory('TODOS')
+      }
+    } catch (err: any) {
+      logger.error('pos', 'Error al eliminar categoría:', err)
+      alert(`Error al eliminar categoría: ${err?.message || err}`)
+    }
+  }
+
+  const handleAddCategory = (newCat: string) => {
+    const trimmed = newCat.trim().toUpperCase()
+    if (!trimmed || trimmed === 'TODOS' || trimmed === 'QUESADILLAS HARINA' || trimmed === 'QUESADILLAS DE HARINA') return
+    if (!customCategoryOrder.includes(trimmed)) {
+      const newOrder = [...customCategoryOrder, trimmed]
+      handleSaveCategoryOrder(newOrder)
+    }
+  }
+
+  useEffect(() => {
+    if (selectedCategory === 'QUESADILLAS HARINA' || selectedCategory === 'QUESADILLAS DE HARINA') {
+      setSelectedCategory('TODOS')
+    }
+  }, [selectedCategory])
 
   useEffect(() => {
     setCurrentTable(0)
@@ -771,15 +840,15 @@ export default function POS() {
               </span>
             </button>
 
-            {/* Botón para organizar categorías */}
+            {/* Botón para organizar y gestionar categorías */}
             <button
               type="button"
               onClick={() => setShowCategoryOrderModal(true)}
-              title="Personalizar orden de categorías (mover bebidas al final, etc.)"
+              title="Organizar y gestionar categorías del menú (editar nombre, soft delete, añadir nueva)"
               className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 text-slate-400 hover:text-amber-400 text-xs font-bold transition-all flex items-center gap-1.5 shadow-md active:scale-95"
             >
               <SlidersHorizontal size={14} className="text-amber-400" />
-              <span className="hidden lg:inline">Organizar</span>
+              <span className="hidden lg:inline">Categorías</span>
             </button>
           </div>
         </div>
@@ -1448,6 +1517,9 @@ export default function POS() {
           onClose={() => setShowCategoryOrderModal(false)}
           currentCategories={categories}
           onSave={handleSaveCategoryOrder}
+          onRenameCategory={handleRenameCategory}
+          onDeleteCategory={handleSoftDeleteCategory}
+          onAddCategory={handleAddCategory}
         />
       )}
     </div>

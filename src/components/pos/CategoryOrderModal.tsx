@@ -10,7 +10,9 @@ import {
   Sparkles, 
   SlidersHorizontal,
   Coffee,
-  GripVertical
+  Edit2,
+  Trash2,
+  Plus
 } from 'lucide-react'
 
 interface CategoryOrderModalProps {
@@ -18,6 +20,9 @@ interface CategoryOrderModalProps {
   onClose: () => void
   currentCategories: string[]
   onSave: (newOrder: string[]) => void
+  onRenameCategory?: (oldName: string, newName: string) => Promise<void> | void
+  onDeleteCategory?: (catName: string) => Promise<void> | void
+  onAddCategory?: (newCategory: string) => Promise<void> | void
 }
 
 export default function CategoryOrderModal({
@@ -25,18 +30,31 @@ export default function CategoryOrderModal({
   onClose,
   currentCategories,
   onSave,
+  onRenameCategory,
+  onDeleteCategory,
+  onAddCategory,
 }: CategoryOrderModalProps) {
-  // Excluimos 'TODOS' ya que siempre se mantiene en la primera posición fija
+  // Excluimos 'TODOS' y 'QUESADILLAS HARINA'
   const filterList = (cats: string[]) =>
     cats
-      .filter(c => c.toUpperCase().trim() !== 'TODOS')
+      .filter(c => {
+        const u = c.toUpperCase().trim()
+        return u !== 'TODOS' && u !== 'QUESADILLAS HARINA' && u !== 'QUESADILLAS DE HARINA'
+      })
       .map(c => c.toUpperCase().trim())
 
   const [order, setOrder] = useState<string[]>(() => filterList(currentCategories))
+  const [editingCat, setEditingCat] = useState<string | null>(null)
+  const [editingInput, setEditingInput] = useState('')
+  const [newCatInput, setNewCatInput] = useState('')
+  const [isBusy, setIsBusy] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
       setOrder(filterList(currentCategories))
+      setEditingCat(null)
+      setEditingInput('')
+      setNewCatInput('')
     }
   }, [isOpen, currentCategories])
 
@@ -93,15 +111,73 @@ export default function CategoryOrderModal({
     setOrder([...otros, ...bebidas])
   }
 
-  // Restaurar a configuración estándar de Localito en UPPERCASE
+  // Restaurar a configuración estándar de Localito en UPPERCASE (sin QUESADILLAS HARINA)
   const handleResetDefault = () => {
-    const defaultCats = ['QUESADILLAS MAÍZ', 'QUESADILLAS HARINA', 'PLATOS', 'ESPECIALIDADES', 'EXTRAS', 'BEBIDAS']
-    // Mantener cualquier otra categoría al final antes de Bebidas
-    const existingOther = order.filter(c => !defaultCats.includes(c))
+    const defaultCats = ['QUESADILLAS MAÍZ', 'PLATOS', 'ESPECIALIDADES', 'EXTRAS', 'BEBIDAS']
+    const existingOther = order.filter(c => !defaultCats.includes(c) && c !== 'QUESADILLAS HARINA' && c !== 'QUESADILLAS DE HARINA')
     const beverages = defaultCats.filter(c => c.includes('BEBIDA') || c.includes('REFRESCO'))
     const standardWithoutBev = defaultCats.filter(c => !c.includes('BEBIDA') && !c.includes('REFRESCO'))
 
     setOrder([...standardWithoutBev, ...existingOther, ...beverages])
+  }
+
+  const handleAdd = () => {
+    const trimmed = newCatInput.trim().toUpperCase()
+    if (!trimmed || trimmed === 'TODOS' || trimmed === 'QUESADILLAS HARINA' || trimmed === 'QUESADILLAS DE HARINA') return
+    if (order.includes(trimmed)) {
+      alert('Esta categoría ya se encuentra en la lista.')
+      return
+    }
+    const newOrder = [...order, trimmed]
+    setOrder(newOrder)
+    setNewCatInput('')
+    if (onAddCategory) {
+      onAddCategory(trimmed)
+    }
+  }
+
+  const handleStartEdit = (cat: string) => {
+    setEditingCat(cat)
+    setEditingInput(cat)
+  }
+
+  const handleSaveEdit = async (oldName: string) => {
+    const trimmed = editingInput.trim().toUpperCase()
+    if (!trimmed || trimmed === oldName) {
+      setEditingCat(null)
+      return
+    }
+    if (trimmed === 'QUESADILLAS HARINA' || trimmed === 'QUESADILLAS DE HARINA') {
+      alert('Esta categoría está deshabilitada.')
+      return
+    }
+    setIsBusy(true)
+    try {
+      if (onRenameCategory) {
+        await onRenameCategory(oldName, trimmed)
+      }
+      setOrder(prev => prev.map(c => c === oldName ? trimmed : c))
+      setEditingCat(null)
+      setEditingInput('')
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
+  const handleDelete = async (catName: string) => {
+    if (order.length <= 1) {
+      alert('Debe existir al menos una categoría en el menú.')
+      return
+    }
+    setIsBusy(true)
+    try {
+      if (onDeleteCategory) {
+        await onDeleteCategory(catName)
+      }
+      setOrder(prev => prev.filter(c => c !== catName))
+    } finally {
+      setIsBusy(false)
+    }
   }
 
   const handleSave = () => {
@@ -123,10 +199,10 @@ export default function CategoryOrderModal({
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
-                Organizar Categorías del Menú
+                Gestionar & Organizar Categorías
               </h3>
               <p className="text-xs text-slate-400">
-                Personaliza el orden de las pestañas en el POS como más cómodo sea para tu flujo de trabajo.
+                Modifica nombres, elimina categorías (soft delete) o reordena las pestañas del POS.
               </p>
             </div>
           </div>
@@ -138,8 +214,28 @@ export default function CategoryOrderModal({
           </button>
         </div>
 
+        {/* Input para agregar nueva categoría */}
+        <div className="px-5 py-3 bg-slate-950/40 border-b border-slate-800/60 flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="+ Agregar nueva categoría (ej. TACOS)..."
+            value={newCatInput}
+            onChange={(e) => setNewCatInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+            className="flex-1 px-3.5 py-2 bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl text-white text-xs font-bold outline-none"
+          />
+          <button
+            type="button"
+            onClick={handleAdd}
+            className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5"
+          >
+            <Plus size={14} />
+            <span>Agregar</span>
+          </button>
+        </div>
+
         {/* Acciones Rápidas */}
-        <div className="px-5 py-3 bg-slate-950/20 border-b border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="px-5 py-2.5 bg-slate-950/20 border-b border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -159,7 +255,7 @@ export default function CategoryOrderModal({
             </button>
           </div>
           <span className="text-[11px] text-slate-500 font-semibold">
-            {order.length} categorías configuradas
+            {order.length} categorías activas
           </span>
         </div>
 
@@ -182,6 +278,7 @@ export default function CategoryOrderModal({
             const isBebida = category.toLowerCase().includes('bebida') || category.toLowerCase().includes('refresco')
             const isFirst = index === 0
             const isLast = index === order.length - 1
+            const isEditing = editingCat === category
 
             return (
               <div
@@ -192,62 +289,121 @@ export default function CategoryOrderModal({
                     : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
                 }`}
               >
-                {/* Posición & Nombre */}
-                <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-lg bg-slate-800 text-amber-400 text-xs font-black flex items-center justify-center border border-slate-700">
-                    {index + 1}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-sm text-slate-200">
-                      {category}
-                    </span>
-                    {isBebida && (
-                      <span className="text-[10px] font-extrabold text-teal-400 bg-teal-950/80 px-2 py-0.5 rounded-full border border-teal-800">
-                        Bebida
-                      </span>
-                    )}
+                {isEditing ? (
+                  <div className="flex-1 flex items-center gap-2 mr-2">
+                    <input
+                      type="text"
+                      value={editingInput}
+                      onChange={(e) => setEditingInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') void handleSaveEdit(category)
+                        if (e.key === 'Escape') setEditingCat(null)
+                      }}
+                      className="flex-1 px-3 py-1.5 bg-slate-900 border border-teal-500 rounded-xl text-white font-bold text-xs outline-none"
+                      autoFocus
+                      disabled={isBusy}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleSaveEdit(category)}
+                      disabled={isBusy}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 shadow-sm"
+                    >
+                      <Check size={13} />
+                      <span>Guardar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingCat(null)}
+                      disabled={isBusy}
+                      className="px-2.5 py-1.5 bg-slate-800 text-slate-400 hover:text-white rounded-xl text-xs"
+                    >
+                      <X size={13} />
+                    </button>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    {/* Posición & Nombre */}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-6 h-6 rounded-lg bg-slate-800 text-amber-400 text-xs font-black flex items-center justify-center border border-slate-700 shrink-0">
+                        {index + 1}
+                      </span>
+                      <span className="font-black text-sm text-slate-200 truncate">
+                        {category}
+                      </span>
+                      {isBebida && (
+                        <span className="text-[10px] font-extrabold text-teal-400 bg-teal-950/80 px-2 py-0.5 rounded-full border border-teal-800 shrink-0">
+                          Bebida
+                        </span>
+                      )}
+                    </div>
 
-                {/* Botones de Mover */}
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => handleMoveToTop(index)}
-                    disabled={isFirst}
-                    title="Mover al principio"
-                    className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors border border-slate-800"
-                  >
-                    <ChevronsUp size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleMoveUp(index)}
-                    disabled={isFirst}
-                    title="Subir una posición"
-                    className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors border border-slate-800"
-                  >
-                    <ArrowUp size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleMoveDown(index)}
-                    disabled={isLast}
-                    title="Bajar una posición"
-                    className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors border border-slate-800"
-                  >
-                    <ArrowDown size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleMoveToBottom(index)}
-                    disabled={isLast}
-                    title="Mover al final (ideal para bebidas)"
-                    className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors border border-slate-800"
-                  >
-                    <ChevronsDown size={15} />
-                  </button>
-                </div>
+                    {/* Acciones: Editar / Soft Delete / Mover */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {onRenameCategory && (
+                        <button
+                          type="button"
+                          onClick={() => handleStartEdit(category)}
+                          disabled={isBusy}
+                          title="Modificar nombre de categoría"
+                          className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition-colors border border-slate-800"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                      )}
+                      {onDeleteCategory && (
+                        <button
+                          type="button"
+                          onClick={() => void handleDelete(category)}
+                          disabled={isBusy}
+                          title="Eliminar categoría del sistema (soft delete)"
+                          className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-rose-400 transition-colors border border-slate-800"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+
+                      <div className="h-4 w-[1px] bg-slate-800 mx-0.5" />
+
+                      <button
+                        type="button"
+                        onClick={() => handleMoveToTop(index)}
+                        disabled={isFirst || isBusy}
+                        title="Mover al principio"
+                        className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors border border-slate-800"
+                      >
+                        <ChevronsUp size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveUp(index)}
+                        disabled={isFirst || isBusy}
+                        title="Subir una posición"
+                        className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors border border-slate-800"
+                      >
+                        <ArrowUp size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveDown(index)}
+                        disabled={isLast || isBusy}
+                        title="Bajar una posición"
+                        className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors border border-slate-800"
+                      >
+                        <ArrowDown size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveToBottom(index)}
+                        disabled={isLast || isBusy}
+                        title="Mover al final"
+                        className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors border border-slate-800"
+                      >
+                        <ChevronsDown size={14} />
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )
           })}
@@ -263,7 +419,7 @@ export default function CategoryOrderModal({
             <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-gradient-to-r from-teal-600 to-emerald-600 text-white flex-shrink-0">
               Todos
             </span>
-            {order.map((cat, i) => (
+            {order.map((cat) => (
               <span
                 key={cat}
                 className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-900 text-slate-300 border border-slate-800 flex-shrink-0"
@@ -281,7 +437,7 @@ export default function CategoryOrderModal({
             onClick={onClose}
             className="px-5 py-2.5 rounded-2xl bg-slate-800 text-slate-300 hover:text-white font-bold text-xs transition-colors"
           >
-            Cancelar
+            Cerrar
           </button>
           <button
             type="button"
@@ -289,7 +445,7 @@ export default function CategoryOrderModal({
             className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center gap-2"
           >
             <Check size={16} />
-            <span>Guardar Nuevo Orden</span>
+            <span>Guardar Configuración</span>
           </button>
         </div>
       </div>
